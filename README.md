@@ -19,7 +19,7 @@ The primary objective of this library is to convert some subset of [SQL-92](http
 
 ## Project Status
 
-This is an early-version SQL parser: If your SQL does not work, at the very least, **[please cut-and-paste it to a new issue](https://github.com/mozilla/moz-sql-parser/issues/new)**
+This is an early-version SQL parser: If your SQL does not work, at the very least, [please cut-and-paste it to a new issue](https://github.com/mozilla/moz-sql-parser/issues/new)
 
 
 ## Install
@@ -53,5 +53,5 @@ SQL queries are translated to JSON objects: Each clause is assigned to an object
 
 ### Notes
 
-* Uses the glorious `pyparsing` library (see http://pyparsing.wikispaces.com/) to define the grammar, and define the shape of the tokens it generates. Expressions are 
+* Uses the glorious `pyparsing` library (see http://pyparsing.wikispaces.com/) to define the grammar, and define the shape of the tokens it generates. 
 * `[sqlparse](https://pypi.python.org/pypi/sqlparse)` Does not provide a tree, rather a list of tokens. 
