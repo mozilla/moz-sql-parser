@@ -1,0 +1,30 @@
+{
+    "name": "moz-sql-parser",
+    "description": "Parse SQL and give you a parse tree. That's it.",
+    "repository": {
+        "url": "https://github.com/mozilla/moz-sql-parser",
+        "license": "MPL2",
+        "type": "git",
+        "tests": "https://github.com/mozilla/moz-sql-parser/tree/dev/tests",
+        "clone": "https://github.com/mozilla/moz-sql-parser.git"
+    },
+    "participate": {
+        "home": "https://github.com/mozilla/moz-sql-parser",
+        "docs": "https://github.com/mozilla/moz-sql-parser/docs",
+        "irc": "irc://irc.mozilla.org/#ateam",
+        "irc-contacts": [
+            "ekyle"
+        ]
+    },
+    "bugs": {
+        "list": "https://github.com/mozilla/moz-sql-parser/issues",
+        "report": "https://github.com/mozilla/moz-sql-parser/issues/new"
+    },
+    "urls": {
+        "stage": ""
+    },
+    "keywords": [
+        "python",
+        "mozilla"
+    ]
+}
