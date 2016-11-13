@@ -50,6 +50,21 @@ class TestSimple(FuzzyTestCase):
         }
         self.assertEqual(result, expected)
 
+    def test_select_expression(self):
+        #                         1         2         3         4         5         6
+        #               0123456789012345678901234567890123456789012345678901234567890123456789
+        result = parse("SELECT a + b/2 + 45*c + (2/d) from dual")
+        expected = {
+            "select": {"value": {"add": [
+                "a",
+                {"div": ["b", {"literal": 2}]},
+                {"mult": [{"literal": 45}, "c"]},
+                {"div": [{"literal": 2}, "d"]}
+            ]}},
+            "from": "dual"
+        }
+        self.assertEqual(result, expected)
+
 
     def select_many_column(self):
         result = parse("Select a, b, c from dual")
@@ -154,3 +169,11 @@ class TestSimple(FuzzyTestCase):
         }
         self.assertEqual(result, expected)
 
+    def test_order_by(self):
+        result = parse("select count(1) from dual order by a")
+        expected = {
+            "select": {"value": {"count": {"literal": 1}}},
+            "from": "dual",
+            "orderby": {"value": "a"}
+        }
+        self.assertEqual(result, expected)

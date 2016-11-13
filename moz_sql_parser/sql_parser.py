@@ -19,12 +19,13 @@ from pyparsing import \
     Literal, ParserElement, infixNotation, oneOf, opAssoc, Regex
 
 ParserElement.enablePackrat()
-DEBUG = False
+DEBUG = True
 
 SELECT = Keyword("select", caseless=True)
 FROM = Keyword("from", caseless=True)
 WHERE = Keyword("where", caseless=True)
 GROUPBY = Keyword("group by", caseless=True)
+ORDERBY = Keyword("order by", caseless=True)
 AS = Keyword("as", caseless=True)
 AND = Keyword("and", caseless=True)
 OR = Keyword("or", caseless=True)
@@ -40,19 +41,24 @@ KNOWN_OPS = {
     "<": "lt",
     ">=": "gte",
     "<=": "lte",
+    "+": "add",
+    "-": "sub",
+    "*": "mult",
+    "/": "div",
     "and": "and",
     "or": "or",
     "not": "not"
 }
 
 
-def fix(instring, tokensStart, retTokens):
+def to_json_expression(instring, tokensStart, retTokens):
+    # ARRANGE INTO {op: params} FORMAT
     tok = retTokens[0]
     op = KNOWN_OPS[tok[1]]
-    return {op: [tok[0], tok[2]]}
+    return {op: [tok[i * 2] for i in range(int((len(tok) + 1) /2))]}
 
 
-def json2value(instring, tokensStart, retTokens):
+def unquote(instring, tokensStart, retTokens):
     val = retTokens[0]
     if val.startswith("'") and val.endswith("'"):
         val = "'"+val[1:-1].replace("''", "\\'")+"'"
@@ -67,13 +73,15 @@ realNum = Combine(
     Optional(arithSign) +
     (Word(nums) + "." + Optional(Word(nums)) | ("." + Word(nums))) +
     Optional(E + Optional(arithSign) + Word(nums))
-).addParseAction(json2value)
+).addParseAction(unquote)
 intNum = Combine(
     Optional(arithSign) +
     Word(nums) +
     Optional(E + Optional("+") + Word(nums))
-).addParseAction(json2value)
-sqlString = Combine(Regex(r"\'(\'\'|\\.|[^'])*\'")).addParseAction(json2value)
+).addParseAction(unquote)
+
+# SQL STRINGS
+sqlString = Combine(Regex(r"\'(\'\'|\\.|[^'])*\'")).addParseAction(unquote)
 
 # EXPRESSIONS
 expr = Forward()
@@ -82,7 +90,7 @@ ident = (~RESERVED + (delimitedList(Word(alphas, alphanums + "_$") | dblQuotedSt
 primitive = realNum("literal") | intNum("literal") | sglQuotedString("literal") | ident
 selectStmt = Forward()
 compound = Group(
-    (Literal("(") + expr + ")").setDebug(DEBUG) |
+    # (Literal("(") + expr + ")").setDebug(DEBUG) |
     realNum("literal").setName("float").setDebug(DEBUG) |
     intNum("literal").setName("int").setDebug(DEBUG) |
     sqlString("literal").setName("string").setDebug(DEBUG) |
@@ -94,12 +102,12 @@ compound = Group(
 expr << Group(infixNotation(
     compound,
     [
-        (oneOf('* /'), 2, opAssoc.LEFT, fix),
-        (oneOf('+ -'), 2, opAssoc.LEFT, fix),
-        (oneOf('= != > >= < <='), 2, opAssoc.LEFT, fix),
-        (NOT, 1, opAssoc.RIGHT, fix),
-        (AND, 2, opAssoc.LEFT, fix),
-        (OR, 2, opAssoc.LEFT, fix)
+        (oneOf('* /'), 2, opAssoc.LEFT, to_json_expression),
+        (oneOf('+ -'), 2, opAssoc.LEFT, to_json_expression),
+        (oneOf('= != > >= < <='), 2, opAssoc.LEFT, to_json_expression),
+        (NOT, 1, opAssoc.RIGHT, to_json_expression),
+        (AND, 2, opAssoc.LEFT, to_json_expression),
+        (OR, 2, opAssoc.LEFT, to_json_expression)
     ]
 ).setName("expression"))
 
@@ -117,7 +125,8 @@ selectStmt << (
     SELECT.suppress() + delimitedList(column)("select") +
     FROM.suppress() + delimitedList(tableName)("from") +
     Optional(WHERE.suppress() + Group(expr).setName("expression"))("where") +
-    Optional(GROUPBY.suppress() + Group(delimitedList(column)).setName("columns"))("groupby")
+    Optional(GROUPBY.suppress() + Group(delimitedList(column)).setName("columns"))("groupby") +
+    Optional(ORDERBY.suppress() + Group(delimitedList(column)).setName("columns"))("orderby")
 )
 
 SQLParser = selectStmt
