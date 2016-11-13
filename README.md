@@ -49,7 +49,25 @@ The `SELECT` clause is an array of objects containing `name` and `value` propert
 
 ## About
 
-SQL queries are translated to JSON objects: Each clause is assigned to an object property of the same name.  Expressions are also objects, but with only one property having the name of the operation, and the value holding (an array of) parameters for that operation. 
+SQL queries are translated to JSON objects: Each clause is assigned to an object property of the same name.
+
+	
+	# SELECT * FROM dual WHERE a>b ORDER BY a+b
+	{
+		"select": "*",
+		"from": "dual"
+		"where": {"gt": ["a","b"]},
+		"orderby": {"add": ["a", "b"]}
+	}
+		
+Expressions are also objects, but with only one property having the name of the operation, and the value holding (an array of) parameters for that operation. 
+
+	{op: parameters}
+
+and you can see this pattern in the previous example:
+
+	{"gt": ["a","b"]}
+
 
 ### Notes
 

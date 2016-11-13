@@ -51,11 +51,23 @@ KNOWN_OPS = {
 }
 
 
-def to_json_expression(instring, tokensStart, retTokens):
+def to_json_operator(instring, tokensStart, retTokens):
     # ARRANGE INTO {op: params} FORMAT
     tok = retTokens[0]
     op = KNOWN_OPS[tok[1]]
     return {op: [tok[i * 2] for i in range(int((len(tok) + 1) /2))]}
+
+
+def to_json_call(instring, tokensStart, retTokens):
+    # ARRANGE INTO {op: params} FORMAT
+    tok = retTokens
+    op = tok.op
+    params = tok.params[0]
+    if not params:
+        params = None
+    elif len(params) == 1:
+        params = params[0]
+    return {op: params}
 
 
 def unquote(instring, tokensStart, retTokens):
@@ -96,18 +108,18 @@ compound = Group(
     sqlString("literal").setName("string").setDebug(DEBUG) |
     Group(ident("var") + IN + "(" + Group(delimitedList(Group(expr).setName("expression")))("set") + ")")("in").setDebug(DEBUG) |
     Group(ident("var") + IN + "(" + Group(selectStmt)("set") + ")")("in").setDebug(DEBUG) |
-    (Word(alphas)("op").setName("function name") + Literal("(") + Group(delimitedList(expr))("params") + ")").setDebug(DEBUG) |
+    (Word(alphas)("op").setName("function name") + Literal("(") + Group(delimitedList(expr))("params") + ")").addParseAction(to_json_call).setDebug(DEBUG) |
     ident
 )
 expr << Group(infixNotation(
     compound,
     [
-        (oneOf('* /'), 2, opAssoc.LEFT, to_json_expression),
-        (oneOf('+ -'), 2, opAssoc.LEFT, to_json_expression),
-        (oneOf('= != > >= < <='), 2, opAssoc.LEFT, to_json_expression),
-        (NOT, 1, opAssoc.RIGHT, to_json_expression),
-        (AND, 2, opAssoc.LEFT, to_json_expression),
-        (OR, 2, opAssoc.LEFT, to_json_expression)
+        (oneOf('* /'), 2, opAssoc.LEFT, to_json_operator),
+        (oneOf('+ -'), 2, opAssoc.LEFT, to_json_operator),
+        (oneOf('= != > >= < <='), 2, opAssoc.LEFT, to_json_operator),
+        (NOT, 1, opAssoc.RIGHT, to_json_operator),
+        (AND, 2, opAssoc.LEFT, to_json_operator),
+        (OR, 2, opAssoc.LEFT, to_json_operator)
     ]
 ).setName("expression"))
 

@@ -30,8 +30,6 @@ def _scrub(result):
             return _scrub(result[0])
         else:
             return [_scrub(r) for r in result]
-    elif "op" in result and "params" in result:
-        return {result.op: _scrub(result.params)}
     else:
         return {k: _scrub(v) for k, v in result.items()}
 
