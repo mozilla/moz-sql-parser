@@ -6,3 +6,6 @@ out
 .idea
 *.iml
 *.txt
+/moz_sql_parser.egg-info
+/build
+/dist

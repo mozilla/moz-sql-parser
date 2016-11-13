@@ -12,7 +12,6 @@ from __future__ import division
 from __future__ import unicode_literals
 
 import ast
-import json
 
 from pyparsing import \
     CaselessLiteral, Word, delimitedList, Optional, Combine, Group, alphas, \
@@ -20,7 +19,7 @@ from pyparsing import \
     Literal, ParserElement, infixNotation, oneOf, opAssoc, Regex
 
 ParserElement.enablePackrat()
-DEBUG = True
+DEBUG = False
 
 SELECT = Keyword("select", caseless=True)
 FROM = Keyword("from", caseless=True)

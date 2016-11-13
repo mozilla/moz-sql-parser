@@ -11,6 +11,8 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import unicode_literals
 
+import json
+
 from moz_sql_parser.sql_parser import SQLParser
 
 
@@ -34,3 +36,4 @@ def _scrub(result):
         return {k: _scrub(v) for k, v in result.items()}
 
 
+_ = json.dumps
