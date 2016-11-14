@@ -50,6 +50,17 @@ class TestSimple(FuzzyTestCase):
         }
         self.assertEqual(result, expected)
 
+    def test_select_quoted_name(self):
+        result = parse('Select a "@*#&", b as test."g.g".c from dual')
+        expected = {
+            "select": [
+                {"name": "@*#&", "value": "a"},
+                {"name": "test.g\\.g.c", "value": "b"}
+            ],
+            "from": "dual"
+        }
+        self.assertEqual(result, expected)
+
     def test_select_expression(self):
         #                         1         2         3         4         5         6
         #               0123456789012345678901234567890123456789012345678901234567890123456789
