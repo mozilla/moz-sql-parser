@@ -19,7 +19,7 @@ from pyparsing import \
     Literal, ParserElement, infixNotation, oneOf, opAssoc, Regex
 
 ParserElement.enablePackrat()
-DEBUG = True
+DEBUG = False
 
 SELECT = Keyword("select", caseless=True)
 FROM = Keyword("from", caseless=True)

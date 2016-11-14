@@ -14,6 +14,9 @@ from __future__ import unicode_literals
 from pyLibrary.testing.fuzzytestcase import FuzzyTestCase
 
 from moz_sql_parser import parse
+from moz_sql_parser import sql_parser
+
+sql_parser.DEBUG = True
 
 
 class TestSimple(FuzzyTestCase):
