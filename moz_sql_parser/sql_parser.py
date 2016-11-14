@@ -16,23 +16,23 @@ import ast
 from pyparsing import \
     CaselessLiteral, Word, delimitedList, Optional, Combine, Group, alphas, \
     nums, alphanums, Forward, restOfLine, Keyword, sglQuotedString, dblQuotedString, \
-    Literal, ParserElement, infixNotation, oneOf, opAssoc, Regex
+    Literal, ParserElement, infixNotation, oneOf, opAssoc, Regex, MatchFirst
 
 ParserElement.enablePackrat()
 DEBUG = False
 
-SELECT = Keyword("select", caseless=True)
-FROM = Keyword("from", caseless=True)
-WHERE = Keyword("where", caseless=True)
-GROUPBY = Keyword("group by", caseless=True)
-ORDERBY = Keyword("order by", caseless=True)
-AS = Keyword("as", caseless=True)
-AND = Keyword("and", caseless=True)
-OR = Keyword("or", caseless=True)
-NOT = Keyword("not", caseless=True)
-IN = Keyword("in", caseless=True)
+# SELECT = Keyword("select", caseless=True)
+# FROM = Keyword("from", caseless=True)
+# WHERE = Keyword("where", caseless=True)
+# GROUPBY = Keyword("group by", caseless=True)
+# ORDERBY = Keyword("order by", caseless=True)
+# AS = Keyword("as", caseless=True)
+# AND = Keyword("and", caseless=True)
+# OR = Keyword("or", caseless=True)
+# NOT = Keyword("not", caseless=True)
+# IN = Keyword("in", caseless=True)
 
-RESERVED = SELECT | FROM | WHERE | GROUPBY | AS | AND | OR | NOT | IN
+keywords = ["select", "from", "where", "group by", "order by", "with", "as"]
 
 KNOWN_OPS = {
     "=": "eq",
@@ -47,8 +47,23 @@ KNOWN_OPS = {
     "/": "div",
     "and": "and",
     "or": "or",
-    "not": "not"
+    "not": "not",
+    "in": "in"
 }
+
+locs = locals()
+reserved = []
+for k in keywords:
+    name, value = k.upper().replace(" ", ""), Keyword(k, caseless=True)
+    locs[name] = value
+    reserved.append(value)
+for l in KNOWN_OPS.keys():
+    name, value = l.upper(), CaselessLiteral(l)
+    locs[name] = value
+    reserved.append(value)
+
+RESERVED = MatchFirst(reserved)
+
 
 
 def to_json_operator(instring, tokensStart, retTokens):
@@ -105,14 +120,13 @@ identString = Combine(Regex(r'\"(\"\"|\\.|[^"])*\"')).addParseAction(unquote)
 expr = Forward()
 
 ident = Combine(~RESERVED + (delimitedList(Word(alphas, alphanums + "_$") | identString, ".", combine=True))).setName("identifier")
-primitive = realNum("literal") | intNum("literal") | sglQuotedString("literal") | ident
+primitive = realNum("literal") | intNum("literal") | sqlString | ident
 selectStmt = Forward()
 compound = Group(
     realNum("literal").setName("float").setDebug(DEBUG) |
     intNum("literal").setName("int").setDebug(DEBUG) |
     sqlString("literal").setName("string").setDebug(DEBUG) |
-    Group(ident("var") + IN + "(" + Group(delimitedList(Group(expr).setName("expression")))("set") + ")")("in").setDebug(DEBUG) |
-    Group(ident("var") + IN + "(" + Group(selectStmt)("set") + ")")("in").setDebug(DEBUG) |
+    (Literal("(").suppress() + Group(delimitedList(expr)) + Literal(")").suppress()).setDebug(DEBUG) |
     (Word(alphas)("op").setName("function name") + Literal("(") + Group(delimitedList(expr))("params") + ")").addParseAction(to_json_call).setDebug(DEBUG) |
     ident
 )
@@ -122,6 +136,7 @@ expr << Group(infixNotation(
         (oneOf('* /'), 2, opAssoc.LEFT, to_json_operator),
         (oneOf('+ -'), 2, opAssoc.LEFT, to_json_operator),
         (oneOf('= != > >= < <='), 2, opAssoc.LEFT, to_json_operator),
+        (IN, 2, opAssoc.LEFT, to_json_operator),
         (NOT, 1, opAssoc.RIGHT, to_json_operator),
         (AND, 2, opAssoc.LEFT, to_json_operator),
         (OR, 2, opAssoc.LEFT, to_json_operator)
@@ -135,7 +150,7 @@ column = Group(
     Group(expr).setName("expression")("value").setDebug(DEBUG) |
     Literal('*')("value").setDebug(DEBUG)
 ).setName("column")
-tableName = delimitedList(ident, ".", combine=True).setName("table name")
+tableName = ident.setName("table name")
 
 # define SQL tokens
 selectStmt << (

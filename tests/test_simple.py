@@ -112,14 +112,14 @@ class TestSimple(FuzzyTestCase):
         expected = {
             "select": {"value": "a"},
             "from": "dual",
-            "where": {"in": {
-                "var": "a",
-                "set": [
+            "where": {"in": [
+                "a",
+                [
                     {"literal": "r"},
                     {"literal": "g"},
                     {"literal": "b"}
                 ]
-            }}
+            ]}
         }
         self.assertEqual(result, expected)
 
@@ -131,22 +131,22 @@ class TestSimple(FuzzyTestCase):
             "select": {"value": "a"},
             "from": "dual",
             "where": {"and": [
-                {"in": {
-                    "var": "a",
-                    "set": [
+                {"in": [
+                    "a",
+                    [
                         {"literal": "r"},
                         {"literal": "g"},
                         {"literal": "b"}
                     ]
-                }},
-                {"in": {
-                    "var": "b",
-                    "set": [
+                ]},
+                {"in": [
+                    "b",
+                    [
                         {"literal": 10},
                         {"literal": 11},
                         {"literal": 12}
                     ]
-                }}
+                ]}
             ]}
         }
         self.assertEqual(result, expected)
