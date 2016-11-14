@@ -1,10 +1,10 @@
-# moz-sql-parser
+# Moz SQL Parser
 
 Let's make a SQL parser so we can provide a familiar interface to non-sql datastores!
 
 ## Problem Statement
 
-SQL is a familiar language used to access databases. Although, each database vendor has its quirky implementation, the average developer does not know enough SQL to be concerned with those quirks. This familiar core SQL (lowest common denominator, if you will) is useful enough to explore data in a primitive ways. It is hoped that, once programmers have reviewed the datastore with basic SQL queries, and see the value of that data, they will be motivated to use the datastore's native query format.
+SQL is a familiar language used to access databases. Although, each database vendor has its quirky implementation, the average developer does not know enough SQL to be concerned with those quirks. This familiar core SQL (lowest common denominator, if you will) is useful enough to explore data in primitive ways. It is hoped that, once programmers have reviewed a datastore with basic SQL queries, and they see the value of that data, they will be motivated to use the datastore's native query format.
 
 ## Objectives
 
@@ -42,12 +42,9 @@ The `SELECT` clause is an array of objects containing `name` and `value` propert
 
 ## Run Tests
 
-	git clone https://github.com/mozilla/moz-sql-parser.git
-	pip install -r requirements.txt
-	set PYTHONPATH=.	
-	python.exe -m unittest tests.test_simple
+See [the tests directory](https://github.com/mozilla/moz-sql-parser/tree/dev/tests) for instructions running tests, or writing new ones.
 
-## About
+## More about implementation
 
 SQL queries are translated to JSON objects: Each clause is assigned to an object property of the same name.
 
