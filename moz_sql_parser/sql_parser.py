@@ -15,41 +15,30 @@ import ast
 
 from pyparsing import \
     CaselessLiteral, Word, delimitedList, Optional, Combine, Group, alphas, \
-    nums, alphanums, Forward, restOfLine, Keyword, sglQuotedString, dblQuotedString, \
-    Literal, ParserElement, infixNotation, oneOf, opAssoc, Regex, MatchFirst
+    nums, alphanums, Forward, restOfLine, Keyword, Literal, ParserElement, infixNotation, opAssoc, Regex, MatchFirst
 
 ParserElement.enablePackrat()
 DEBUG = False
 
-# SELECT = Keyword("select", caseless=True)
-# FROM = Keyword("from", caseless=True)
-# WHERE = Keyword("where", caseless=True)
-# GROUPBY = Keyword("group by", caseless=True)
-# ORDERBY = Keyword("order by", caseless=True)
-# AS = Keyword("as", caseless=True)
-# AND = Keyword("and", caseless=True)
-# OR = Keyword("or", caseless=True)
-# NOT = Keyword("not", caseless=True)
-# IN = Keyword("in", caseless=True)
-
 keywords = ["select", "from", "where", "group by", "order by", "with", "as"]
 
-KNOWN_OPS = {
-    "=": "eq",
-    "!=": "neq",
-    ">": "gt",
-    "<": "lt",
-    ">=": "gte",
-    "<=": "lte",
-    "+": "add",
-    "-": "sub",
-    "*": "mult",
-    "/": "div",
-    "and": "and",
-    "or": "or",
-    "not": "not",
-    "in": "in"
-}
+KNOWN_OPS = [
+    {"op": "*", "name": "mult"},
+    {"op": "/", "name": "div"},
+    {"op": "+", "name": "add"},
+    {"op": "-", "name": "sub"},
+    {"op": "=", "name": "eq"},
+    {"op": "!=", "name": "neq"},
+    {"op": "<>", "name": "neq"},
+    {"op": ">", "name": "gt"},
+    {"op": "<", "name": "lt"},
+    {"op": ">=", "name": "gte"},
+    {"op": "<=", "name": "lte"},
+    {"op": "in", "name": "in"},
+    {"op": "not", "name": "not", "arity": 1},
+    {"op": "and", "name": "and"},
+    {"op": "or", "name": "or"}
+]
 
 locs = locals()
 reserved = []
@@ -57,19 +46,19 @@ for k in keywords:
     name, value = k.upper().replace(" ", ""), Keyword(k, caseless=True)
     locs[name] = value
     reserved.append(value)
-for l in KNOWN_OPS.keys():
-    name, value = l.upper(), CaselessLiteral(l)
-    locs[name] = value
+for o in KNOWN_OPS:
+    k, v = o['op'], o['name']
+    name = k.upper()
+    value = locs[name] = o['literal'] = CaselessLiteral(k)
     reserved.append(value)
 
 RESERVED = MatchFirst(reserved)
 
 
-
 def to_json_operator(instring, tokensStart, retTokens):
     # ARRANGE INTO {op: params} FORMAT
     tok = retTokens[0]
-    op = KNOWN_OPS[tok[1]]
+    op = filter(lambda o: o['op'] == tok[1], KNOWN_OPS)[0]['name']
     return {op: [tok[i * 2] for i in range(int((len(tok) + 1) /2))]}
 
 
@@ -132,15 +121,7 @@ compound = Group(
 )
 expr << Group(infixNotation(
     compound,
-    [
-        (oneOf('* /'), 2, opAssoc.LEFT, to_json_operator),
-        (oneOf('+ -'), 2, opAssoc.LEFT, to_json_operator),
-        (oneOf('= != > >= < <='), 2, opAssoc.LEFT, to_json_operator),
-        (IN, 2, opAssoc.LEFT, to_json_operator),
-        (NOT, 1, opAssoc.RIGHT, to_json_operator),
-        (AND, 2, opAssoc.LEFT, to_json_operator),
-        (OR, 2, opAssoc.LEFT, to_json_operator)
-    ]
+    [(o['literal'], o.get('arity', 2), opAssoc.LEFT, to_json_operator) for o in KNOWN_OPS]
 ).setName("expression"))
 
 # SQL STATEMENT
