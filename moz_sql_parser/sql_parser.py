@@ -74,8 +74,13 @@ def unquote(instring, tokensStart, retTokens):
     val = retTokens[0]
     if val.startswith("'") and val.endswith("'"):
         val = "'"+val[1:-1].replace("''", "\\'")+"'"
+        val = val.replace(".", "\\.")
+    elif val.startswith('"') and val.endswith('"'):
+        val = '"'+val[1:-1].replace('""', '\\"')+'"'
+        val = val.replace(".", "\\.")
 
-    return ast.literal_eval(val)
+    un = ast.literal_eval(val)
+    return un
 
 # NUMBERS
 E = CaselessLiteral("E")
@@ -94,11 +99,12 @@ intNum = Combine(
 
 # SQL STRINGS
 sqlString = Combine(Regex(r"\'(\'\'|\\.|[^'])*\'")).addParseAction(unquote)
+identString = Combine(Regex(r'\"(\"\"|\\.|[^"])*\"')).addParseAction(unquote)
 
 # EXPRESSIONS
 expr = Forward()
 
-ident = (~RESERVED + (delimitedList(Word(alphas, alphanums + "_$") | dblQuotedString, ".", combine=True))).setName("identifier")
+ident = Combine(~RESERVED + (delimitedList(Word(alphas, alphanums + "_$") | identString, ".", combine=True))).setName("identifier")
 primitive = realNum("literal") | intNum("literal") | sglQuotedString("literal") | ident
 selectStmt = Forward()
 compound = Group(
