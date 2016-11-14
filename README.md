@@ -4,7 +4,7 @@ Let's make a SQL parser so we can provide a familiar interface to non-sql datast
 
 ## Problem Statement
 
-SQL is a familiar language used to access databases. Although, each database vendor has it's quirky implementation, the average developer does not know enough SQL to be concerned with those quirks. This familiar core SQL (lowest common denominator, if you will) is useful enough to explore data in a primitive ways. It is hoped that, once programmers have reviewed the datastore with basic SQL queries, and see the value of that data, they will be motivated to use the datastore's native query format.
+SQL is a familiar language used to access databases. Although, each database vendor has its quirky implementation, the average developer does not know enough SQL to be concerned with those quirks. This familiar core SQL (lowest common denominator, if you will) is useful enough to explore data in a primitive ways. It is hoped that, once programmers have reviewed the datastore with basic SQL queries, and see the value of that data, they will be motivated to use the datastore's native query format.
 
 ## Objectives
 

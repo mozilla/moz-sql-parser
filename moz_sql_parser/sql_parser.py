@@ -102,7 +102,6 @@ ident = (~RESERVED + (delimitedList(Word(alphas, alphanums + "_$") | dblQuotedSt
 primitive = realNum("literal") | intNum("literal") | sglQuotedString("literal") | ident
 selectStmt = Forward()
 compound = Group(
-    # (Literal("(") + expr + ")").setDebug(DEBUG) |
     realNum("literal").setName("float").setDebug(DEBUG) |
     intNum("literal").setName("int").setDebug(DEBUG) |
     sqlString("literal").setName("string").setDebug(DEBUG) |
