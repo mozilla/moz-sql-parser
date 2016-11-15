@@ -47,9 +47,8 @@ for k in keywords:
     locs[name] = value
     reserved.append(value)
 for o in KNOWN_OPS:
-    k, v = o['op'], o['name']
-    name = k.upper()
-    value = locs[name] = o['literal'] = CaselessLiteral(k)
+    name = o['op'].upper()
+    value = locs[name] = o['literal'] = CaselessLiteral(o['op'])
     reserved.append(value)
 
 RESERVED = MatchFirst(reserved)
