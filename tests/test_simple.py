@@ -14,6 +14,7 @@ from __future__ import unicode_literals
 from pyLibrary.testing.fuzzytestcase import FuzzyTestCase
 
 from moz_sql_parser import parse
+from moz_sql_parser import sql_parser
 
 
 class TestSimple(FuzzyTestCase):
@@ -104,19 +105,30 @@ class TestSimple(FuzzyTestCase):
     def test_incomplete2(self):
         self.assertRaises("", lambda: parse("SELECT * FROM"))
 
+    def test_where_neq(self):
+        #                         1         2         3         4         5         6
+        #               0123456789012345678901234567890123456789012345678901234567890123456789
+        result = parse("SELECT * FROM dual WHERE a<>'test'")
+        expected = {
+            "select": {"value": "*"},
+            "from": "dual",
+            "where": {"neq": ["a", {"literal": "test"}]}
+        }
+        self.assertEqual(result, expected)
+
     def test_where_in(self):
         result = parse("SELECT a FROM dual WHERE a in ('r', 'g', 'b')")
         expected = {
             "select": {"value": "a"},
             "from": "dual",
-            "where": {"in": {
-                "var": "a",
-                "set": [
+            "where": {"in": [
+                "a",
+                [
                     {"literal": "r"},
                     {"literal": "g"},
                     {"literal": "b"}
                 ]
-            }}
+            ]}
         }
         self.assertEqual(result, expected)
 
@@ -128,22 +140,22 @@ class TestSimple(FuzzyTestCase):
             "select": {"value": "a"},
             "from": "dual",
             "where": {"and": [
-                {"in": {
-                    "var": "a",
-                    "set": [
+                {"in": [
+                    "a",
+                    [
                         {"literal": "r"},
                         {"literal": "g"},
                         {"literal": "b"}
                     ]
-                }},
-                {"in": {
-                    "var": "b",
-                    "set": [
+                ]},
+                {"in": [
+                    "b",
+                    [
                         {"literal": 10},
                         {"literal": 11},
                         {"literal": 12}
                     ]
-                }}
+                ]}
             ]}
         }
         self.assertEqual(result, expected)
@@ -188,3 +200,6 @@ class TestSimple(FuzzyTestCase):
             "orderby": {"value": "a"}
         }
         self.assertEqual(result, expected)
+
+    def test_debug_is_off(self):
+        self.assertFalse(sql_parser.DEBUG, "Turn off debugging")

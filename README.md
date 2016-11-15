@@ -57,7 +57,7 @@ SQL queries are translated to JSON objects: Each clause is assigned to an object
 		"orderby": {"add": ["a", "b"]}
 	}
 		
-Expressions are also objects, but with only one property having the name of the operation, and the value holding (an array of) parameters for that operation. 
+Expressions are also objects, but with only one property: The name of the operation, and the value holding (an array of) parameters for that operation. 
 
 	{op: parameters}
 
