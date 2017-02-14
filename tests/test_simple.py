@@ -11,7 +11,7 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import unicode_literals
 
-from pyLibrary.testing.fuzzytestcase import FuzzyTestCase
+from mo_testing.fuzzytestcase import FuzzyTestCase
 
 from moz_sql_parser import parse
 from moz_sql_parser import sql_parser
