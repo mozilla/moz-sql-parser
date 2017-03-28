@@ -18,7 +18,7 @@ from pyparsing import \
     nums, alphanums, Forward, restOfLine, Keyword, Literal, ParserElement, infixNotation, opAssoc, Regex, MatchFirst
 
 ParserElement.enablePackrat()
-DEBUG = False
+DEBUG = True
 
 keywords = ["select", "from", "where", "group by", "order by", "with", "as"]
 
@@ -35,7 +35,6 @@ KNOWN_OPS = [
     {"op": ">=", "name": "gte"},
     {"op": "<=", "name": "lte"},
     {"op": "in", "name": "in"},
-    {"op": "not", "name": "not", "arity": 1},
     {"op": "and", "name": "and"},
     {"op": "or", "name": "or"}
 ]
@@ -48,7 +47,7 @@ for k in keywords:
     reserved.append(value)
 for o in KNOWN_OPS:
     name = o['op'].upper()
-    value = locs[name] = o['literal'] = CaselessLiteral(o['op'])
+    value = locs[name] = o['literal'] = CaselessLiteral(o['op']).setName(o['op']).setDebug(DEBUG)
     reserved.append(value)
 
 RESERVED = MatchFirst(reserved)
@@ -111,35 +110,49 @@ ident = Combine(~RESERVED + (delimitedList(Word(alphas, alphanums + "_$") | iden
 primitive = realNum("literal") | intNum("literal") | sqlString | ident
 selectStmt = Forward()
 compound = Group(
+    (Literal("-").setResultsValue("neg").setResultsName("op").setDebug(DEBUG) + expr("params")).addParseAction(to_json_call) |
+    (Literal("not").setResultsName("op").setDebug(DEBUG) + expr("params")).addParseAction(to_json_call) |
     realNum("literal").setName("float").setDebug(DEBUG) |
     intNum("literal").setName("int").setDebug(DEBUG) |
     sqlString("literal").setName("string").setDebug(DEBUG) |
     (Literal("(").suppress() + Group(delimitedList(expr)) + Literal(")").suppress()).setDebug(DEBUG) |
     (Word(alphas)("op").setName("function name") + Literal("(") + Group(delimitedList(expr))("params") + ")").addParseAction(to_json_call).setDebug(DEBUG) |
-    ident
+    ident.copy().setName("variable").setDebug(DEBUG)
 )
 expr << Group(infixNotation(
     compound,
-    [(o['literal'], o.get('arity', 2), opAssoc.LEFT, to_json_operator) for o in KNOWN_OPS]
-).setName("expression"))
+    [
+        (
+            o['literal'],
+            2,
+            opAssoc.LEFT,
+            to_json_operator
+        )
+        for o in KNOWN_OPS
+    ]
+).setName("expression").setDebug(DEBUG))
 
 # SQL STATEMENT
 column = Group(
-    Group(expr).setName("expression")("value") + AS + ident.setName("column name")("name").setDebug(DEBUG) |
-    Group(expr).setName("expression")("value") + ident.setName("column name")("name").setDebug(DEBUG) |
-    Group(expr).setName("expression")("value").setDebug(DEBUG) |
+    Group(expr).setName("expression1")("value").setDebug(DEBUG) + Optional(Optional(AS) + ident.copy().setName("column_name1")("name").setDebug(DEBUG)) |
     Literal('*')("value").setDebug(DEBUG)
 ).setName("column")
-tableName = ident.setName("table name")
+
+
+tableName = ident("value").setName("table_name1").setDebug(DEBUG) + Optional(AS) + ident("name").setName("table_alias1").setDebug(DEBUG) | \
+            ident.setName("table_name2").setDebug(DEBUG)
 
 # define SQL tokens
 selectStmt << (
-    SELECT.suppress() + delimitedList(column)("select") +
-    FROM.suppress() + delimitedList(tableName)("from") +
-    Optional(WHERE.suppress() + Group(expr).setName("expression"))("where") +
-    Optional(GROUPBY.suppress() + Group(delimitedList(column)).setName("columns"))("groupby") +
-    Optional(ORDERBY.suppress() + Group(delimitedList(column)).setName("columns"))("orderby")
+    SELECT.suppress().setDebug(DEBUG) + delimitedList(column)("select") +
+    Optional(
+        FROM.suppress().setDebug(DEBUG) + delimitedList(tableName)("from") +
+        Optional(WHERE.suppress().setDebug(DEBUG) + Group(expr).setName("expression"))("where") +
+        Optional(GROUPBY.suppress().setDebug(DEBUG) + Group(delimitedList(column)).setName("columns"))("groupby") +
+        Optional(ORDERBY.suppress().setDebug(DEBUG) + Group(delimitedList(column)).setName("columns"))("orderby")
+    )
 )
+selectStmt
 
 SQLParser = selectStmt
 

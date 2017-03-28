@@ -635,67 +635,99 @@ class TestResources(FuzzyTestCase):
     def test_100(self):
         sql = "SELECT * FROM test1 WHERE f1<0"
         result = parse(sql)
-        expected = "error"
-        self.assertEqual(result, expected)
-
-    def test_101(self):
-        sql = "PRAGMA empty_result_callbacks=on"
-        result = parse(sql)
-        expected = "error"
-        self.assertEqual(result, expected)
-
-    def test_102(self):
-        sql = "SELECT * FROM test1 WHERE f1<0"
-        result = parse(sql)
-        expected = "error"
+        expected = {
+            "from": "test1",
+            "select": {"value": "*"},
+            "where": {"lt": ["f1", {"literal": 0}]}
+        }
         self.assertEqual(result, expected)
 
     def test_103(self):
         sql = "SELECT * FROM test1 WHERE f1<(select count(*) from test2)"
         result = parse(sql)
-        expected = "error"
+        expected = {
+            "from": "test1",
+            "select": {"value": "*"},
+            "where": {"lt": {"f1", {
+                "from": "test2",
+                "select": {"value": {"count": "*"}}
+            }}}
+        }
         self.assertEqual(result, expected)
 
     def test_104(self):
         sql = "SELECT * FROM test1 ORDER BY f1"
         result = parse(sql)
-        expected = "error"
+        expected = {
+            "from": "test1",
+            "select": {"value": "*"},
+            "orderby": {"value": "f1"}
+        }
         self.assertEqual(result, expected)
 
     def test_105(self):
         sql = "SELECT * FROM test1 WHERE f1<0 ORDER BY f1"
         result = parse(sql)
-        expected = "error"
+        expected = {
+            "from": "test1",
+            "select": {"value": "*"},
+            "where": {"lt": ["f1", {"literal": 0}]},
+            "orderby": {"value": "f1"}
+        }
         self.assertEqual(result, expected)
 
     def test_106(self):
         sql = "SELECT f1 AS x FROM test1 ORDER BY x"
         result = parse(sql)
-        expected = "error"
+        expected = {
+            "from": "test1",
+            "select": {"value": "f1", "name": "x"},
+            "orderby": {"value": "x"}
+        }
         self.assertEqual(result, expected)
 
     def test_107(self):
+        #      0123456789012345678901234567890123456789
         sql = "SELECT f1 AS x FROM test1 ORDER BY -x"
         result = parse(sql)
-        expected = "error"
+        expected = {
+            "from": "test1",
+            "select": {"value": "f1", "name": "x"},
+            "orderby": {"value": {"neg": "x"}}
+        }
         self.assertEqual(result, expected)
 
     def test_108(self):
         sql = "SELECT f1-23 AS x FROM test1 ORDER BY abs(x)"
         result = parse(sql)
-        expected = "error"
+        expected = {
+            "from": "test1",
+            "select": {"value": {"sub": ["f1", {"literal": 23}]}, "name": "x"},
+            "orderby": {"value": {"abs": "x"}}
+        }
         self.assertEqual(result, expected)
 
     def test_109(self):
         sql = "SELECT f1-23 AS x FROM test1 ORDER BY -abs(x)"
         result = parse(sql)
-        expected = "error"
+        expected = {
+            "from": "test1",
+            "select": {"value": {"sub": ["f1", {"literal": 23}]}, "name": "x"},
+            "orderby": {"value": {"neg":{"abs": "x"}}}
+        }
         self.assertEqual(result, expected)
 
     def test_110(self):
         sql = "SELECT f1-22 AS x, f2-22 as y FROM test1"
         result = parse(sql)
-        expected = "error"
+        expected = {
+            "from": "test1",
+            "select": [
+                {"value": {"sub": ["f1", {"literal": 23}]}, "name": "x"},
+                {"value": {"sub": ["f2", {"literal": 23}]}, "name": "x"},
+            ],
+            "orderby": {"value": {"neg":{"abs": "x"}}}
+        }
         self.assertEqual(result, expected)
 
     def test_111(self):
@@ -713,19 +745,28 @@ class TestResources(FuzzyTestCase):
     def test_113(self):
         sql = "SELECT * FROM t3, t4;"
         result = parse(sql)
-        expected = "error"
+        expected = {
+            "from": ["t3", "t4"],
+            "select": {"value": "*"}
+        }
         self.assertEqual(result, expected)
 
     def test_114(self):
         sql = "SELECT t3.*, t4.b FROM t3, t4;"
         result = parse(sql)
-        expected = "error"
+        expected = {
+            "from":["t3", "t4"],
+            "select": [{"value": "t3.*"}, {"value": "t4.b"}]
+        }
         self.assertEqual(result, expected)
 
     def test_115(self):
         sql = "SELECT \"t3\".*, t4.b FROM t3, t4;"
         result = parse(sql)
-        expected = "error"
+        expected = {
+            "from":["t3", "t4"],
+            "select": [{"value": "t3.*"}, {"value": "t4.b"}]
+        }
         self.assertEqual(result, expected)
 
     def test_116(self):
@@ -749,7 +790,13 @@ class TestResources(FuzzyTestCase):
     def test_119(self):
         sql = "SELECT 3, 4 UNION SELECT * FROM t3;"
         result = parse(sql)
-        expected = "error"
+        expected = {"union":[
+            {"select": [{"value": 3}, {"value": 4}]},
+            {
+                "from": "t3",
+                "select": "*"
+            }
+        ]}
         self.assertEqual(result, expected)
 
     def test_120(self):
@@ -761,37 +808,38 @@ class TestResources(FuzzyTestCase):
     def test_121(self):
         sql = "SELECT * FROM t3 WHERE a=(SELECT 2);"
         result = parse(sql)
-        expected = "error"
-        self.assertEqual(result, expected)
-
-    def test_122(self):
-        sql = "BEGIN;\ncreate TABLE abc(a, b, c, PRIMARY KEY(a, b));\nINSERT INTO abc VALUES(1, 1, 1);"
-        result = parse(sql)
-        expected = "error"
-        self.assertEqual(result, expected)
-
-    def test_123(self):
-        sql = "INSERT INTO abc SELECT a+(select max(a) FROM abc),\nb+(select max(a) FROM abc), c+(select max(a) FROM abc) FROM abc;"
-        result = parse(sql)
-        expected = "error"
-        self.assertEqual(result, expected)
-
-    def test_124(self):
-        sql = "COMMIT"
-        result = parse(sql)
-        expected = "error"
+        expected = {
+            "from": "t3",
+            "select": {"value": "*"},
+            "where": {"eq": ["a", {"select": 2}]}
+        }
         self.assertEqual(result, expected)
 
     def test_125(self):
         sql = "SELECT count(\n(SELECT a FROM abc WHERE a = NULL AND b >= upper.c)\n) FROM abc AS upper;"
         result = parse(sql)
-        expected = "error"
+        expected = {
+            "from": {"value": "abc", "name": "upper"},
+            "select": {"value": {"count": {
+                "from": "abc",
+                "select": {"value": "a"},
+                "where": {"and": [
+                    {"eq": ["a", "NULL"]},
+                    {"gte": ["b", "upper.c"]}
+                ]}
+            }}}
+
+        }
         self.assertEqual(result, expected)
 
     def test_126(self):
         sql = "SELECT name FROM sqlite_master WHERE type = 'table'"
         result = parse(sql)
-        expected = "error"
+        expected = {
+            "from":"sqlite_master",
+            "select": {"value":"name"},
+            "where": {"eq": ["type", {"literal": "table"}]}
+        }
         self.assertEqual(result, expected)
 
     def test_127(self):
