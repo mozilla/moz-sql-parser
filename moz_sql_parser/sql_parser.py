@@ -20,23 +20,24 @@ from pyparsing import \
 ParserElement.enablePackrat()
 DEBUG = True
 
-keywords = ["select", "from", "where", "group by", "order by", "with", "as"]
+keywords = ["select", "from", "where", "group by", "order by", "with", "as", "desc"]
 
 KNOWN_OPS = [
-    {"op": "*", "name": "mult"},
-    {"op": "/", "name": "div"},
-    {"op": "+", "name": "add"},
-    {"op": "-", "name": "sub"},
-    {"op": "=", "name": "eq"},
-    {"op": "!=", "name": "neq"},
-    {"op": "<>", "name": "neq"},
-    {"op": ">", "name": "gt"},
-    {"op": "<", "name": "lt"},
-    {"op": ">=", "name": "gte"},
-    {"op": "<=", "name": "lte"},
-    {"op": "in", "name": "in"},
-    {"op": "and", "name": "and"},
-    {"op": "or", "name": "or"}
+    {"op": "*", "name": "mult", "type": Literal},
+    {"op": "/", "name": "div", "type": Literal},
+    {"op": "+", "name": "add", "type": Literal},
+    {"op": "-", "name": "sub", "type": Literal},
+    {"op": "=", "name": "eq", "type": Literal},
+    {"op": "==", "name": "eq", "type": Literal},
+    {"op": "!=", "name": "neq", "type": Literal},
+    {"op": "<>", "name": "neq", "type": Literal},
+    {"op": ">", "name": "gt", "type": Literal},
+    {"op": "<", "name": "lt", "type": Literal},
+    {"op": ">=", "name": "gte", "type": Literal},
+    {"op": "<=", "name": "lte", "type": Literal},
+    {"op": "in", "name": "in", "type": Keyword},
+    {"op": "and", "name": "and", "type": Keyword},
+    {"op": "or", "name": "or", "type": Keyword}
 ]
 
 locs = locals()
@@ -47,7 +48,7 @@ for k in keywords:
     reserved.append(value)
 for o in KNOWN_OPS:
     name = o['op'].upper()
-    value = locs[name] = o['literal'] = CaselessLiteral(o['op']).setName(o['op']).setDebug(DEBUG)
+    value = locs[name] = o['literal'] = o['type'](o['op']).setName(o['op'])
     reserved.append(value)
 
 RESERVED = MatchFirst(reserved)
@@ -112,8 +113,8 @@ selectStmt = Forward()
 compound = Group(
     (Literal("-").setResultsValue("neg").setResultsName("op").setDebug(DEBUG) + expr("params")).addParseAction(to_json_call) |
     (Literal("not").setResultsName("op").setDebug(DEBUG) + expr("params")).addParseAction(to_json_call) |
-    realNum("literal").setName("float").setDebug(DEBUG) |
-    intNum("literal").setName("int").setDebug(DEBUG) |
+    realNum.setName("float").setDebug(DEBUG) |
+    intNum.setName("int").setDebug(DEBUG) |
     sqlString("literal").setName("string").setDebug(DEBUG) |
     (Literal("(").suppress() + Group(delimitedList(expr)) + Literal(")").suppress()).setDebug(DEBUG) |
     (Word(alphas)("op").setName("function name") + Literal("(") + Group(delimitedList(expr))("params") + ")").addParseAction(to_json_call).setDebug(DEBUG) |
@@ -133,7 +134,7 @@ expr << Group(infixNotation(
 ).setName("expression").setDebug(DEBUG))
 
 # SQL STATEMENT
-column = Group(
+selectColumn = Group(
     Group(expr).setName("expression1")("value").setDebug(DEBUG) + Optional(Optional(AS) + ident.copy().setName("column_name1")("name").setDebug(DEBUG)) |
     Literal('*')("value").setDebug(DEBUG)
 ).setName("column")
@@ -142,14 +143,17 @@ column = Group(
 tableName = ident("value").setName("table_name1").setDebug(DEBUG) + Optional(AS) + ident("name").setName("table_alias1").setDebug(DEBUG) | \
             ident.setName("table_name2").setDebug(DEBUG)
 
+sortColumn = expr("value").setName("sort1").setDebug(DEBUG) + Optional(DESC("sort")) | \
+             expr("value").setName("sort2").setDebug(DEBUG)
+
 # define SQL tokens
 selectStmt << (
-    SELECT.suppress().setDebug(DEBUG) + delimitedList(column)("select") +
+    SELECT.suppress().setDebug(DEBUG) + delimitedList(selectColumn)("select") +
     Optional(
         FROM.suppress().setDebug(DEBUG) + delimitedList(tableName)("from") +
         Optional(WHERE.suppress().setDebug(DEBUG) + Group(expr).setName("expression"))("where") +
-        Optional(GROUPBY.suppress().setDebug(DEBUG) + Group(delimitedList(column)).setName("columns"))("groupby") +
-        Optional(ORDERBY.suppress().setDebug(DEBUG) + Group(delimitedList(column)).setName("columns"))("orderby")
+        Optional(GROUPBY.suppress().setDebug(DEBUG) + Group(delimitedList(selectColumn)).setName("columns"))("groupby") +
+        Optional(ORDERBY.suppress().setDebug(DEBUG) + Group(delimitedList(sortColumn)).setName("columns"))("orderby")
     )
 )
 selectStmt

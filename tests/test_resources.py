@@ -185,451 +185,663 @@ class TestResources(FuzzyTestCase):
     def test_25(self):
         sql = "SELECT COUNT(*) FROM test1"
         result = parse(sql)
-        expected = "error"
+        expected = {
+            "from": "t3",
+            "select": {"value": {"count":"*"}}
+        }
         self.assertEqual(result, expected)
 
     def test_26(self):
         sql = "SELECT COUNT(*)+1 FROM test1"
         result = parse(sql)
-        expected = "error"
+        expected = {
+            "from": "t3",
+            "select": {"value": {"add": [{"count": "*"}, 1]}}
+        }
         self.assertEqual(result, expected)
 
     def test_27(self):
         sql = "SELECT count(*),count(a),count(b) FROM t3"
         result = parse(sql)
-        expected = "error"
+        expected = {
+            "from": "t3",
+            "select":[
+                {"value": {"count": "*"}},
+                {"value": {"count": "a"}},
+                {"value": {"count": "b"}}
+            ]
+        }
         self.assertEqual(result, expected)
 
     def test_28(self):
         sql = "SELECT count(*),count(a),count(b) FROM t4"
         result = parse(sql)
-        expected = "error"
+        expected = {
+            "from": "t4",
+            "select":[
+                {"value": {"count": "*"}},
+                {"value": {"count": "a"}},
+                {"value": {"count": "b"}}
+            ]
+        }
         self.assertEqual(result, expected)
 
     def test_29(self):
         sql = "SELECT count(*),count(a),count(b) FROM t4 WHERE b=5"
         result = parse(sql)
-        expected = "error"
+        expected = {
+            "from": "t4",
+            "select":[
+                {"value": {"count": "*"}},
+                {"value": {"count": "a"}},
+                {"value": {"count": "b"}}
+            ],
+            "where": {"eq": ["b", 5]}
+        }
         self.assertEqual(result, expected)
 
     def test_30(self):
         sql = "SELECT min(*) FROM test1"
         result = parse(sql)
-        expected = "error"
+        expected = {
+            "from": "test1",
+            "select": {"value": {"min":"*"}}
+        }
         self.assertEqual(result, expected)
 
     def test_31(self):
         sql = "SELECT Min(f1) FROM test1"
         result = parse(sql)
-        expected = "error"
+        expected = {
+            "from": "test1",
+            "select": {"value": {"min": "f1"}}
+        }
         self.assertEqual(result, expected)
 
     def test_32(self):
         sql = "SELECT MIN(f1,f2) FROM test1"
         result = parse(sql)
-        expected = "error"
+        expected = {
+            "from": "test1",
+            "select": {"value": {"min": ["f1", "f2"]}}
+        }
         self.assertEqual(result, expected)
 
     def test_33(self):
         sql = "SELECT coalesce(min(a),'xyzzy') FROM t3"
         result = parse(sql)
-        expected = "error"
+        expected = {
+            "from": "t3",
+            "select": {"value": {"coalesce": [{"min": "a"}, {"literal": "xyzzy"}]}}
+        }
         self.assertEqual(result, expected)
 
     def test_34(self):
         sql = "SELECT min(coalesce(a,'xyzzy')) FROM t3"
         result = parse(sql)
-        expected = "error"
+        expected = {
+            "from": "t3",
+            "select": {"value": {"min": {"coalesce": ["a", {"literal": "xyzzy"}]}}}
+        }
         self.assertEqual(result, expected)
 
     def test_35(self):
         sql = "SELECT min(b), min(b) FROM t4"
         result = parse(sql)
-        expected = "error"
+        expected = {
+            "from": "t4",
+            "select": [{"value": {"min": "b"}}, {"value": {"min": "b"}}]
+        }
         self.assertEqual(result, expected)
 
     def test_36(self):
         sql = "SELECT MAX(*) FROM test1"
         result = parse(sql)
-        expected = "error"
+        expected = {
+            "from": "test1",
+            "select": {"value": {"max": "*"}}
+        }
         self.assertEqual(result, expected)
 
     def test_37(self):
         sql = "SELECT Max(f1) FROM test1"
         result = parse(sql)
-        expected = "error"
+        expected = {
+            "from": "test1",
+            "select": {"value": {"max": "f1"}}
+        }
         self.assertEqual(result, expected)
 
     def test_38(self):
         sql = "SELECT max(f1,f2) FROM test1"
         result = parse(sql)
-        expected = "error"
+        expected = {
+            "from": "test1",
+            "select": {"value": {"max": ["f1", "f2"]}}
+        }
         self.assertEqual(result, expected)
 
     def test_39(self):
         sql = "SELECT MAX(f1,f2)+1 FROM test1"
         result = parse(sql)
-        expected = "error"
+        expected = {
+            "from": "test1",
+            "select": {"value": {"add": [{"max": ["f1", "f2"]}, 1]}}
+        }
         self.assertEqual(result, expected)
 
     def test_40(self):
         sql = "SELECT MAX(f1)+1 FROM test1"
         result = parse(sql)
-        expected = "error"
+        expected = {
+            "from": "test1",
+            "select": {"value": {"add": [{"max": "f1"}, 1]}}
+        }
         self.assertEqual(result, expected)
 
     def test_41(self):
         sql = "SELECT coalesce(max(a),'xyzzy') FROM t3"
         result = parse(sql)
-        expected = "error"
+        expected = {
+            "from": "test1",
+            "select": {"value": {"coalesce": [{"max": "a"}, {"literal": "xyzzy"}]}}
+        }
         self.assertEqual(result, expected)
 
     def test_42(self):
         sql = "SELECT max(coalesce(a,'xyzzy')) FROM t3"
         result = parse(sql)
-        expected = "error"
+        expected = {
+            "from": "t3",
+            "select": {"value": {"max": {"coalesce": ["a", {"literal": "xyzzy"}]}}}
+        }
         self.assertEqual(result, expected)
 
     def test_43(self):
         sql = "SELECT SUM(*) FROM test1"
         result = parse(sql)
-        expected = "error"
+        expected = {
+            "from": "t3",
+            "select": {"value": {"sum":"*"}}
+        }
         self.assertEqual(result, expected)
 
     def test_44(self):
         sql = "SELECT Sum(f1) FROM test1"
         result = parse(sql)
-        expected = "error"
+        expected = {
+            "from": "t3",
+            "select": {"value": {"sum":"f1"}}
+        }
         self.assertEqual(result, expected)
 
     def test_45(self):
         sql = "SELECT sum(f1,f2) FROM test1"
         result = parse(sql)
-        expected = "error"
+        expected = {
+            "from": "test1",
+            "select": {"value": {"sum": ["f1", "f2"]}}
+        }
         self.assertEqual(result, expected)
 
     def test_46(self):
         sql = "SELECT SUM(f1)+1 FROM test1"
         result = parse(sql)
-        expected = "error"
+        expected = {
+            "from": "test1",
+            "select": {"value": {"sum": [{"sum": "f1"}, 1]}}
+        }
         self.assertEqual(result, expected)
 
     def test_47(self):
         sql = "SELECT sum(a) FROM t3"
         result = parse(sql)
-        expected = "error"
+        expected = {
+            "from": "test1",
+            "select": {"value": {"sum": "a"}}
+        }
         self.assertEqual(result, expected)
 
     def test_48(self):
         sql = "SELECT XYZZY(f1) FROM test1"
         result = parse(sql)
-        expected = "error"
+        expected = {
+            "from": "test1",
+            "select": {"value": {"xyzzy": "f1"}}
+        }
         self.assertEqual(result, expected)
 
     def test_49(self):
         sql = "SELECT SUM(min(f1,f2)) FROM test1"
         result = parse(sql)
-        expected = "error"
+        expected = {
+            "from": "test1",
+            "select": {"value": {"sum": {"min": ["f1", "f2"]}}}
+        }
         self.assertEqual(result, expected)
 
     def test_50(self):
         sql = "SELECT SUM(min(f1)) FROM test1"
         result = parse(sql)
-        expected = "error"
-        self.assertEqual(result, expected)
-
-    def test_51(self):
-        sql = "CREATE TABLE tkt2526(a,b,c PRIMARY KEY);\nINSERT INTO tkt2526 VALUES('x','y',NULL);\nINSERT INTO tkt2526 VALUES('x','z',NULL);"
-        result = parse(sql)
-        expected = "error"
+        expected = {
+            "from": "test1",
+            "select": {"value": {"sum": {"min": "f1"}}}
+        }
         self.assertEqual(result, expected)
 
     def test_52(self):
         sql = "SELECT f1 FROM test1 WHERE f1<11"
         result = parse(sql)
-        expected = "error"
+        expected = {
+            "from": "test1",
+            "select": {"value": "f1"},
+            "where": {"lt": ["f1", 11]}
+        }
         self.assertEqual(result, expected)
 
     def test_53(self):
         sql = "SELECT f1 FROM test1 WHERE f1<=11"
         result = parse(sql)
-        expected = "error"
+        expected = {
+            "from": "test1",
+            "select": {"value": "f1"},
+            "where": {"lte": ["f1", 11]}
+        }
         self.assertEqual(result, expected)
 
     def test_54(self):
         sql = "SELECT f1 FROM test1 WHERE f1=11"
         result = parse(sql)
-        expected = "error"
+        expected = {
+            "from": "test1",
+            "select": {"value": "f1"},
+            "where": {"eq": ["f1", 11]}
+        }
         self.assertEqual(result, expected)
 
     def test_55(self):
         sql = "SELECT f1 FROM test1 WHERE f1>=11"
         result = parse(sql)
-        expected = "error"
+        expected = {
+            "from": "test1",
+            "select": {"value": "f1"},
+            "where": {"gte": ["f1", 11]}
+        }
         self.assertEqual(result, expected)
 
     def test_56(self):
         sql = "SELECT f1 FROM test1 WHERE f1>11"
         result = parse(sql)
-        expected = "error"
+        expected = {
+            "from": "test1",
+            "select": {"value": "f1"},
+            "where": {"gt": ["f1", 11]}
+        }
         self.assertEqual(result, expected)
 
     def test_57(self):
         sql = "SELECT f1 FROM test1 WHERE f1!=11"
         result = parse(sql)
-        expected = "error"
+        expected = {
+            "from": "test1",
+            "select": {"value": "f1"},
+            "where": {"ne": ["f1", 11]}
+        }
         self.assertEqual(result, expected)
 
     def test_58(self):
         sql = "SELECT f1 FROM test1 WHERE min(f1,f2)!=11"
         result = parse(sql)
-        expected = "error"
+        expected = {
+            "from": "test1",
+            "select": {"value": "f1"},
+            "where": {"ne": [{"min": ["f1", "f2"]}, 11]}
+        }
         self.assertEqual(result, expected)
 
     def test_59(self):
         sql = "SELECT f1 FROM test1 WHERE max(f1,f2)!=11"
         result = parse(sql)
-        expected = "error"
+        expected = {
+            "from": "test1",
+            "select": {"value": "f1"},
+            "where": {"ne": [{"max": ["f1", "f2"]}, 11]}
+        }
         self.assertEqual(result, expected)
 
     def test_60(self):
         sql = "SELECT f1 FROM test1 WHERE count(f1,f2)!=11"
         result = parse(sql)
-        expected = "error"
+        expected = {
+            "from": "test1",
+            "select": {"value": "f1"},
+            "where": {"ne": [{"count": ["f1", "f2"]}, 11]}
+        }
         self.assertEqual(result, expected)
 
     def test_61(self):
         sql = "SELECT f1 FROM test1 ORDER BY f1"
         result = parse(sql)
-        expected = "error"
+        expected = {
+            "from": "test1",
+            "select": {"value": "f1"},
+            "orderby": {"value": "f1"}
+        }
         self.assertEqual(result, expected)
 
     def test_62(self):
         sql = "SELECT f1 FROM test1 ORDER BY -f1"
         result = parse(sql)
-        expected = "error"
+        expected = {
+            "from": "test1",
+            "select": {"value": "f1"},
+            "orderby": {"value": {"neg": "f1"}}
+        }
         self.assertEqual(result, expected)
 
     def test_63(self):
         sql = "SELECT f1 FROM test1 ORDER BY min(f1,f2)"
         result = parse(sql)
-        expected = "error"
+        expected = {
+            "from": "test1",
+            "select": {"value": "f1"},
+            "orderby": {"value": {"min": ["f1", "f2"]}}
+        }
         self.assertEqual(result, expected)
 
     def test_64(self):
         sql = "SELECT f1 FROM test1 ORDER BY min(f1)"
         result = parse(sql)
-        expected = "error"
+        expected = {
+            "from": "test1",
+            "select": {"value": "f1"},
+            "orderby": {"value": {"min": "f1"}}
+        }
         self.assertEqual(result, expected)
 
     def test_65(self):
         sql = "SELECT f1 FROM test1 ORDER BY 8.4"
         result = parse(sql)
-        expected = "error"
+        expected = {
+            "from": "test1",
+            "select": {"value": "f1"},
+            "orderby": {"value": 8.4}
+        }
         self.assertEqual(result, expected)
 
     def test_66(self):
         sql = "SELECT f1 FROM test1 ORDER BY '8.4'"
         result = parse(sql)
-        expected = "error"
+        expected = {
+            "from": "test1",
+            "select": {"value": "f1"},
+            "orderby": {"value": {"literal": "8.4"}}
+        }
         self.assertEqual(result, expected)
 
     def test_67(self):
-        sql = "CREATE TABLE t5(a,b);\nINSERT INTO t5 VALUES(1,10);\nINSERT INTO t5 VALUES(2,9);\nSELECT * FROM t5 ORDER BY 1;"
+        sql = "SELECT * FROM t5 ORDER BY 1"
         result = parse(sql)
-        expected = "error"
+        expected = {
+            "from": "t5",
+            "select": {"value": "*"},
+            "orderby": {"value": 1}
+        }
         self.assertEqual(result, expected)
 
     def test_68(self):
-        sql = "SELECT * FROM t5 ORDER BY 2;"
+        sql = "SELECT * FROM t5 ORDER BY 2"
         result = parse(sql)
-        expected = "error"
+        expected = {
+            "from": "t5",
+            "select": {"value": "*"},
+            "orderby": {"value": 2}
+        }
         self.assertEqual(result, expected)
 
     def test_69(self):
-        sql = "SELECT * FROM t5 ORDER BY +2;"
+        sql = "SELECT * FROM t5 ORDER BY +2"
         result = parse(sql)
-        expected = "error"
+        expected = {
+            "from": "t5",
+            "select": {"value": "*"},
+            "orderby": {"value": 2}
+        }
         self.assertEqual(result, expected)
 
     def test_70(self):
-        sql = "INSERT INTO t5 VALUES(3,10);\nSELECT * FROM t5 ORDER BY 2, 1 DESC;"
+        sql = "SELECT * FROM t5 ORDER BY 2, 1 DESC"
         result = parse(sql)
-        expected = "error"
+        expected = {
+            "from": "t5",
+            "select": {"value": "*"},
+            "orderby": [{"value": 2}, {"value": 1, "sort": "desc"}]
+        }
         self.assertEqual(result, expected)
 
     def test_71(self):
-        sql = "SELECT * FROM t5 ORDER BY 1 DESC, b;"
+        sql = "SELECT * FROM t5 ORDER BY 1 DESC, b"
         result = parse(sql)
-        expected = "error"
+        expected = {
+            "from": "t5",
+            "select": {"value": "*"},
+            "orderby": [{"value": 1, "sort": "desc"}, {"value": "b"}]
+        }
         self.assertEqual(result, expected)
 
     def test_72(self):
-        sql = "SELECT * FROM t5 ORDER BY b DESC, 1;"
+        sql = "SELECT * FROM t5 ORDER BY b DESC, 1"
         result = parse(sql)
-        expected = "error"
+        expected = {
+            "from": "t5",
+            "select": {"value": "*"},
+            "orderby": [{"value": "b", "sort": "desc"}, {"value": 1}]
+        }
         self.assertEqual(result, expected)
 
     def test_73(self):
         sql = "SELECT max(f1) FROM test1 ORDER BY f2"
         result = parse(sql)
-        expected = "error"
-        self.assertEqual(result, expected)
-
-    def test_74(self):
-        sql = "CREATE TABLE test2(t1 text, t2 text)"
-        result = parse(sql)
-        expected = "error"
-        self.assertEqual(result, expected)
-
-    def test_75(self):
-        sql = "INSERT INTO test2 VALUES('abc','xyz')"
-        result = parse(sql)
-        expected = "error"
-        self.assertEqual(result, expected)
-
-    def test_76(self):
-        sql = "PRAGMA full_column_names=on"
-        result = parse(sql)
-        expected = "error"
-        self.assertEqual(result, expected)
-
-    def test_77(self):
-        sql = "PRAGMA full_column_names=off"
-        result = parse(sql)
-        expected = "error"
+        expected = {
+            "from": "t5",
+            "select": {"value": {"max": "f1"}},
+            "orderby": {"value": "f2"}
+        }
         self.assertEqual(result, expected)
 
     def test_78(self):
         sql = "SELECT A.f1, B.f1 FROM test1 as A, test1 as B\nORDER BY A.f1, B.f1"
         result = parse(sql)
-        expected = "error"
-        self.assertEqual(result, expected)
-
-    def test_79(self):
-        sql = "PRAGMA short_column_names=OFF;\nPRAGMA full_column_names=OFF;"
-        result = parse(sql)
-        expected = "error"
-        self.assertEqual(result, expected)
-
-    def test_80(self):
-        sql = "PRAGMA short_column_names=OFF;\nPRAGMA full_column_names=ON;"
-        result = parse(sql)
-        expected = "error"
-        self.assertEqual(result, expected)
-
-    def test_81(self):
-        sql = "PRAGMA short_column_names=OFF;\nPRAGMA full_column_names=ON;"
-        result = parse(sql)
-        expected = "error"
-        self.assertEqual(result, expected)
-
-    def test_82(self):
-        sql = "PRAGMA short_column_names=ON;\nPRAGMA full_column_names=ON;"
-        result = parse(sql)
-        expected = "error"
-        self.assertEqual(result, expected)
-
-    def test_83(self):
-        sql = "PRAGMA short_column_names=ON;\nPRAGMA full_column_names=OFF;"
-        result = parse(sql)
-        expected = "error"
-        self.assertEqual(result, expected)
-
-    def test_84(self):
-        sql = "PRAGMA short_column_names=OFF;\nPRAGMA full_column_names=ON;"
-        result = parse(sql)
-        expected = "error"
-        self.assertEqual(result, expected)
-
-    def test_85(self):
-        sql = "PRAGMA short_column_names=ON;\nPRAGMA full_column_names=OFF;"
-        result = parse(sql)
-        expected = "error"
+        expected = {
+            "from": [{"value": "test1", "name": "A"}, {"value": "test1", "name": "B"}],
+            "select": [{"value": "A.f1"}, {"value": "B.f1"}],
+            "orderby": [{"value": "A.f1"}, {"value": "B.f1"}]
+        }
         self.assertEqual(result, expected)
 
     def test_86(self):
-        sql = "CREATE TABLE t6(a TEXT, b TEXT);\nINSERT INTO t6 VALUES('a','0');\nINSERT INTO t6 VALUES('b','1');\nINSERT INTO t6 VALUES('c','2');\nINSERT INTO t6 VALUES('d','3');\nSELECT a FROM t6 WHERE b IN\n(SELECT b FROM t6 WHERE a<='b' UNION SELECT '3' AS x\nORDER BY 1 LIMIT 1)"
+        sql = "SELECT a FROM t6 WHERE b IN\n(SELECT b FROM t6 WHERE a<='b' UNION SELECT '3' AS x\nORDER BY 1 LIMIT 1)"
         result = parse(sql)
-        expected = "error"
+        expected = {
+            "from": "t6",
+            "select": {"value": "a"},
+            "where": {"in": ["b", {
+                "from": {"union": [
+                    {
+                        "from": "t6",
+                        "select": {"value": "b"},
+                        "where": {"lte": ["a", {"literal": "b"}]},
+                    },
+                    {
+                        "select": {"value": {"literal": "3"}, "name": "x"}
+                    }
+                ]},
+                "orderby": 1,
+                "limit": 1
+            }]}
+        }
         self.assertEqual(result, expected)
 
     def test_87(self):
         sql = "SELECT a FROM t6 WHERE b IN\n(SELECT b FROM t6 WHERE a<='b' UNION SELECT '3' AS x\nORDER BY 1 DESC LIMIT 1)"
         result = parse(sql)
-        expected = "error"
+        expected = {
+            "from": "t6",
+            "select": {"value": "a"},
+            "where": {"in": ["b", {
+                "from": {"union": [
+                    {
+                        "from": "t6",
+                        "select": {"value": "b"},
+                        "where": {"lte": ["a", {"literal": "b"}]},
+                    },
+                    {
+                        "select": {"value": {"literal": "3"}, "name": "x"}
+                    }
+                ]},
+                "orderby": {"value": 1, "sort": "desc"},
+                "limit": 1
+            }]}
+        }
         self.assertEqual(result, expected)
 
     def test_88(self):
-        sql = "SELECT a FROM t6 WHERE b IN\n(SELECT b FROM t6 WHERE a<='b' UNION SELECT '3' AS x\nORDER BY b LIMIT 2)\nORDER BY a;"
+        sql = "SELECT a FROM t6 WHERE b IN\n(SELECT b FROM t6 WHERE a<='b' UNION SELECT '3' AS x\nORDER BY b LIMIT 2)\nORDER BY a"
         result = parse(sql)
-        expected = "error"
+        expected = {
+            "from": "t6",
+            "select": {"value": "a"},
+            "where": {"in": ["b", {
+                "from": {"union": [
+                    {
+                        "from": "t6",
+                        "select": {"value": "b"},
+                        "where": {"lte": ["a", {"literal": "b"}]},
+                    },
+                    {
+                        "select": {"value": {"literal": "3"}, "name": "x"}
+                    }
+                ]},
+                "orderby": {"value": "b"},
+                "limit": 2
+            }]},
+            "orderby": "a"
+        }
         self.assertEqual(result, expected)
 
     def test_89(self):
-        sql = "SELECT a FROM t6 WHERE b IN\n(SELECT b FROM t6 WHERE a<='b' UNION SELECT '3' AS x\nORDER BY x DESC LIMIT 2)\nORDER BY a;"
+        sql = "SELECT a FROM t6 WHERE b IN\n(SELECT b FROM t6 WHERE a<='b' UNION SELECT '3' AS x\nORDER BY x DESC LIMIT 2)\nORDER BY a"
         result = parse(sql)
-        expected = "error"
+        expected = {
+            "from": "t6",
+            "select": {"value": "a"},
+            "where": {"in": ["b", {
+                "from": {"union": [
+                    {
+                        "from": "t6",
+                        "select": {"value": "b"},
+                        "where": {"lte": ["a", {"literal": "b"}]},
+                    },
+                    {
+                        "select": {"value": {"literal": "3"}, "name": "x"}
+                    }
+                ]},
+                "orderby": {"value": "b", "sort": "desc"},
+                "limit": 2
+            }]},
+            "orderby": "a"
+        }
         self.assertEqual(result, expected)
 
     def test_90(self):
-        sql = "SELECT f1 FROM test1 UNION SELECT WHERE;"
-        result = parse(sql)
-        expected = "error"
-        self.assertEqual(result, expected)
+        sql = "SELECT f1 FROM test1 UNION SELECT WHERE"
+        self.assertRaises(Exception, parse, sql)
 
     def test_91(self):
         sql = "SELECT f1 FROM test1 as 'hi', test2 as"
-        result = parse(sql)
-        expected = "error"
-        self.assertEqual(result, expected)
-
-    def test_92(self):
-        sql = "SELECT count(f1,f2) FROM test1;"
-        result = parse(sql)
-        expected = "error"
-        self.assertEqual(result, expected)
+        self.assertRaises(Exception, parse, sql)
 
     def test_93(self):
-        sql = "SELECT count(f1,f2) FROM test1;"
+        sql = "SELECT count(f1,f2) FROM test1"
         result = parse(sql)
-        expected = "error"
+        expected = {
+            "from": "test",
+            "select": {"value": {"count": ["f1", "f2"]}}
+        }
         self.assertEqual(result, expected)
 
     def test_94(self):
-        sql = "SELECT f1 FROM test1 ORDER BY f2, f1;"
+        sql = "SELECT f1 FROM test1 ORDER BY f2, f1"
         result = parse(sql)
-        expected = "error"
+        expected = {
+            "from": "test",
+            "select": {"value": "f1"},
+            "orderby": [{"value": "f2"}, {"value": "f1"}]
+        }
         self.assertEqual(result, expected)
 
     def test_95(self):
         sql = "SELECT f1 FROM test1 WHERE 4.3+2.4 OR 1 ORDER BY f1"
         result = parse(sql)
-        expected = "error"
+        expected = {
+            "from": "test",
+            "select": {"value": "f1"},
+            "where": {"or": [{"add": [4.3, 2.4]}, 1]},
+            "orderby": {"value": "f1"}
+        }
         self.assertEqual(result, expected)
 
     def test_96(self):
         sql = "SELECT f1 FROM test1 WHERE ('x' || f1) BETWEEN 'x10' AND 'x20'\nORDER BY f1"
         result = parse(sql)
-        expected = "error"
+        expected = {
+            "from": "test1",
+            "select": {"value": "f1"},
+            "where": {"between": [
+                {"concat": [{"literal": "x"}, "f1"]},
+                {"literal": "x10"},
+                {"literal": "x20"}
+            ]},
+            "orderby": {"value": "f1"}
+        }
         self.assertEqual(result, expected)
 
     def test_97(self):
         sql = "SELECT f1 FROM test1 WHERE 5-3==2\nORDER BY f1"
         result = parse(sql)
-        expected = "error"
+        expected = {
+            "from": "test1",
+            "select": {"value": "f1"},
+            "where": {"eq": [{"sub": [5, 3]}, 2]},
+            "orderby": {"value": "f1"}
+        }
         self.assertEqual(result, expected)
 
     def test_98(self):
         sql = "SELECT coalesce(f1/(f1-11),'x'),\ncoalesce(min(f1/(f1-11),5),'y'),\ncoalesce(max(f1/(f1-33),6),'z')\nFROM test1 ORDER BY f1"
         result = parse(sql)
-        expected = "error"
+        expected = {
+            "from": "test1",
+            "orderby": "f1",
+            "select": [
+                {"coalesce": [{"div": ["f1", {"sub": ["f1", 11]}]}, {"literal": "x"}]},
+                {"coalesce": [{"min": [{"div": ["f1", {"sub": ["f1", 11]}]}, 5]}, {"literal": "y"}]},
+                {"coalesce": [{"min": [{"div": ["f1", {"sub": ["f1", 33]}]}, 6]}, {"literal": "z"}]},
+            ]
+        }
         self.assertEqual(result, expected)
 
     def test_99(self):
         sql = "SELECT min(1,2,3), -max(1,2,3)\nFROM test1 ORDER BY f1"
         result = parse(sql)
-        expected = "error"
+        expected = {
+            "from": "test1",
+            "orderby": "f1",
+            "select": [
+                {"min": [1, 2, 3]},
+                {"neg": {"max": [1, 2, 3]}}
+            ]
+        }
         self.assertEqual(result, expected)
 
     def test_100(self):
@@ -713,7 +925,7 @@ class TestResources(FuzzyTestCase):
         expected = {
             "from": "test1",
             "select": {"value": {"sub": ["f1", {"literal": 23}]}, "name": "x"},
-            "orderby": {"value": {"neg":{"abs": "x"}}}
+            "orderby": {"value": {"neg": {"abs": "x"}}}
         }
         self.assertEqual(result, expected)
 
@@ -726,7 +938,7 @@ class TestResources(FuzzyTestCase):
                 {"value": {"sub": ["f1", {"literal": 23}]}, "name": "x"},
                 {"value": {"sub": ["f2", {"literal": 23}]}, "name": "x"},
             ],
-            "orderby": {"value": {"neg":{"abs": "x"}}}
+            "orderby": {"value": {"neg": {"abs": "x"}}}
         }
         self.assertEqual(result, expected)
 
@@ -743,7 +955,7 @@ class TestResources(FuzzyTestCase):
         self.assertEqual(result, expected)
 
     def test_113(self):
-        sql = "SELECT * FROM t3, t4;"
+        sql = "SELECT * FROM t3, t4"
         result = parse(sql)
         expected = {
             "from": ["t3", "t4"],
@@ -752,45 +964,45 @@ class TestResources(FuzzyTestCase):
         self.assertEqual(result, expected)
 
     def test_114(self):
-        sql = "SELECT t3.*, t4.b FROM t3, t4;"
+        sql = "SELECT t3.*, t4.b FROM t3, t4"
         result = parse(sql)
         expected = {
-            "from":["t3", "t4"],
+            "from": ["t3", "t4"],
             "select": [{"value": "t3.*"}, {"value": "t4.b"}]
         }
         self.assertEqual(result, expected)
 
     def test_115(self):
-        sql = "SELECT \"t3\".*, t4.b FROM t3, t4;"
+        sql = "SELECT \"t3\".*, t4.b FROM t3, t4"
         result = parse(sql)
         expected = {
-            "from":["t3", "t4"],
+            "from": ["t3", "t4"],
             "select": [{"value": "t3.*"}, {"value": "t4.b"}]
         }
         self.assertEqual(result, expected)
 
     def test_116(self):
-        sql = "SELECT t3.b, t4.* FROM t3, t4;"
+        sql = "SELECT t3.b, t4.* FROM t3, t4"
         result = parse(sql)
         expected = "error"
         self.assertEqual(result, expected)
 
     def test_117(self):
-        sql = "DELETE FROM t3;\nINSERT INTO t3 VALUES(1,2);"
+        sql = "DELETE FROM t3\nINSERT INTO t3 VALUES(1,2)"
         result = parse(sql)
         expected = "error"
         self.assertEqual(result, expected)
 
     def test_118(self):
-        sql = "SELECT * FROM t3 UNION SELECT 3 AS 'a', 4 ORDER BY a;"
+        sql = "SELECT * FROM t3 UNION SELECT 3 AS 'a', 4 ORDER BY a"
         result = parse(sql)
         expected = "error"
         self.assertEqual(result, expected)
 
     def test_119(self):
-        sql = "SELECT 3, 4 UNION SELECT * FROM t3;"
+        sql = "SELECT 3, 4 UNION SELECT * FROM t3"
         result = parse(sql)
-        expected = {"union":[
+        expected = {"union": [
             {"select": [{"value": 3}, {"value": 4}]},
             {
                 "from": "t3",
@@ -800,13 +1012,13 @@ class TestResources(FuzzyTestCase):
         self.assertEqual(result, expected)
 
     def test_120(self):
-        sql = "SELECT * FROM t3 WHERE a=(SELECT 1);"
+        sql = "SELECT * FROM t3 WHERE a=(SELECT 1)"
         result = parse(sql)
         expected = "error"
         self.assertEqual(result, expected)
 
     def test_121(self):
-        sql = "SELECT * FROM t3 WHERE a=(SELECT 2);"
+        sql = "SELECT * FROM t3 WHERE a=(SELECT 2)"
         result = parse(sql)
         expected = {
             "from": "t3",
@@ -816,7 +1028,7 @@ class TestResources(FuzzyTestCase):
         self.assertEqual(result, expected)
 
     def test_125(self):
-        sql = "SELECT count(\n(SELECT a FROM abc WHERE a = NULL AND b >= upper.c)\n) FROM abc AS upper;"
+        sql = "SELECT count(\n(SELECT a FROM abc WHERE a = NULL AND b >= upper.c)\n) FROM abc AS upper"
         result = parse(sql)
         expected = {
             "from": {"value": "abc", "name": "upper"},
@@ -836,82 +1048,38 @@ class TestResources(FuzzyTestCase):
         sql = "SELECT name FROM sqlite_master WHERE type = 'table'"
         result = parse(sql)
         expected = {
-            "from":"sqlite_master",
-            "select": {"value":"name"},
+            "from": "sqlite_master",
+            "select": {"value": "name"},
             "where": {"eq": ["type", {"literal": "table"}]}
         }
         self.assertEqual(result, expected)
 
     def test_127(self):
-        sql = "SELECT * FROM sqlite_master WHERE rowid>10;\nSELECT * FROM sqlite_master WHERE rowid=10;\nSELECT * FROM sqlite_master WHERE rowid<10;\nSELECT * FROM sqlite_master WHERE rowid<=10;\nSELECT * FROM sqlite_master WHERE rowid>=10;\nSELECT * FROM sqlite_master;"
+        sql = "SELECT * FROM sqlite_master WHERE rowid>10\nSELECT * FROM sqlite_master WHERE rowid=10\nSELECT * FROM sqlite_master WHERE rowid<10\nSELECT * FROM sqlite_master WHERE rowid<=10\nSELECT * FROM sqlite_master WHERE rowid>=10\nSELECT * FROM sqlite_master"
         result = parse(sql)
         expected = "error"
         self.assertEqual(result, expected)
 
     def test_128(self):
-        sql = "SELECT 10 IN (SELECT rowid FROM sqlite_master);"
+        sql = "SELECT 10 IN (SELECT rowid FROM sqlite_master)"
         result = parse(sql)
-        expected = "error"
-        self.assertEqual(result, expected)
-
-    def test_129(self):
-        sql = "CREATE TABLE t1(a);\nCREATE INDEX i1 ON t1(a);\nINSERT INTO t1 VALUES(1);\nINSERT INTO t1 VALUES(2);\nINSERT INTO t1 VALUES(3);"
-        result = parse(sql)
-        expected = "error"
-        self.assertEqual(result, expected)
-
-    def test_130(self):
-        sql = "DROP INDEX i1"
-        result = parse(sql)
-        expected = "error"
+        expected = {
+            "select": {"value": {"in": [
+                10,
+                {"from": "sqlite_master", "select": "rowid"}
+            ]}},
+        }
         self.assertEqual(result, expected)
 
     def test_131(self):
         sql = "SELECT 2 IN (SELECT a FROM t1)"
         result = parse(sql)
-        expected = "error"
-        self.assertEqual(result, expected)
-
-    def test_132(self):
-        sql = "CREATE TABLE tbl1(f1 int, f2 int)"
-        result = parse(sql)
-        expected = "error"
-        self.assertEqual(result, expected)
-
-    def test_133(self):
-        sql = "BEGIN"
-        result = parse(sql)
-        expected = "error"
-        self.assertEqual(result, expected)
-
-    def test_134(self):
-        sql = "COMMIT"
-        result = parse(sql)
-        expected = "error"
-        self.assertEqual(result, expected)
-
-    def test_135(self):
-        sql = "CREATE TABLE tbl2(f1 int, f2 int, f3 int); BEGIN;"
-        result = parse(sql)
-        expected = "error"
-        self.assertEqual(result, expected)
-
-    def test_136(self):
-        sql = "INSERT INTO tbl2 VALUES(i,i2,i3)"
-        result = parse(sql)
-        expected = "error"
-        self.assertEqual(result, expected)
-
-    def test_137(self):
-        sql = "COMMIT"
-        result = parse(sql)
-        expected = "error"
-        self.assertEqual(result, expected)
-
-    def test_138(self):
-        sql = "DROP TABLE tbl2"
-        result = parse(sql)
-        expected = "error"
+        expected = {
+            "select": {"value": {"in": [
+                2,
+                {"from": "t1", "select": "a"}
+            ]}},
+        }
         self.assertEqual(result, expected)
 
     def test_139(self):
@@ -923,101 +1091,101 @@ class TestResources(FuzzyTestCase):
     def test_140(self):
         sql = "SELECT count(*) FROM tbl2 WHERE f2>1000"
         result = parse(sql)
-        expected = "error"
+        expected = {
+            "from": "tbl2",
+            "select": {"value": "*", "aggregate": "count"},
+            "where": {"gt": ["f2", 1000]}
+        }
         self.assertEqual(result, expected)
 
     def test_141(self):
         sql = "SELECT f1 FROM tbl2 WHERE 1000=f2"
         result = parse(sql)
-        expected = "error"
-        self.assertEqual(result, expected)
-
-    def test_142(self):
-        sql = "CREATE INDEX idx1 ON tbl2(f2)"
-        result = parse(sql)
-        expected = "error"
-        self.assertEqual(result, expected)
-
-    def test_143(self):
-        sql = "SELECT f1 FROM tbl2 WHERE 1000=f2"
-        result = parse(sql)
-        expected = "error"
+        expected = {
+            "from": "tbl2",
+            "select": {"value": "f1"},
+            "where": {"eq": [1000, "f2"]}
+        }
         self.assertEqual(result, expected)
 
     def test_144(self):
         sql = "SELECT f1 FROM tbl2 WHERE f2=1000"
         result = parse(sql)
-        expected = "error"
+        expected = {
+            "from": "tbl2",
+            "select": {"value": "f1"},
+            "where": {"eq": ["f2", 1000]}
+        }
         self.assertEqual(result, expected)
 
     def test_145(self):
         sql = "SELECT * FROM tbl2 WHERE 1000=f2"
         result = parse(sql)
-        expected = "error"
+        expected = {
+            "from": "tbl2",
+            "select": {"value": "*"},
+            "where": {"eq": [1000, "f2"]}
+        }
         self.assertEqual(result, expected)
 
     def test_146(self):
         sql = "SELECT * FROM tbl2 WHERE f2=1000"
         result = parse(sql)
-        expected = "error"
-        self.assertEqual(result, expected)
-
-    def test_147(self):
-        sql = "DROP INDEX idx1"
-        result = parse(sql)
-        expected = "error"
+        expected = {
+            "from": "tbl2",
+            "select": {"value": "*"},
+            "where": {"eq": ["f2", 1000]}
+        }
         self.assertEqual(result, expected)
 
     def test_148(self):
         sql = "SELECT f1 FROM tbl2 WHERE f2==2000"
         result = parse(sql)
-        expected = "error"
-        self.assertEqual(result, expected)
-
-    def test_149(self):
-        sql = "CREATE TABLE aa(a);\nCREATE TABLE bb(b);\nINSERT INTO aa VALUES(1);\nINSERT INTO aa VALUES(3);\nINSERT INTO bb VALUES(2);\nINSERT INTO bb VALUES(4);\nSELECT * FROM aa, bb WHERE max(a,b)>2;"
-        result = parse(sql)
-        expected = "error"
+        expected = {
+            "from": "tbl2",
+            "select": {"value": "f1"},
+            "where": {"eq": ["f2", 2000]}
+        }
         self.assertEqual(result, expected)
 
     def test_150(self):
-        sql = "INSERT INTO bb VALUES(0);\nSELECT * FROM aa CROSS JOIN bb WHERE b;"
+        sql = "SELECT * FROM aa CROSS JOIN bb WHERE b"
         result = parse(sql)
         expected = "error"
         self.assertEqual(result, expected)
 
     def test_151(self):
-        sql = "SELECT * FROM aa CROSS JOIN bb WHERE NOT b;"
+        sql = "SELECT * FROM aa CROSS JOIN bb WHERE NOT b"
         result = parse(sql)
         expected = "error"
         self.assertEqual(result, expected)
 
     def test_152(self):
-        sql = "SELECT * FROM aa, bb WHERE min(a,b);"
+        sql = "SELECT * FROM aa, bb WHERE min(a,b)"
         result = parse(sql)
         expected = "error"
         self.assertEqual(result, expected)
 
     def test_153(self):
-        sql = "SELECT * FROM aa, bb WHERE NOT min(a,b);"
+        sql = "SELECT * FROM aa, bb WHERE NOT min(a,b)"
         result = parse(sql)
         expected = "error"
         self.assertEqual(result, expected)
 
     def test_154(self):
-        sql = "SELECT * FROM aa, bb WHERE CASE WHEN a=b-1 THEN 1 END;"
+        sql = "SELECT * FROM aa, bb WHERE CASE WHEN a=b-1 THEN 1 END"
         result = parse(sql)
         expected = "error"
         self.assertEqual(result, expected)
 
     def test_155(self):
-        sql = "SELECT * FROM aa, bb WHERE CASE WHEN a=b-1 THEN 0 ELSE 1 END;"
+        sql = "SELECT * FROM aa, bb WHERE CASE WHEN a=b-1 THEN 0 ELSE 1 END"
         result = parse(sql)
         expected = "error"
         self.assertEqual(result, expected)
 
     def test_156(self):
-        sql = "CREATE TABLE t1(n int, log int);\nBEGIN;"
+        sql = "CREATE TABLE t1(n int, log int)\nBEGIN"
         result = parse(sql)
         expected = "error"
         self.assertEqual(result, expected)
@@ -1043,13 +1211,31 @@ class TestResources(FuzzyTestCase):
     def test_160(self):
         sql = "SELECT min(n),min(log),max(n),max(log),sum(n),sum(log),avg(n),avg(log)\nFROM t1"
         result = parse(sql)
-        expected = "error"
+        expected = {
+            "from": "t1",
+            "select": [
+                {"value": {"min": "n"}},
+                {"value": {"min": "log"}},
+                {"value": {"max": "n"}},
+                {"value": {"max": "log"}},
+                {"value": {"sum": "n"}},
+                {"value": {"sum": "log"}},
+                {"value": {"avg": "n"}},
+                {"value": {"avg": "log"}}
+            ]
+        }
         self.assertEqual(result, expected)
 
     def test_161(self):
         sql = "SELECT max(n)/avg(n), max(log)/avg(log) FROM t1"
         result = parse(sql)
-        expected = "error"
+        expected = {
+            "from": "t1",
+            "select": [
+                {"value": {"div": [{"max": "n"}, {"avg": "n"}]}},
+                {"value": {"div": [{"max": "log"}, {"avg": "log"}]}},
+            ]
+        }
         self.assertEqual(result, expected)
 
     def test_162(self):
@@ -1155,85 +1341,105 @@ class TestResources(FuzzyTestCase):
         self.assertEqual(result, expected)
 
     def test_179(self):
-        sql = "SELECT log, min(n) FROM t1 GROUP BY log ORDER BY log;"
+        sql = "SELECT log, min(n) FROM t1 GROUP BY log ORDER BY log"
         result = parse(sql)
         expected = "error"
         self.assertEqual(result, expected)
 
     def test_180(self):
-        sql = "SELECT log, min(n) FROM t1 GROUP BY log ORDER BY log DESC;"
+        sql = "SELECT log, min(n) FROM t1 GROUP BY log ORDER BY log DESC"
         result = parse(sql)
         expected = "error"
         self.assertEqual(result, expected)
 
     def test_181(self):
-        sql = "SELECT log, min(n) FROM t1 GROUP BY log ORDER BY 1;"
-        result = parse(sql)
-        expected = "error"
-        self.assertEqual(result, expected)
-
-    def test_182(self):
-        sql = "SELECT log, min(n) FROM t1 GROUP BY log ORDER BY 1 DESC;"
+        sql = "SELECT log, min(n) FROM t1 GROUP BY log ORDER BY 1"
         result = parse(sql)
         expected = "error"
         self.assertEqual(result, expected)
 
     def test_183(self):
-        sql = "CREATE INDEX i1 ON t1(log);\nSELECT log, min(n) FROM t1 GROUP BY log ORDER BY log;"
+        sql = "SELECT log, min(n) FROM t1 GROUP BY log ORDER BY log"
         result = parse(sql)
-        expected = "error"
+        expected = {
+            "from": "t1",
+            "select": [{"value": "log"}, {"value": {"min": "n"}}],
+            "groupby": {"value": "log"},
+            "orderby": {"value": "log"}
+        }
         self.assertEqual(result, expected)
 
     def test_184(self):
-        sql = "SELECT log, min(n) FROM t1 GROUP BY log ORDER BY log DESC;"
+        #      012345678901234567890123456789012345678901234567890123456789
+        sql = "SELECT log, min(n) FROM t1 GROUP BY log ORDER BY log DESC"
         result = parse(sql)
-        expected = "error"
+        expected = {
+            "from": "t1",
+            "select": [{"value": "log"}, {"value": {"min": "n"}}],
+            "groupby": {"value": "log"},
+            "orderby": {"value": "log", "sort": "desc"}
+        }
         self.assertEqual(result, expected)
 
     def test_185(self):
-        sql = "SELECT log, min(n) FROM t1 GROUP BY log ORDER BY 1;"
+        sql = "SELECT log, min(n) FROM t1 GROUP BY log ORDER BY 1"
         result = parse(sql)
-        expected = "error"
+        expected = {
+            "from": "t1",
+            "select": [{"value": "log"}, {"value": {"min": "n"}}],
+            "groupby": {"value": "log"},
+            "orderby": {"value": 1}
+        }
         self.assertEqual(result, expected)
 
     def test_186(self):
-        sql = "SELECT log, min(n) FROM t1 GROUP BY log ORDER BY 1 DESC;"
+        sql = "SELECT log, min(n) FROM t1 GROUP BY log ORDER BY 1 DESC"
         result = parse(sql)
-        expected = "error"
+        expected = {
+            "from": "t1",
+            "select": [{"value": "log"}, {"value": {"min": "n"}}],
+            "groupby": {"value": "log"},
+            "orderby": {"value": 1, "sort": "desc"}
+        }
         self.assertEqual(result, expected)
 
     def test_187(self):
-        sql = "CREATE TABLE t2(a,b);\nINSERT INTO t2 VALUES(1,2);\nSELECT a, sum(b) FROM t2 WHERE b=5 GROUP BY a;"
+        #      01234567890123456789012345678901234567890123456789
+        sql = "SELECT a, sum(b) FROM t2 WHERE b=5 GROUP BY a"
         result = parse(sql)
-        expected = "error"
+        expected = {
+            "from": "t2",
+            "select": [{"value": "a"}, {"value": {"sum": "b"}}],
+            "groupby": {"value": "a"},
+            "where": {"eq": ["b", 5]}
+        }
         self.assertEqual(result, expected)
 
     def test_188(self):
-        sql = "SELECT a, sum(b) FROM t2 WHERE b=5;"
+        sql = "SELECT a, sum(b) FROM t2 WHERE b=5"
         result = parse(sql)
-        expected = "error"
+        expected = {
+            "from": "t2",
+            "select": [{"value": "a"}, {"value": {"sum": "b"}}],
+            "where": {"eq": ["b", 5]}
+        }
         self.assertEqual(result, expected)
 
     def test_189(self):
-        sql = "CREATE TABLE A (\nA1 DOUBLE,\nA2 VARCHAR COLLATE NOCASE,\nA3 DOUBLE\n);\nINSERT INTO A VALUES(39136,'ABC',1201900000);\nINSERT INTO A VALUES(39136,'ABC',1207000000);\nSELECT typeof(sum(a3)) FROM a;"
+        sql = "SELECT typeof(sum(a3)) FROM a"
         result = parse(sql)
-        expected = "error"
+        expected = {
+            "from": "a",
+            "select": {"value": {"typeof": {"sum": "a3"}}}
+        }
         self.assertEqual(result, expected)
 
     def test_190(self):
-        sql = "SELECT typeof(sum(a3)) FROM a GROUP BY a1;"
+        sql = "SELECT typeof(sum(a3)) FROM a GROUP BY a1"
         result = parse(sql)
-        expected = "error"
-        self.assertEqual(result, expected)
-
-    def test_191(self):
-        sql = "CREATE TABLE t1(n int, log int);\nBEGIN;"
-        result = parse(sql)
-        expected = "error"
-        self.assertEqual(result, expected)
-
-    def test_192(self):
-        sql = "DROP TABLE t2"
-        result = parse(sql)
-        expected = "error"
+        expected = {
+            "from": "a",
+            "select": {"value": {"typeof": {"sum": "a3"}}},
+            "groupby": {"value": "a1"}
+        }
         self.assertEqual(result, expected)

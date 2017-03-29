@@ -1,7 +1,10 @@
 Moz SQL Parser Tests
 ====================
 
-The parser is not complete! Please help by adding a test, and then altering the grammar to pass that test.
+The parser is not complete! 
+
+
+**March 2017** - Added a number of test cases, most of which are missing the expected JSON parse tree, so they fail.
 
 ## Running Tests
 
