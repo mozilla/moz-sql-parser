@@ -1008,7 +1008,10 @@ class TestResources(FuzzyTestCase):
     def test_116(self):
         sql = "SELECT t3.b, t4.* FROM t3, t4"
         result = parse(sql)
-        expected = "error"
+        expected = {
+            "from": ["t3", "t4"],
+            "select": [{"value": "t3.b"}, {"value": "t4.*"}]
+        }
         self.assertEqual(result, expected)
 
     def test_118(self):
@@ -1038,7 +1041,11 @@ class TestResources(FuzzyTestCase):
     def test_120(self):
         sql = "SELECT * FROM t3 WHERE a=(SELECT 1)"
         result = parse(sql)
-        expected = "error"
+        expected = {
+            "from": "t3",
+            "select": {"value": "*"},
+            "where": {"eq": ["a", {"select": 1}]}
+        }
         self.assertEqual(result, expected)
 
     def test_121(self):
@@ -1170,7 +1177,7 @@ class TestResources(FuzzyTestCase):
         sql = "SELECT * FROM aa CROSS JOIN bb WHERE b"
         result = parse(sql)
         expected = {
-            "from": ["aa", {"cross_join": "bb"}],
+            "from": ["aa", {"cross join": "bb"}],
             "select": {"value": "*"},
             "where": "b"
         }
@@ -1179,13 +1186,21 @@ class TestResources(FuzzyTestCase):
     def test_151(self):
         sql = "SELECT * FROM aa CROSS JOIN bb WHERE NOT b"
         result = parse(sql)
-        expected = "error"
+        expected = {
+            "from": ["aa", {"cross join": "bb"}],
+            "select": {"value": "*"},
+            "where": {"not": "b"}
+        }
         self.assertEqual(result, expected)
 
     def test_152(self):
         sql = "SELECT * FROM aa, bb WHERE min(a,b)"
         result = parse(sql)
-        expected = "error"
+        expected = {
+            "from": ["aa", "bb"],
+            "select": {"value": "*"},
+            "where": {"min": ["a", "b"]}
+        }
         self.assertEqual(result, expected)
 
     def test_153(self):
@@ -1204,9 +1219,9 @@ class TestResources(FuzzyTestCase):
         expected = {
             "from":["aa","bb"],
             "select": {"value": "*"},
-            "where": {"case": [
+            "where": {"case":
                 {"when": {"eq": ["a", {"sub": ["b", 1]}]}, "then": 1}
-            ]}
+            }
         }
         self.assertEqual(result, expected)
 
@@ -1229,7 +1244,7 @@ class TestResources(FuzzyTestCase):
         expected = {
             "from":"t1",
             "select": {"value": {"distinct": "log"}},
-            "orderby": "log"
+            "orderby": {"value":"log"}
         }
         self.assertEqual(result, expected)
 
@@ -1357,7 +1372,7 @@ class TestResources(FuzzyTestCase):
                 {"value": {"count": "*"}, "name": "y"}
             ],
             "groupby": {"value": "x"},
-            "orderby": [{"value": "x"}, {"value": "y"}]
+            "orderby": [{"value": "y"}, {"value": "x"}]
         }
         self.assertEqual(result, expected)
 
@@ -1474,7 +1489,10 @@ class TestResources(FuzzyTestCase):
             ],
             "groupby": {"value": "log"},
             "orderby": [
-                {"value": {"add": [{"max": [{"add": ["n", {"mult": ["log", 2]}]}, 0]}]}},
+                {"value": {"add": [
+                    {"max": {"add": ["n", {"mult": ["log", 2]}]}},
+                    0
+                ]}},
                 {"value": {"add": [{"avg": "n"}, 0]}}
             ]
         }
@@ -1493,7 +1511,10 @@ class TestResources(FuzzyTestCase):
             ],
             "groupby": {"value": "log"},
             "orderby": [
-                {"value": {"add": [{"max": [{"add": ["n", {"mult": ["log", 2]}]}, 0]}]}},
+                {"value": {"add": [
+                    {"max": {"add": ["n", {"mult": ["log", 2]}]}},
+                    0
+                ]}},
                 {"value": {"add": [{"min": ["log", {"avg": "n"}]}, 0]}}
             ]
         }

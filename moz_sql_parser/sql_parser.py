@@ -15,12 +15,13 @@ import ast
 
 from pyparsing import \
     CaselessLiteral, Word, delimitedList, Optional, Combine, Group, alphas, \
-    nums, alphanums, Forward, restOfLine, Keyword, Literal, ParserElement, infixNotation, opAssoc, Regex, MatchFirst
+    nums, alphanums, Forward, restOfLine, Keyword, Literal, ParserElement, infixNotation, opAssoc, Regex, MatchFirst, ZeroOrMore, Suppress
 
 ParserElement.enablePackrat()
 DEBUG = True
+END = None
 
-keywords = ["select", "from", "where", "group by", "order by", "with", "as", "desc"]
+keywords = ["select", "from", "where", "group by", "order by", "having", "with", "as", "desc", "case", "when", "then", "else", "end", "on", "cross join", "inner join", "join"]
 
 KNOWN_OPS = [
     {"op": "*", "name": "mult", "type": Literal},
@@ -72,6 +73,28 @@ def to_json_call(instring, tokensStart, retTokens):
         params = params[0]
     return {op: params}
 
+def to_case_call(instring, tokensStart, retTokens):
+    tok = retTokens
+    cases = list(tok.case)
+    elze = getattr(tok, "else", None)
+    if elze:
+        cases.append(elze)
+    return {"case": cases}
+
+
+def to_when_call(instring, tokensStart, retTokens):
+    tok = retTokens
+    return {"when": tok.when, "then":tok.then}
+
+
+def to_join_call(instring, tokensStart, retTokens):
+    tok = retTokens
+
+    output = {tok.op: tok.join}
+    if tok.on:
+        output['on'] = tok.on
+    return output
+
 
 def unquote(instring, tokensStart, retTokens):
     val = retTokens[0]
@@ -109,16 +132,24 @@ expr = Forward()
 
 ident = Literal("*") | Combine(~RESERVED + (delimitedList(Word(alphas, alphanums + "_$") | identString, ".", combine=True))).setName("identifier")
 primitive = realNum("literal") | intNum("literal") | sqlString | ident
+
+# CASE
+case = (CASE + Group(ZeroOrMore((WHEN + expr("when") + THEN + expr("then")).addParseAction(to_when_call)))("case") + Optional(ELSE+expr("else")) + END).addParseAction(to_case_call)
+
+
 selectStmt = Forward()
-compound = Group(
+compound = (
     (Literal("-").setResultsValue("neg").setResultsName("op").setDebug(DEBUG) + expr("params")).addParseAction(to_json_call) |
-    (Literal("not").setResultsName("op").setDebug(DEBUG) + expr("params")).addParseAction(to_json_call) |
+    (Keyword("not", caseless=True).setResultsName("op").setDebug(DEBUG) + expr("params")).addParseAction(to_json_call) |
+    (Keyword("distinct", caseless=True).setResultsName("op").setDebug(DEBUG) + expr("params")).addParseAction(to_json_call) |
+    case |
+    selectStmt |
+    (Literal("(").suppress() + Group(delimitedList(expr)) + Literal(")").suppress()).setDebug(DEBUG) |
     realNum.setName("float").setDebug(DEBUG) |
     intNum.setName("int").setDebug(DEBUG) |
     sqlString("literal").setName("string").setDebug(DEBUG) |
-    (Literal("(").suppress() + Group(delimitedList(expr)) + Literal(")").suppress()).setDebug(DEBUG) |
     (Word(alphas)("op").setName("function name") + Literal("(") + Optional(Group(delimitedList(expr))("params")) + ")").addParseAction(to_json_call).setDebug(DEBUG) |
-    ident.copy().setName("variable").setDebug(DEBUG)
+    ident.setName("variable").setDebug(DEBUG)
 )
 expr << Group(infixNotation(
     compound,
@@ -143,6 +174,8 @@ selectColumn = Group(
 tableName = ident("value").setName("table_name1").setDebug(DEBUG) + Optional(AS) + ident("name").setName("table_alias1").setDebug(DEBUG) | \
             ident.setName("table_name2").setDebug(DEBUG)
 
+join = ((CROSSJOIN | INNERJOIN | JOIN)("op") + tableName("join") + Optional(ON + expr("on"))).addParseAction(to_join_call)
+
 sortColumn = expr("value").setName("sort1").setDebug(DEBUG) + Optional(DESC("sort")) | \
              expr("value").setName("sort2").setDebug(DEBUG)
 
@@ -150,10 +183,11 @@ sortColumn = expr("value").setName("sort1").setDebug(DEBUG) + Optional(DESC("sor
 selectStmt << (
     SELECT.suppress().setDebug(DEBUG) + delimitedList(selectColumn)("select") +
     Optional(
-        FROM.suppress().setDebug(DEBUG) + delimitedList(Group(tableName))("from") +
+        Optional(FROM.suppress().setDebug(DEBUG) + (delimitedList(Group(tableName)) + ZeroOrMore(join)))("from") +
         Optional(WHERE.suppress().setDebug(DEBUG) + expr.setName("where"))("where") +
-        Optional(GROUPBY.suppress().setDebug(DEBUG) + Group(delimitedList(selectColumn)).setName("groupby"))("groupby") +
-        Optional(ORDERBY.suppress().setDebug(DEBUG) + Group(delimitedList(sortColumn)).setName("orderby"))("orderby")
+        Optional(GROUPBY.suppress().setDebug(DEBUG) + delimitedList(Group(selectColumn))("groupby").setName("groupby")) +
+        Optional(HAVING.suppress().setDebug(DEBUG) + expr("having").setName("having")) +
+        Optional(ORDERBY.suppress().setDebug(DEBUG) + delimitedList(Group(sortColumn))("orderby").setName("orderby"))
     )
 )
 selectStmt
