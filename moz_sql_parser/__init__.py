@@ -23,6 +23,8 @@ def parse(sql):
 def _scrub(result):
     if isinstance(result, (str, unicode, int, float)):
         return result
+    elif not result:
+        return {}
     elif isinstance(result, list) or not result.items():
         if not result:
             return None

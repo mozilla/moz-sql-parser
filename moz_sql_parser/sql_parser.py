@@ -64,8 +64,8 @@ def to_json_operator(instring, tokensStart, retTokens):
 def to_json_call(instring, tokensStart, retTokens):
     # ARRANGE INTO {op: params} FORMAT
     tok = retTokens
-    op = tok.op
-    params = tok.params[0]
+    op = tok.op.lower()
+    params = tok.params
     if not params:
         params = None
     elif len(params) == 1:
@@ -77,10 +77,10 @@ def unquote(instring, tokensStart, retTokens):
     val = retTokens[0]
     if val.startswith("'") and val.endswith("'"):
         val = "'"+val[1:-1].replace("''", "\\'")+"'"
-        val = val.replace(".", "\\.")
+        # val = val.replace(".", "\\.")
     elif val.startswith('"') and val.endswith('"'):
         val = '"'+val[1:-1].replace('""', '\\"')+'"'
-        val = val.replace(".", "\\.")
+        # val = val.replace(".", "\\.")
 
     un = ast.literal_eval(val)
     return un
@@ -107,7 +107,7 @@ identString = Combine(Regex(r'\"(\"\"|\\.|[^"])*\"')).addParseAction(unquote)
 # EXPRESSIONS
 expr = Forward()
 
-ident = Combine(~RESERVED + (delimitedList(Word(alphas, alphanums + "_$") | identString, ".", combine=True))).setName("identifier")
+ident = Literal("*") | Combine(~RESERVED + (delimitedList(Word(alphas, alphanums + "_$") | identString, ".", combine=True))).setName("identifier")
 primitive = realNum("literal") | intNum("literal") | sqlString | ident
 selectStmt = Forward()
 compound = Group(
@@ -117,7 +117,7 @@ compound = Group(
     intNum.setName("int").setDebug(DEBUG) |
     sqlString("literal").setName("string").setDebug(DEBUG) |
     (Literal("(").suppress() + Group(delimitedList(expr)) + Literal(")").suppress()).setDebug(DEBUG) |
-    (Word(alphas)("op").setName("function name") + Literal("(") + Group(delimitedList(expr))("params") + ")").addParseAction(to_json_call).setDebug(DEBUG) |
+    (Word(alphas)("op").setName("function name") + Literal("(") + Optional(Group(delimitedList(expr))("params")) + ")").addParseAction(to_json_call).setDebug(DEBUG) |
     ident.copy().setName("variable").setDebug(DEBUG)
 )
 expr << Group(infixNotation(
@@ -150,10 +150,10 @@ sortColumn = expr("value").setName("sort1").setDebug(DEBUG) + Optional(DESC("sor
 selectStmt << (
     SELECT.suppress().setDebug(DEBUG) + delimitedList(selectColumn)("select") +
     Optional(
-        FROM.suppress().setDebug(DEBUG) + delimitedList(tableName)("from") +
-        Optional(WHERE.suppress().setDebug(DEBUG) + Group(expr).setName("expression"))("where") +
-        Optional(GROUPBY.suppress().setDebug(DEBUG) + Group(delimitedList(selectColumn)).setName("columns"))("groupby") +
-        Optional(ORDERBY.suppress().setDebug(DEBUG) + Group(delimitedList(sortColumn)).setName("columns"))("orderby")
+        FROM.suppress().setDebug(DEBUG) + delimitedList(Group(tableName))("from") +
+        Optional(WHERE.suppress().setDebug(DEBUG) + expr.setName("where"))("where") +
+        Optional(GROUPBY.suppress().setDebug(DEBUG) + Group(delimitedList(selectColumn)).setName("groupby"))("groupby") +
+        Optional(ORDERBY.suppress().setDebug(DEBUG) + Group(delimitedList(sortColumn)).setName("orderby"))("orderby")
     )
 )
 selectStmt
