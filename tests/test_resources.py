@@ -667,7 +667,7 @@ class TestResources(FuzzyTestCase):
         sql = "SELECT max(f1) FROM test1 ORDER BY f2"
         result = parse(sql)
         expected = {
-            "from": "t5",
+            "from": "test1",
             "select": {"value": {"max": "f1"}},
             "orderby": {"value": "f2"}
         }
@@ -684,6 +684,8 @@ class TestResources(FuzzyTestCase):
         self.assertEqual(result, expected)
 
     def test_086(self):
+        #                1111111111222222222233333333334444444444555555555566666666667777777777
+        #      01234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789
         sql = "SELECT a FROM t6 WHERE b IN\n(SELECT b FROM t6 WHERE a<='b' UNION SELECT '3' AS x\nORDER BY 1 LIMIT 1)"
         result = parse(sql)
         expected = {
@@ -700,7 +702,7 @@ class TestResources(FuzzyTestCase):
                         "select": {"value": {"literal": "3"}, "name": "x"}
                     }
                 ]},
-                "orderby": 1,
+                "orderby": {"value": 1},
                 "limit": 1
             }]}
         }
@@ -749,7 +751,7 @@ class TestResources(FuzzyTestCase):
                 "orderby": {"value": "b"},
                 "limit": 2
             }]},
-            "orderby": "a"
+            "orderby": {"value": "a"}
         }
         self.assertEqual(result, expected)
 
@@ -773,7 +775,7 @@ class TestResources(FuzzyTestCase):
                 "orderby": {"value": "b", "sort": "desc"},
                 "limit": 2
             }]},
-            "orderby": "a"
+            "orderby": {"value": "x"}
         }
         self.assertEqual(result, expected)
 
@@ -789,7 +791,7 @@ class TestResources(FuzzyTestCase):
         sql = "SELECT count(f1,f2) FROM test1"
         result = parse(sql)
         expected = {
-            "from": "test",
+            "from": "test1",
             "select": {"value": {"count": ["f1", "f2"]}}
         }
         self.assertEqual(result, expected)
@@ -798,7 +800,7 @@ class TestResources(FuzzyTestCase):
         sql = "SELECT f1 FROM test1 ORDER BY f2, f1"
         result = parse(sql)
         expected = {
-            "from": "test",
+            "from": "test1",
             "select": {"value": "f1"},
             "orderby": [{"value": "f2"}, {"value": "f1"}]
         }
@@ -808,7 +810,7 @@ class TestResources(FuzzyTestCase):
         sql = "SELECT f1 FROM test1 WHERE 4.3+2.4 OR 1 ORDER BY f1"
         result = parse(sql)
         expected = {
-            "from": "test",
+            "from": "test1",
             "select": {"value": "f1"},
             "where": {"or": [{"add": [4.3, 2.4]}, 1]},
             "orderby": {"value": "f1"}
@@ -948,7 +950,7 @@ class TestResources(FuzzyTestCase):
         result = parse(sql)
         expected = {
             "from": "test1",
-            "select": {"value": {"sub": ["f1", {"literal": 23}]}, "name": "x"},
+            "select": {"value": {"sub": ["f1", 23]}, "name": "x"},
             "orderby": {"value": {"neg": {"abs": "x"}}}
         }
         self.assertEqual(result, expected)
@@ -959,8 +961,8 @@ class TestResources(FuzzyTestCase):
         expected = {
             "from": "test1",
             "select": [
-                {"value": {"sub": ["f1", {"literal": 23}]}, "name": "x"},
-                {"value": {"sub": ["f2", {"literal": 23}]}, "name": "x"},
+                {"value": {"sub": ["f1", 23]}, "name": "x"},
+                {"value": {"sub": ["f2", 23]}, "name": "y"},
             ],
             "orderby": {"value": {"neg": {"abs": "x"}}}
         }
@@ -969,13 +971,27 @@ class TestResources(FuzzyTestCase):
     def test_111(self):
         sql = "SELECT f1-22 AS x, f2-22 as y FROM test1 WHERE x>0 AND y<50"
         result = parse(sql)
-        expected = "error"
+        expected = {
+            "from": "test1",
+            "select": [
+                {"value": {"sub": ["f1", 23]}, "name": "x"},
+                {"value": {"sub": ["f2", 23]}, "name": "y"},
+            ],
+            "where": {"and": [
+                {"gt": ["x", 0]},
+                {"lt": ["y", 50]}
+            ]}
+        }
         self.assertEqual(result, expected)
 
     def test_112(self):
         sql = "SELECT f1 COLLATE nocase AS x FROM test1 ORDER BY x"
         result = parse(sql)
-        expected = "error"
+        expected = {
+            "from": "test1",
+            "select": {"value": {"collate": "f1", "nocase": True}},
+            "orderby": {"value": "x"}
+        }
         self.assertEqual(result, expected)
 
     def test_113(self):
@@ -1054,11 +1070,13 @@ class TestResources(FuzzyTestCase):
         expected = {
             "from": "t3",
             "select": {"value": "*"},
-            "where": {"eq": ["a", {"select": 2}]}
+            "where": {"eq": ["a", {"select": {"value": 2}}]}
         }
         self.assertEqual(result, expected)
 
     def test_125(self):
+        #                11111111112222222222333333333344444444445555555555666666666677777777778888888888
+        #      012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789
         sql = "SELECT count(\n(SELECT a FROM abc WHERE a = NULL AND b >= upper.c)\n) FROM abc AS upper"
         result = parse(sql)
         expected = {

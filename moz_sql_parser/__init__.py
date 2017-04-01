@@ -17,7 +17,8 @@ from moz_sql_parser.sql_parser import SQLParser
 
 
 def parse(sql):
-    return _scrub(SQLParser.parseString(sql))
+    parse_result = SQLParser.parseString(sql, parseAll=True)
+    return _scrub(parse_result)
 
 
 def _scrub(result):
