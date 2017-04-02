@@ -13,9 +13,10 @@ from __future__ import unicode_literals
 
 import ast
 
+from mo_dots.objects import datawrap
 from pyparsing import \
     CaselessLiteral, Word, delimitedList, Optional, Combine, Group, alphas, \
-    nums, alphanums, Forward, restOfLine, Keyword, Literal, ParserElement, infixNotation, opAssoc, Regex, MatchFirst, ZeroOrMore, Suppress
+    nums, alphanums, Forward, restOfLine, Keyword, Literal, ParserElement, infixNotation, opAssoc, Regex, MatchFirst, ZeroOrMore, Dict
 
 ParserElement.enablePackrat()
 DEBUG = True
@@ -26,6 +27,7 @@ keywords = [
     "as",
     "between",
     "case",
+    "collate nocase",
     "cross join",
     "desc",
     "else",
@@ -35,6 +37,8 @@ keywords = [
     "having",
     "in",
     "inner join",
+    "is",
+    "is not",
     "join",
     "limit",
     "on",
@@ -51,28 +55,30 @@ locs = locals()
 reserved = []
 for k in keywords:
     name = k.upper().replace(" ", "")
-    locs[name] = value = Keyword(k, caseless=True).setName(k.lower())
+    locs[name] = value = Keyword(k, caseless=True).setName(k.lower()).setDebug(True)
     reserved.append(value)
 RESERVED = MatchFirst(reserved)
 
 KNOWN_OPS = [
     (BETWEEN, AND),
+    Literal("||").setName("concat").setDebug(DEBUG),
     Literal("*").setName("mult").setDebug(DEBUG),
     Literal("/").setName("div").setDebug(DEBUG),
     Literal("+").setName("add").setDebug(DEBUG),
     Literal("-").setName("sub").setDebug(DEBUG),
-    Literal("=").setName("eq").setDebug(DEBUG),
-    Literal("==").setName("eq").setDebug(DEBUG),
-    Literal("!=").setName("neq").setDebug(DEBUG),
     Literal("<>").setName("neq").setDebug(DEBUG),
     Literal(">").setName("gt").setDebug(DEBUG),
     Literal("<").setName("lt").setDebug(DEBUG),
     Literal(">=").setName("gte").setDebug(DEBUG),
     Literal("<=").setName("lte").setDebug(DEBUG),
     IN.setName("in").setDebug(DEBUG),
+    IS.setName("eq").setDebug(DEBUG),
+    Literal("=").setName("eq").setDebug(DEBUG),
+    Literal("==").setName("eq").setDebug(DEBUG),
+    ISNOT.setName("neq").setDebug(DEBUG),
+    Literal("!=").setName("neq").setDebug(DEBUG),
     OR.setName("or").setDebug(DEBUG),
-    AND.setName("and").setDebug(DEBUG),
-    Literal("||").setName("concat").setDebug(DEBUG)
+    AND.setName("and").setDebug(DEBUG)
 ]
 
 
@@ -89,6 +95,18 @@ def to_json_operator(instring, tokensStart, retTokens):
             break
     else:
         raise "not found"
+
+    if op == "eq":
+        if tok[2] == "null":
+            return {"missing": tok[0]}
+        elif tok[0] == "null":
+            return {"missing": tok[2]}
+    elif op == "neq":
+        if tok[2] == "null":
+            return {"exists": tok[0]}
+        elif tok[0] == "null":
+            return {"exists": tok[2]}
+
     return {op: [tok[i * 2] for i in range(int((len(tok) + 1) / 2))]}
 
 
@@ -96,6 +114,10 @@ def to_json_call(instring, tokensStart, retTokens):
     # ARRANGE INTO {op: params} FORMAT
     tok = retTokens
     op = tok.op.lower()
+
+    if op == "-":
+        op = "neg"
+
     params = tok.params
     if not params:
         params = None
@@ -128,21 +150,36 @@ def to_join_call(instring, tokensStart, retTokens):
 
 
 def to_select_call(instring, tokensStart, retTokens):
+    # toks = datawrap(retTokens)
+    # return {
+    #     "select": toks.select,
+    #     "from": toks['from'],
+    #     "where": toks.where,
+    #     "groupby": toks.groupby,
+    #     "having": toks.having,
+    #     "limit": toks.limit
+    #
+    # }
     return retTokens
 
 
 def to_union_call(instring, tokensStart, retTokens):
-    if len(retTokens.union)==1:
-        output = retTokens.union[0]
-        output["orderby"] = retTokens.orderby if retTokens.orderby else None
-        output["limit"] = retTokens.limit if retTokens.limit else None
+    tok = retTokens[0]
+    unions = list(tok['from'].union)
+    if len(unions)==1:
+        output = unions[0]
+        output["orderby"] = tok.orderby if tok.orderby else None
+        output["limit"] = tok.limit if tok.limit else None
         return output
     else:
-        return {
-            "from": {"union": retTokens.union},
-            "orderby": retTokens.orderby,
-            "limit": retTokens.limit
-        }
+        if not tok.orderby and not tok.limit:
+            return tok['from']
+        else:
+            return {
+                "from": {"union": unions},
+                "orderby": tok.orderby if tok.orderby else None,
+                "limit": tok.limit if tok.limit else None
+            }
 
 
 def unquote(instring, tokensStart, retTokens):
@@ -181,7 +218,6 @@ intNum = Combine(
 sqlString = Combine(Regex(r"\'(\'\'|\\.|[^'])*\'")).addParseAction(to_string)
 identString = Combine(Regex(r'\"(\"\"|\\.|[^"])*\"')).addParseAction(unquote)
 ident = Combine(~RESERVED + (delimitedList(Literal("*") | Word(alphas, alphanums + "_$") | identString, delim=".", combine=True))).setName("identifier")
-primitive = realNum | intNum | sqlString | ident
 
 # EXPRESSIONS
 expr = Forward()
@@ -192,12 +228,12 @@ case = (CASE + Group(ZeroOrMore((WHEN + expr("when") + THEN + expr("then")).addP
 
 selectStmt = Forward()
 compound = (
-    (Literal("-").setResultsValue("neg").setResultsName("op").setDebug(DEBUG) + expr("params")).addParseAction(to_json_call) |
-    (Keyword("not", caseless=True).setResultsName("op").setDebug(DEBUG) + expr("params")).addParseAction(to_json_call) |
-    (Keyword("distinct", caseless=True).setResultsName("op").setDebug(DEBUG) + expr("params")).addParseAction(to_json_call) |
-    Keyword("null", caseless=True).setDebug(DEBUG) |
+    (Literal("-")("op").setDebug(DEBUG) + expr("params")).addParseAction(to_json_call) |
+    (Keyword("not", caseless=True)("op").setDebug(DEBUG) + expr("params")).addParseAction(to_json_call) |
+    (Keyword("distinct", caseless=True)("op").setDebug(DEBUG) + expr("params")).addParseAction(to_json_call) |
+    Keyword("null", caseless=True).setName("null").setDebug(DEBUG) |
     case |
-    (Literal("(").setDebug(DEBUG).suppress() + selectStmt + Literal(")").suppress()).addParseAction(to_select_call) |
+    (Literal("(").setDebug(DEBUG).suppress() + selectStmt + Literal(")").suppress()) |
     (Literal("(").setDebug(DEBUG).suppress() + Group(delimitedList(expr)) + Literal(")").suppress()) |
     realNum.setName("float").setDebug(DEBUG) |
     intNum.setName("int").setDebug(DEBUG) |
@@ -205,7 +241,7 @@ compound = (
     (
         Word(alphas)("op").setName("function name").setDebug(DEBUG) +
         Literal("(").setName("func_param").setDebug(DEBUG) +
-        Optional(selectStmt.addParseAction(to_select_call) | Group(delimitedList(expr)))("params") +
+        Optional(selectStmt | Group(delimitedList(expr)))("params") +
         ")"
     ).addParseAction(to_json_call).setDebug(DEBUG) |
     ident.copy().setName("variable").setDebug(DEBUG)
@@ -239,8 +275,8 @@ sortColumn = expr("value").setName("sort1").setDebug(DEBUG) + Optional(DESC("sor
              expr("value").setName("sort2").setDebug(DEBUG)
 
 # define SQL tokens
-selectStmt << (
-    (
+selectStmt << Group(
+    Group(Group(
         delimitedList(
             Group(
                 SELECT.suppress().setDebug(DEBUG) + delimitedList(selectColumn)("select") +
@@ -254,7 +290,7 @@ selectStmt << (
             ).addParseAction(to_select_call),
             delim=UNION
         )
-    )("union") +
+    )("union"))("from") +
     Optional(ORDERBY.suppress().setDebug(DEBUG) + delimitedList(Group(sortColumn))("orderby").setName("orderby")) +
     Optional(LIMIT.suppress().setDebug(DEBUG) + expr("limit"))
 ).addParseAction(to_union_call)
