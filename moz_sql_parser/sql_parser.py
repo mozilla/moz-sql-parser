@@ -38,7 +38,6 @@ keywords = [
     "in",
     "inner join",
     "is",
-    "is not",
     "join",
     "limit",
     "on",
@@ -55,13 +54,13 @@ locs = locals()
 reserved = []
 for k in keywords:
     name = k.upper().replace(" ", "")
-    locs[name] = value = Keyword(k, caseless=True).setName(k.lower()).setDebug(True)
+    locs[name] = value = Keyword(k, caseless=True).setName(k.lower()).setDebug(DEBUG)
     reserved.append(value)
 RESERVED = MatchFirst(reserved)
 
 KNOWN_OPS = [
     (BETWEEN, AND),
-    Literal("||").setName("concat").setDebug(DEBUG),
+    # Literal("||").setName("concat").setDebug(DEBUG),
     Literal("*").setName("mult").setDebug(DEBUG),
     Literal("/").setName("div").setDebug(DEBUG),
     Literal("+").setName("add").setDebug(DEBUG),
@@ -75,7 +74,6 @@ KNOWN_OPS = [
     IS.setName("eq").setDebug(DEBUG),
     Literal("=").setName("eq").setDebug(DEBUG),
     Literal("==").setName("eq").setDebug(DEBUG),
-    ISNOT.setName("neq").setDebug(DEBUG),
     Literal("!=").setName("neq").setDebug(DEBUG),
     OR.setName("or").setDebug(DEBUG),
     AND.setName("and").setDebug(DEBUG)
@@ -176,9 +174,9 @@ def to_union_call(instring, tokensStart, retTokens):
             return tok['from']
         else:
             return {
-                "from": {"union": unions},
-                "orderby": tok.orderby if tok.orderby else None,
-                "limit": tok.limit if tok.limit else None
+                    "from": {"union": unions},
+                    "orderby": tok.orderby if tok.orderby else None,
+                    "limit": tok.limit if tok.limit else None
             }
 
 
