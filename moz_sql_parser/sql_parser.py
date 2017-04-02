@@ -12,15 +12,20 @@ from __future__ import division
 from __future__ import unicode_literals
 
 import ast
+import sys
 
-from mo_dots.objects import datawrap
 from pyparsing import \
     CaselessLiteral, Word, delimitedList, Optional, Combine, Group, alphas, \
-    nums, alphanums, Forward, restOfLine, Keyword, Literal, ParserElement, infixNotation, opAssoc, Regex, MatchFirst, ZeroOrMore, Dict
+    nums, alphanums, Forward, restOfLine, Keyword, Literal, ParserElement, infixNotation, opAssoc, Regex, MatchFirst, ZeroOrMore
 
 ParserElement.enablePackrat()
 DEBUG = True
 END = None
+
+
+# THE PARSING DEPTH IS NASTY
+sys.setrecursionlimit(1500)
+
 
 keywords = [
     "and",
@@ -60,7 +65,7 @@ RESERVED = MatchFirst(reserved)
 
 KNOWN_OPS = [
     (BETWEEN, AND),
-    # Literal("||").setName("concat").setDebug(DEBUG),
+    Literal("||").setName("concat").setDebug(DEBUG),
     Literal("*").setName("mult").setDebug(DEBUG),
     Literal("/").setName("div").setDebug(DEBUG),
     Literal("+").setName("add").setDebug(DEBUG),
