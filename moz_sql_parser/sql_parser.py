@@ -97,7 +97,11 @@ def to_json_operator(instring, tokensStart, retTokens):
             op = o.name
             break
     else:
-        raise "not found"
+        if tok[1] == COLLATENOCASE.match:
+            op = COLLATENOCASE.name
+            return {op: tok[0]}
+        else:
+            raise "not found"
 
     if op == "eq":
         if tok[2] == "null":
@@ -167,21 +171,23 @@ def to_select_call(instring, tokensStart, retTokens):
 
 
 def to_union_call(instring, tokensStart, retTokens):
-    tok = retTokens[0]
-    unions = list(tok['from'].union)
-    if len(unions)==1:
+    tok = retTokens[0].asDict()
+    unions = tok['from']['union']
+    if len(unions) == 1:
         output = unions[0]
-        output["orderby"] = tok.orderby if tok.orderby else None
-        output["limit"] = tok.limit if tok.limit else None
+        if tok.get('orderby'):
+            output["orderby"] = tok.get('orderby')
+        if tok.get('limit'):
+            output["limit"] = tok.get('limit')
         return output
     else:
-        if not tok.orderby and not tok.limit:
+        if not tok.get('orderby') and not tok.get('limit'):
             return tok['from']
         else:
             return {
-                    "from": {"union": unions},
-                    "orderby": tok.orderby if tok.orderby else None,
-                    "limit": tok.limit if tok.limit else None
+                "from": {"union": unions},
+                "orderby": tok.get('orderby') if tok.get('orderby') else None,
+                "limit": tok.get('limit') if tok.get('limit') else None
             }
 
 
@@ -259,6 +265,13 @@ expr << Group(infixNotation(
             to_json_operator
         )
         for o in KNOWN_OPS
+    ]+[
+        (
+            COLLATENOCASE,
+            1,
+            opAssoc.LEFT,
+            to_json_operator
+        )
     ]
 ).setName("expression").setDebug(DEBUG))
 
@@ -287,10 +300,10 @@ selectStmt << Group(
                     FROM.suppress().setDebug(DEBUG) + (delimitedList(Group(tableName)) + ZeroOrMore(join))("from") +
                     Optional(WHERE.suppress().setDebug(DEBUG) + expr.setName("where"))("where") +
                     Optional(GROUPBY.suppress().setDebug(DEBUG) + delimitedList(Group(selectColumn))("groupby").setName("groupby")) +
-                    Optional(HAVING.suppress().setDebug(DEBUG) + expr("having").setName("having"))+
+                    Optional(HAVING.suppress().setDebug(DEBUG) + expr("having").setName("having")) +
                     Optional(LIMIT.suppress().setDebug(DEBUG) + expr("limit"))
                 )
-            ).addParseAction(to_select_call),
+            ),
             delim=UNION
         )
     )("union"))("from") +
