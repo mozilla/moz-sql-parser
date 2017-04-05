@@ -19,7 +19,7 @@ from pyparsing import \
     nums, alphanums, Forward, restOfLine, Keyword, Literal, ParserElement, infixNotation, opAssoc, Regex, MatchFirst, ZeroOrMore
 
 ParserElement.enablePackrat()
-DEBUG = True
+DEBUG = False
 END = None
 
 
@@ -206,7 +206,9 @@ def unquote(instring, tokensStart, retTokens):
 
 
 def to_string(instring, tokensStart, retTokens):
-    return {"literal": ast.literal_eval(retTokens[0])}
+    val = retTokens[0]
+    val = "'"+val[1:-1].replace("''", "\\'")+"'"
+    return {"literal": ast.literal_eval(val)}
 
 # NUMBERS
 E = CaselessLiteral("E")
