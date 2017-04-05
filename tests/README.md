@@ -1,7 +1,7 @@
 Moz SQL Parser Tests
 ====================
 
-The parser is not complete! Please help by adding a test, and then altering the grammar to pass that test.
+The test suite has over 160 tests, all passing. 
 
 ## Running Tests
 
@@ -22,4 +22,8 @@ is known to lurk while matching `infixNotation`.
 * Feel free to leave in rulers, if you use them
 
  
+## History
+
+**March 2017** - Added a number of test cases, most of which are missing the expected JSON parse tree, so they fail.
+
 

@@ -19,8 +19,7 @@ The primary objective of this library is to convert some subset of [SQL-92](http
 
 ## Project Status
 
-This is an early-version SQL parser: If your SQL does not work, at the very least, [please cut-and-paste it to a new issue](https://github.com/mozilla/moz-sql-parser/issues/new)
-
+There are [over 160 tests, all passing](https://github.com/mozilla/moz-sql-parser/tree/dev/tests). This parser is good enough for basic usage, including inner queries.
 
 ## Install
 

@@ -11,7 +11,7 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import unicode_literals
 
-from pyLibrary.testing.fuzzytestcase import FuzzyTestCase
+from mo_testing.fuzzytestcase import FuzzyTestCase
 
 from moz_sql_parser import parse
 from moz_sql_parser import sql_parser
@@ -56,7 +56,7 @@ class TestSimple(FuzzyTestCase):
         expected = {
             "select": [
                 {"name": "@*#&", "value": "a"},
-                {"name": "test.g\\.g.c", "value": "b"}
+                {"name": "test.g.g.c", "value": "b"}
             ],
             "from": "dual"
         }
@@ -69,9 +69,9 @@ class TestSimple(FuzzyTestCase):
         expected = {
             "select": {"value": {"add": [
                 "a",
-                {"div": ["b", {"literal": 2}]},
-                {"mult": [{"literal": 45}, "c"]},
-                {"div": [{"literal": 2}, "d"]}
+                {"div": ["b", 2]},
+                {"mult": [45, "c"]},
+                {"div": [2, "d"]}
             ]}},
             "from": "dual"
         }
@@ -91,16 +91,16 @@ class TestSimple(FuzzyTestCase):
         self.assertEqual(result, expected)
 
     def test_bad_select1(self):
-        self.assertRaises('Expected "select"', lambda: parse("se1ect A, B, C from dual"))
+        self.assertRaises('Expected select', lambda: parse("se1ect A, B, C from dual"))
 
     def test_bad_select2(self):
-        self.assertRaises('Expected {{expression "as" column name}', lambda: parse("Select &&& FROM dual"))
+        self.assertRaises('Expected {{expression1 [{[as] column_name1}]}', lambda: parse("Select &&& FROM dual"))
 
     def test_bad_from(self):
-        self.assertRaises('Expected "from"', lambda: parse("select A, B, C frum dual"))
+        self.assertRaises('Expected end of text (at char 20)', lambda: parse("select A, B, C frum dual"))
 
     def test_incomplete1(self):
-        self.assertRaises('Expected {{expression "as" column name}', lambda: parse("SELECT"))
+        self.assertRaises('Expected {{expression1 [{[as] column_name1}]}', lambda: parse("SELECT"))
 
     def test_incomplete2(self):
         self.assertRaises("", lambda: parse("SELECT * FROM"))
@@ -150,11 +150,7 @@ class TestSimple(FuzzyTestCase):
                 ]},
                 {"in": [
                     "b",
-                    [
-                        {"literal": 10},
-                        {"literal": 11},
-                        {"literal": 12}
-                    ]
+                    [10, 11, 12]
                 ]}
             ]}
         }
@@ -177,7 +173,7 @@ class TestSimple(FuzzyTestCase):
         expected = {
             "select": [
                 {"value": "a"},
-                {"name": "b", "value": {"count": {"literal": 1}}}
+                {"name": "b", "value": {"count": 1}}
             ],
             "from": "mytable",
             "groupby": {"value": "a"}
@@ -187,7 +183,7 @@ class TestSimple(FuzzyTestCase):
     def test_function(self):
         result = parse("select count(1) from mytable")
         expected = {
-            "select": {"value": {"count": {"literal": 1}}},
+            "select": {"value": {"count": 1}},
             "from": "mytable"
         }
         self.assertEqual(result, expected)
@@ -195,7 +191,7 @@ class TestSimple(FuzzyTestCase):
     def test_order_by(self):
         result = parse("select count(1) from dual order by a")
         expected = {
-            "select": {"value": {"count": {"literal": 1}}},
+            "select": {"value": {"count": 1}},
             "from": "dual",
             "orderby": {"value": "a"}
         }
