@@ -77,6 +77,25 @@ class TestSimple(FuzzyTestCase):
         }
         self.assertEqual(result, expected)
 
+    def test_select_underscore_name(self):
+        #                         1         2         3         4         5         6
+        #               0123456789012345678901234567890123456789012345678901234567890123456789
+        result = parse("select _id from dual")
+        expected = {
+            "select": {"value": "_id"},
+            "from": "dual"
+        }
+        self.assertEqual(result, expected)
+
+    def test_select_dots_names(self):
+        #                         1         2         3         4         5         6
+        #               0123456789012345678901234567890123456789012345678901234567890123456789
+        result = parse("select a.b.c._d from dual")
+        expected = {
+            "select": {"value": "a.b.c._d"},
+            "from": "dual"
+        }
+        self.assertEqual(result, expected)
 
     def select_many_column(self):
         result = parse("Select a, b, c from dual")

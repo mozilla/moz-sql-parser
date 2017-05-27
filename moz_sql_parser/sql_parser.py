@@ -228,7 +228,7 @@ intNum = Combine(
 # STRINGS, NUMBERS, VARIABLES
 sqlString = Combine(Regex(r"\'(\'\'|\\.|[^'])*\'")).addParseAction(to_string)
 identString = Combine(Regex(r'\"(\"\"|\\.|[^"])*\"')).addParseAction(unquote)
-ident = Combine(~RESERVED + (delimitedList(Literal("*") | Word(alphas, alphanums + "_$") | identString, delim=".", combine=True))).setName("identifier")
+ident = Combine(~RESERVED + (delimitedList(Literal("*") | Word(alphas + "_", alphanums + "_$") | identString, delim=".", combine=True))).setName("identifier")
 
 # EXPRESSIONS
 expr = Forward()
