@@ -116,7 +116,7 @@ class TestSimple(FuzzyTestCase):
         self.assertRaises('Expected {{expression1 [{[as] column_name1}]}', lambda: parse("Select &&& FROM dual"))
 
     def test_bad_from(self):
-        self.assertRaises('Expected end of text (at char 20)', lambda: parse("select A, B, C frum dual"))
+        self.assertRaises('(at char 20)', lambda: parse("select A, B, C frum dual"))
 
     def test_incomplete1(self):
         self.assertRaises('Expected {{expression1 [{[as] column_name1}]}', lambda: parse("SELECT"))
