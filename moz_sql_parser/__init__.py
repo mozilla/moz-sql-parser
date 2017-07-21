@@ -13,11 +13,25 @@ from __future__ import unicode_literals
 
 import json
 
-from moz_sql_parser.sql_parser import SQLParser
+from pyparsing import ParseException
+
+from moz_sql_parser.sql_parser import SQLParser, all_exceptions
 
 
 def parse(sql):
-    parse_result = SQLParser.parseString(sql, parseAll=True)
+    try:
+        parse_result = SQLParser.parseString(sql, parseAll=True)
+    except Exception as e:
+        if e.msg == "Expected end of text":
+            problems = all_exceptions[e.loc]
+            expecting = [
+                f
+                for f in (set(p.msg.lstrip("Expected").strip() for p in problems)-{"Found unwanted token"})
+                if not f.startswith("{")
+            ]
+            raise ParseException(sql, e.loc, "Expecting one of (" + (", ".join(expecting)) + ")")
+        else:
+            raise e
     return _scrub(parse_result)
 
 
