@@ -8,7 +8,7 @@ The test suite has over 160 tests, all passing.
 	git clone https://github.com/mozilla/moz-sql-parser.git
 	pip install -r requirements.txt
 	set PYTHONPATH=.	
-	python.exe -m unittest tests.test_simple
+	python.exe -m unittest discover tests
 
 ### Debugging Suggestions
 
