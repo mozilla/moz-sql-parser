@@ -187,6 +187,30 @@ class TestSimple(FuzzyTestCase):
         }
         self.assertEqual(result, expected)
 
+    def test_is_null(self):
+        result = parse("SELECT a, b FROM t1 WHERE t1.a IS NULL")
+        expected = {
+            "select": [
+                {"value": "a"},
+                {"value": "b"}
+            ],
+            "from": "t1",
+            "where": {"missing": "t1.a"}
+        }
+        self.assertEqual(result, expected)
+
+    def test_is_not_null(self):
+        result = parse("SELECT a, b FROM t1 WHERE t1.a IS NOT NULL")
+        expected = {
+            "select": [
+                {"value": "a"},
+                {"value": "b"}
+            ],
+            "from": "t1",
+            "where": {"exists": "t1.a"}
+        }
+        self.assertEqual(result, expected)
+
     def test_groupby(self):
         result = parse("select a, count(1) as b from mytable group by a")
         expected = {

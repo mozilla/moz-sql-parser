@@ -14,8 +14,7 @@ from __future__ import unicode_literals
 import ast
 import sys
 
-from pyparsing import \
-    CaselessLiteral, Word, delimitedList, Optional, Combine, Group, alphas, nums, alphanums, Forward, restOfLine, Keyword, Literal, ParserElement, infixNotation, opAssoc, Regex, MatchFirst, ZeroOrMore, _ustr
+from pyparsing import CaselessLiteral, Word, delimitedList, Optional, Combine, Group, alphas, nums, alphanums, Forward, restOfLine, Keyword, Literal, ParserElement, infixNotation, opAssoc, Regex, MatchFirst, ZeroOrMore, _ustr
 
 ParserElement.enablePackrat()
 
@@ -92,7 +91,7 @@ KNOWN_OPS = [
     Literal(">=").setName("gte").setDebugActions(*debug),
     Literal("<=").setName("lte").setDebugActions(*debug),
     IN.setName("in").setDebugActions(*debug),
-    IS.setName("eq").setDebugActions(*debug),
+    IS.setName("is").setDebugActions(*debug),
     Literal("=").setName("eq").setDebugActions(*debug),
     Literal("==").setName("eq").setDebugActions(*debug),
     Literal("!=").setName("neq").setDebugActions(*debug),
@@ -129,6 +128,11 @@ def to_json_operator(instring, tokensStart, retTokens):
             return {"exists": tok[0]}
         elif tok[0] == "null":
             return {"exists": tok[2]}
+    elif op == "is":
+        if tok[2] == 'null':
+            return {"missing": tok[0]}
+        else:
+            return {"exists": tok[0]}
 
     return {op: [tok[i * 2] for i in range(int((len(tok) + 1) / 2))]}
 
