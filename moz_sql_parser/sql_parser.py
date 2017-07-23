@@ -227,23 +227,12 @@ def to_string(instring, tokensStart, retTokens):
     return {"literal": ast.literal_eval(val)}
 
 # NUMBERS
-E = CaselessLiteral("E")
-# binop = oneOf("= != < > >= <= eq ne lt le gt ge", caseless=True)
-arithSign = Word("+-", exact=1)
-realNum = Combine(
-    Optional(arithSign) +
-    (Word(nums) + "." + Optional(Word(nums)) | ("." + Word(nums))) +
-    Optional(E + Optional(arithSign) + Word(nums))
-).addParseAction(unquote)
-intNum = Combine(
-    Optional(arithSign) +
-    Word(nums) +
-    Optional(E + Optional("+") + Word(nums))
-).addParseAction(unquote)
+realNum = Regex(r"[+-]?(\d+\.\d*|\.\d+)([eE][+-]?\d+)?").addParseAction(unquote)
+intNum = Regex(r"[+-]?\d+([eE]\+?\d+)?").addParseAction(unquote)
 
 # STRINGS, NUMBERS, VARIABLES
-sqlString = Combine(Regex(r"\'(\'\'|\\.|[^'])*\'")).addParseAction(to_string)
-identString = Combine(Regex(r'\"(\"\"|\\.|[^"])*\"')).addParseAction(unquote)
+sqlString = Regex(r"\'(\'\'|\\.|[^'])*\'").addParseAction(to_string)
+identString = Regex(r'\"(\"\"|\\.|[^"])*\"').addParseAction(unquote)
 ident = Combine(~RESERVED + (delimitedList(Literal("*") | Word(alphas + "_", alphanums + "_$") | identString, delim=".", combine=True))).setName("identifier")
 
 # EXPRESSIONS
