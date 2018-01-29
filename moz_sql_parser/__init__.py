@@ -13,6 +13,7 @@ from __future__ import unicode_literals
 
 import json
 
+from mo_future import text_type, number_types, binary_type
 from pyparsing import ParseException
 
 from moz_sql_parser.sql_parser import SQLParser, all_exceptions
@@ -22,7 +23,7 @@ def parse(sql):
     try:
         parse_result = SQLParser.parseString(sql, parseAll=True)
     except Exception as e:
-        if e.msg == "Expected end of text":
+        if isinstance(e, ParseException) and e.msg == "Expected end of text":
             problems = all_exceptions[e.loc]
             expecting = [
                 f
@@ -30,17 +31,20 @@ def parse(sql):
                 if not f.startswith("{")
             ]
             raise ParseException(sql, e.loc, "Expecting one of (" + (", ".join(expecting)) + ")")
-        else:
-            raise e
+        raise
     return _scrub(parse_result)
 
 
 def _scrub(result):
-    if isinstance(result, (str, unicode, int, float)):
+    if isinstance(result, text_type):
+        return result
+    elif isinstance(result, binary_type):
+        return result.decode('utf8')
+    elif isinstance(result, number_types):
         return result
     elif not result:
         return {}
-    elif isinstance(result, list) or not result.items():
+    elif isinstance(result, list) or not list(result.items()):
         if not result:
             return None
         elif len(result) == 1:
