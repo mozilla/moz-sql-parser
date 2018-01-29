@@ -11,4 +11,4 @@ env:
 
 # command to run tests
 script:
-  - python -m unittest discover teststests/travis/run.sh
+  - python -m unittest discover tests

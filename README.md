@@ -2,6 +2,13 @@
 
 Let's make a SQL parser so we can provide a familiar interface to non-sql datastores!
 
+
+|Branch      |Status   |
+|------------|---------|
+|master      | [![Build Status](https://travis-ci.org/mozilla/moz-sql-parser.svg?branch=master)](https://travis-ci.org/mozilla/moz-sql-parser) |
+|dev         | [![Build Status](https://travis-ci.org/mozilla/moz-sql-parser.svg?branch=dev)](https://travis-ci.org/mozilla/moz-sql-parser)    |
+
+
 ## Problem Statement
 
 SQL is a familiar language used to access databases. Although, each database vendor has its quirky implementation, the average developer does not know enough SQL to be concerned with those quirks. This familiar core SQL (lowest common denominator, if you will) is useful enough to explore data in primitive ways. It is hoped that, once programmers have reviewed a datastore with basic SQL queries, and they see the value of that data, they will be motivated to use the datastore's native query format.
