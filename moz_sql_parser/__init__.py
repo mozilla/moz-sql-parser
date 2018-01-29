@@ -44,7 +44,7 @@ def _scrub(result):
         return result
     elif not result:
         return {}
-    elif isinstance(result, list) or not result.items():
+    elif isinstance(result, list) or not list(result.items()):
         if not result:
             return None
         elif len(result) == 1:
