@@ -24,8 +24,9 @@ is known to lurk while matching `infixNotation`.
  
 ## History
 
-* **March 2017** - Added a number of test cases, most of which are missing the expected JSON parse tree, so they fail.
-* **April 2017** - All tests pass
+* **January 2018** - fixes for Python3
 * **July 2017** - Add suite to start testing error messages, with hope of improving them
+* **April 2017** - All tests pass
+* **March 2017** - Added a number of test cases, most of which are missing the expected JSON parse tree, so they fail.
 
 
