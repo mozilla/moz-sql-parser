@@ -13,7 +13,7 @@ from __future__ import unicode_literals
 
 import json
 
-from mo_logs import Except
+from mo_future import text_type, number_types
 from pyparsing import ParseException
 
 from moz_sql_parser.sql_parser import SQLParser, all_exceptions
@@ -36,7 +36,9 @@ def parse(sql):
 
 
 def _scrub(result):
-    if isinstance(result, (str, unicode, int, float)):
+    if isinstance(result, text_type):
+        return result
+    elif isinstance(result, number_types):
         return result
     elif not result:
         return {}
