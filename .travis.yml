@@ -10,4 +10,4 @@ env:
 
 # command to run tests
 script:
-  - tests/travis/run.sh
+  - python -m unittest discover tests
