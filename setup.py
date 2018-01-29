@@ -42,7 +42,7 @@ def find_packages(where='.', lib_prefix='', exclude=()):
 
 setup(
     name='moz-sql-parser',
-    version="0.1.17202",
+    version="1.3.17202",
     description='Extract Parse Tree from SQL',
     long_description=long_desc,
     author='Kyle Lahnakoski',
