@@ -42,7 +42,7 @@ def find_packages(where='.', lib_prefix='', exclude=()):
 
 setup(
     name='moz-sql-parser',
-    version="1.3.17202",
+    version="1.3.18029",
     description='Extract Parse Tree from SQL',
     long_description=long_desc,
     author='Kyle Lahnakoski',
@@ -50,7 +50,7 @@ setup(
     url='https://github.com/mozilla/moz-sql-parser',
     license='MPL 2.0',
     packages=find_packages(".", lib_prefix=""),
-    install_requires=["pyparsing"],
+    install_requires=["mo-future","pyparsing"],
     include_package_data=True,
     zip_safe=False,
     classifiers=[  #https://pypi.python.org/pypi?%3Aaction=list_classifiers
