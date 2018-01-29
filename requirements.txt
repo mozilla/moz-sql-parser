@@ -1,2 +1,2 @@
-mo_future
+mo-future
 pyparsing

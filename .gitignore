@@ -1,12 +1,11 @@
 *.log
-*.log.*
 *.pyc
 *.tab
 out
 .idea
 *.iml
-*.txt
 /moz_sql_parser.egg-info
 /build
 /dist
 /moz-sql-parser
+vendor/
