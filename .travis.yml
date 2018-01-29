@@ -1,13 +1,14 @@
 language: python
 python:
   - "2.7"
+  - "3.6"
 
 install:
-  - "pip install -r requirements.txt"
+  - "pip install -r tests/requirements.txt"
 
 env:
   - PYTHONPATH=.
 
 # command to run tests
 script:
-  - tests/travis/run.sh
+  - python -m unittest discover teststests/travis/run.sh
