@@ -242,3 +242,21 @@ class TestSimple(FuzzyTestCase):
 
     def test_debug_is_off(self):
         self.assertFalse(sql_parser.DEBUG, "Turn off debugging")
+
+    def test_neg_or_precedence(self):
+        result = parse("select B,C from table1 where A=-900 or B=100")
+        expected = {
+            'from': 'table1',
+            'where': {'or': [{'eq': ['A', -900]}, {'eq': ['B', 100]}]},
+            'select': [{'value': 'B'}, {'value': 'C'}]
+        }
+        self.assertEqual(result, expected)
+
+    def test_negative_number(self):
+        result = parse("select a from table1 where A=-900")
+        expected = {
+            'from': 'table1',
+            'where': {'eq': ['A', -900]},
+            'select': {'value': 'a'}
+        }
+        self.assertEqual(result, expected)
