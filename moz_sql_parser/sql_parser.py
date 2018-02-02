@@ -252,7 +252,6 @@ case = (
 
 selectStmt = Forward()
 compound = (
-    (Literal("-")("op").setDebugActions(*debug) + expr("params")).addParseAction(to_json_call) |
     (Keyword("not", caseless=True)("op").setDebugActions(*debug) + expr("params")).addParseAction(to_json_call) |
     (Keyword("distinct", caseless=True)("op").setDebugActions(*debug) + expr("params")).addParseAction(to_json_call) |
     Keyword("null", caseless=True).setName("null").setDebugActions(*debug) |
@@ -261,6 +260,7 @@ compound = (
     (Literal("(").setDebugActions(*debug).suppress() + Group(delimitedList(expr)) + Literal(")").suppress()) |
     realNum.setName("float").setDebugActions(*debug) |
     intNum.setName("int").setDebugActions(*debug) |
+    (Literal("-")("op").setDebugActions(*debug) + expr("params")).addParseAction(to_json_call) |
     sqlString.setName("string").setDebugActions(*debug) |
     (
         Word(alphas)("op").setName("function name").setDebugActions(*debug) +
