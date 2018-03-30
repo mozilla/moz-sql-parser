@@ -22,7 +22,7 @@ class TestSimple(FuzzyTestCase):
     def test_two_tables(self):
         result = parse("SELECT * from XYZZY, ABC")
         expected = {
-            "select": {"value": "*"},
+            "select": "*",
             "from": ["XYZZY", "ABC"]
         }
         self.assertEqual(result, expected)
@@ -30,7 +30,7 @@ class TestSimple(FuzzyTestCase):
     def test_dot_table_name(self):
         result = parse("select * from SYS.XYZZY")
         expected = {
-            "select": {"value": "*"},
+            "select": "*",
             "from": "SYS.XYZZY"
         }
         self.assertEqual(result, expected)
@@ -129,7 +129,7 @@ class TestSimple(FuzzyTestCase):
         #               0123456789012345678901234567890123456789012345678901234567890123456789
         result = parse("SELECT * FROM dual WHERE a<>'test'")
         expected = {
-            "select": {"value": "*"},
+            "select": "*",
             "from": "dual",
             "where": {"neq": ["a", {"literal": "test"}]}
         }
