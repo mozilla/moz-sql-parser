@@ -13,6 +13,7 @@ from __future__ import unicode_literals
 
 from mo_logs import Except
 from mo_testing.fuzzytestcase import FuzzyTestCase
+
 from moz_sql_parser import parse
 
 
