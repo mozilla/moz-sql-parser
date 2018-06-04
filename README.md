@@ -28,21 +28,23 @@ The primary objective of this library is to convert some subset of [SQL-92](http
 
 There are [over 160 tests, all passing](https://github.com/mozilla/moz-sql-parser/tree/dev/tests). This parser is good enough for basic usage, including inner queries.
 
+You can see the parser in action at [https://sql.telemetry.mozilla.org/](https://sql.telemetry.mozilla.org/) while using the ActiveData datasource
+
 ## Install
 
-	pip install moz-sql-parser
+    pip install moz-sql-parser
 
 ## Usage
 
-	>>> from moz_sql_parser import parse
-	>>> import json
-	>>> json.dumps(parse("select count(1) from jobs"))
-	'{"from": "jobs", "select": {"value": {"count": {"literal": 1}}}}'
-	
+    >>> from moz_sql_parser import parse
+    >>> import json
+    >>> json.dumps(parse("select count(1) from jobs"))
+    '{"from": "jobs", "select": {"value": {"count": {"literal": 1}}}}'
+    
 Each SQL query is parsed to an object: Each clause is assigned to an object property of the same name. 
 
-	>>> json.dumps(parse("select a as hello, b as world from jobs"))
-	'{"from": "jobs", "select": [{"name": "hello", "value": "a"}, {"name": "world", "value": "b"}]}'
+    >>> json.dumps(parse("select a as hello, b as world from jobs"))
+    '{"from": "jobs", "select": [{"name": "hello", "value": "a"}, {"name": "world", "value": "b"}]}'
 
 The `SELECT` clause is an array of objects containing `name` and `value` properties. 
 
@@ -54,22 +56,22 @@ See [the tests directory](https://github.com/mozilla/moz-sql-parser/tree/dev/tes
 
 SQL queries are translated to JSON objects: Each clause is assigned to an object property of the same name.
 
-	
-	# SELECT * FROM dual WHERE a>b ORDER BY a+b
-	{
-		"select": "*",
-		"from": "dual"
-		"where": {"gt": ["a","b"]},
-		"orderby": {"add": ["a", "b"]}
-	}
-		
+    
+    # SELECT * FROM dual WHERE a>b ORDER BY a+b
+    {
+        "select": "*",
+        "from": "dual"
+        "where": {"gt": ["a","b"]},
+        "orderby": {"add": ["a", "b"]}
+    }
+        
 Expressions are also objects, but with only one property: The name of the operation, and the value holding (an array of) parameters for that operation. 
 
-	{op: parameters}
+    {op: parameters}
 
 and you can see this pattern in the previous example:
 
-	{"gt": ["a","b"]}
+    {"gt": ["a","b"]}
 
 
 ### Notes

@@ -177,17 +177,12 @@ def to_join_call(instring, tokensStart, retTokens):
 
 
 def to_select_call(instring, tokensStart, retTokens):
-    # toks = datawrap(retTokens)
-    # return {
-    #     "select": toks.select,
-    #     "from": toks['from'],
-    #     "where": toks.where,
-    #     "groupby": toks.groupby,
-    #     "having": toks.having,
-    #     "limit": toks.limit
-    #
-    # }
-    return retTokens
+    tok = retTokens[0].asDict()
+
+    if tok.get('value')[0][0] == '*':
+        return '*'
+    else:
+        return tok
 
 
 def to_union_call(instring, tokensStart, retTokens):
@@ -294,7 +289,7 @@ expr << Group(infixNotation(
 selectColumn = Group(
     Group(expr).setName("expression1")("value").setDebugActions(*debug) + Optional(Optional(AS) + ident.copy().setName("column_name1")("name").setDebugActions(*debug)) |
     Literal('*')("value").setDebugActions(*debug)
-).setName("column")
+).setName("column").addParseAction(to_select_call)
 
 
 tableName = (

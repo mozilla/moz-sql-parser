@@ -19,19 +19,19 @@ class TestResources(FuzzyTestCase):
     def test_001(self):
         sql = "SELECT * FROM test1"
         result = parse(sql)
-        expected = {"from": "test1", "select": {"value": "*"}}
+        expected = {"from": "test1", "select": "*"}
         self.assertEqual(result, expected)
 
     def test_002(self):
         sql = "SELECT * FROM test1, test2"
         result = parse(sql)
-        expected = {"from": ["test1", "test2"], "select": {"value": "*"}}
+        expected = {"from": ["test1", "test2"], "select": "*"}
         self.assertEqual(result, expected)
 
     def test_003(self):
         sql = "SELECT * FROM test2, test1"
         result = parse(sql)
-        expected = {"from": ["test2", "test1"], "select": {"value": "*"}}
+        expected = {"from": ["test2", "test1"], "select": "*"}
         self.assertEqual(result, expected)
 
     def test_004(self):
@@ -61,7 +61,7 @@ class TestResources(FuzzyTestCase):
     def test_008(self):
         sql = "SELECT *, * FROM test1"
         result = parse(sql)
-        expected = {"from": "test1", "select": [{"value": "*"}]}
+        expected = {"from": "test1", "select": ["*"]}
         self.assertEqual(result, expected)
 
     def test_009(self):
@@ -70,7 +70,7 @@ class TestResources(FuzzyTestCase):
         expected = {
             "from": "test1",
             "select": [
-                {"value": "*"},
+                "*",
                 {"value": {"min": ["f1", "f2"]}},
                 {"value": {"max": ["f1", "f2"]}}
             ]
@@ -84,9 +84,9 @@ class TestResources(FuzzyTestCase):
             "from": "test1",
             "select": [
                 {"value": {"literal": "one"}},
-                {"value": "*"},
+                "*",
                 {"value": {"literal": "two"}},
-                {"value": "*"}
+                "*"
             ]
         }
         self.assertEqual(result, expected)
@@ -97,7 +97,7 @@ class TestResources(FuzzyTestCase):
         expected = {
             "from": ["test1", "test2"],
             "select": [
-                {"value": "*"},
+                "*",
                 {"value": {"literal": "hi"}}
             ]
         }
@@ -110,9 +110,9 @@ class TestResources(FuzzyTestCase):
             "from": ["test1", "test2"],
             "select": [
                 {"value": {"literal": "one"}},
-                {"value": "*"},
+                "*",
                 {"value": {"literal": "two"}},
-                {"value": "*"}
+                "*"
             ]
         }
         self.assertEqual(result, expected)
@@ -149,7 +149,7 @@ class TestResources(FuzzyTestCase):
                 {"value": "test1", "name": "a"},
                 {"value": "test1", "name": "b"}
             ],
-            "select": {"value": "*"}
+            "select": "*"
         }
         self.assertEqual(result, expected)
 
@@ -608,7 +608,7 @@ class TestResources(FuzzyTestCase):
         result = parse(sql)
         expected = {
             "from": "t5",
-            "select": {"value": "*"},
+            "select": "*",
             "orderby": {"value": 1}
         }
         self.assertEqual(result, expected)
@@ -618,7 +618,7 @@ class TestResources(FuzzyTestCase):
         result = parse(sql)
         expected = {
             "from": "t5",
-            "select": {"value": "*"},
+            "select": "*",
             "orderby": {"value": 2}
         }
         self.assertEqual(result, expected)
@@ -628,7 +628,7 @@ class TestResources(FuzzyTestCase):
         result = parse(sql)
         expected = {
             "from": "t5",
-            "select": {"value": "*"},
+            "select": "*",
             "orderby": {"value": 2}
         }
         self.assertEqual(result, expected)
@@ -638,7 +638,7 @@ class TestResources(FuzzyTestCase):
         result = parse(sql)
         expected = {
             "from": "t5",
-            "select": {"value": "*"},
+            "select": "*",
             "orderby": [{"value": 2}, {"value": 1, "sort": "desc"}]
         }
         self.assertEqual(result, expected)
@@ -648,7 +648,7 @@ class TestResources(FuzzyTestCase):
         result = parse(sql)
         expected = {
             "from": "t5",
-            "select": {"value": "*"},
+            "select": "*",
             "orderby": [{"value": 1, "sort": "desc"}, {"value": "b"}]
         }
         self.assertEqual(result, expected)
@@ -658,7 +658,7 @@ class TestResources(FuzzyTestCase):
         result = parse(sql)
         expected = {
             "from": "t5",
-            "select": {"value": "*"},
+            "select": "*",
             "orderby": [{"value": "b", "sort": "desc"}, {"value": 1}]
         }
         self.assertEqual(result, expected)
@@ -876,7 +876,7 @@ class TestResources(FuzzyTestCase):
         result = parse(sql)
         expected = {
             "from": "test1",
-            "select": {"value": "*"},
+            "select": "*",
             "where": {"lt": ["f1", 0]}
         }
         self.assertEqual(result, expected)
@@ -886,7 +886,7 @@ class TestResources(FuzzyTestCase):
         result = parse(sql)
         expected = {
             "from": "test1",
-            "select": {"value": "*"},
+            "select": "*",
             "where": {"lt": ["f1", {
                 "from": "test2",
                 "select": {"value": {"count": "*"}}
@@ -899,7 +899,7 @@ class TestResources(FuzzyTestCase):
         result = parse(sql)
         expected = {
             "from": "test1",
-            "select": {"value": "*"},
+            "select": "*",
             "orderby": {"value": "f1"}
         }
         self.assertEqual(result, expected)
@@ -909,7 +909,7 @@ class TestResources(FuzzyTestCase):
         result = parse(sql)
         expected = {
             "from": "test1",
-            "select": {"value": "*"},
+            "select": "*",
             "where": {"lt": ["f1", 0]},
             "orderby": {"value": "f1"}
         }
@@ -999,7 +999,7 @@ class TestResources(FuzzyTestCase):
         result = parse(sql)
         expected = {
             "from": ["t3", "t4"],
-            "select": {"value": "*"}
+            "select": "*"
         }
         self.assertEqual(result, expected)
 
@@ -1039,7 +1039,7 @@ class TestResources(FuzzyTestCase):
         result = parse(sql)
         expected = {
             "from":{"union": [
-                {"from": "t3", "select": {"value": "*"}},
+                {"from": "t3", "select": "*"},
                 {"select": [{"value": 3, "name": "a"}, {"value": 4}]}
             ]},
             "orderby": {"value": "a"}
@@ -1051,7 +1051,7 @@ class TestResources(FuzzyTestCase):
         result = parse(sql)
         expected = {
             "from":{"union": [
-                {"from": "t3", "select": {"value": "*"}},
+                {"from": "t3", "select": "*"},
                 {"select": [{"value": 3, "name": "a"}, {"value": 4}]}
             ]},
             "orderby": {"value": "a"}
@@ -1065,7 +1065,7 @@ class TestResources(FuzzyTestCase):
             {"select": [{"value": 3}, {"value": 4}]},
             {
                 "from": "t3",
-                "select": {"value":"*"}
+                "select": "*"
             }
         ]}
         self.assertEqual(result, expected)
@@ -1075,7 +1075,7 @@ class TestResources(FuzzyTestCase):
         result = parse(sql)
         expected = {
             "from": "t3",
-            "select": {"value": "*"},
+            "select": "*",
             "where": {"eq": ["a", {"select": {"value": 1}}]}
         }
         self.assertEqual(result, expected)
@@ -1085,7 +1085,7 @@ class TestResources(FuzzyTestCase):
         result = parse(sql)
         expected = {
             "from": "t3",
-            "select": {"value": "*"},
+            "select": "*",
             "where": {"eq": ["a", {"select": {"value": 2}}]}
         }
         self.assertEqual(result, expected)
@@ -1182,7 +1182,7 @@ class TestResources(FuzzyTestCase):
         result = parse(sql)
         expected = {
             "from": "tbl2",
-            "select": {"value": "*"},
+            "select": "*",
             "where": {"eq": [1000, "f2"]}
         }
         self.assertEqual(result, expected)
@@ -1192,7 +1192,7 @@ class TestResources(FuzzyTestCase):
         result = parse(sql)
         expected = {
             "from": "tbl2",
-            "select": {"value": "*"},
+            "select": "*",
             "where": {"eq": ["f2", 1000]}
         }
         self.assertEqual(result, expected)
@@ -1212,7 +1212,7 @@ class TestResources(FuzzyTestCase):
         result = parse(sql)
         expected = {
             "from": ["aa", {"cross join": "bb"}],
-            "select": {"value": "*"},
+            "select": "*",
             "where": "b"
         }
         self.assertEqual(result, expected)
@@ -1222,7 +1222,7 @@ class TestResources(FuzzyTestCase):
         result = parse(sql)
         expected = {
             "from": ["aa", {"cross join": "bb"}],
-            "select": {"value": "*"},
+            "select": "*",
             "where": {"not": "b"}
         }
         self.assertEqual(result, expected)
@@ -1232,7 +1232,7 @@ class TestResources(FuzzyTestCase):
         result = parse(sql)
         expected = {
             "from": ["aa", "bb"],
-            "select": {"value": "*"},
+            "select": "*",
             "where": {"min": ["a", "b"]}
         }
         self.assertEqual(result, expected)
@@ -1242,7 +1242,7 @@ class TestResources(FuzzyTestCase):
         result = parse(sql)
         expected = {
             "from": ["aa", "bb"],
-            "select": {"value": "*"},
+            "select": "*",
             "where": {"not": {"min": ["a", "b"]}}
         }
         self.assertEqual(result, expected)
@@ -1252,7 +1252,7 @@ class TestResources(FuzzyTestCase):
         result = parse(sql)
         expected = {
             "from":["aa","bb"],
-            "select": {"value": "*"},
+            "select": "*",
             "where": {"case":
                 {"when": {"eq": ["a", {"sub": ["b", 1]}]}, "then": 1}
             }
@@ -1264,7 +1264,7 @@ class TestResources(FuzzyTestCase):
         result = parse(sql)
         expected = {
             "from":["aa","bb"],
-            "select": {"value": "*"},
+            "select": "*",
             "where": {"case": [
                 {"when": {"eq": ["a", {"sub": ["b", 1]}]}, "then": 0},
                 1
