@@ -60,6 +60,7 @@ keywords = [
     "is",
     "join",
     "limit",
+    "like",
     "on",
     "or",
     "order by",
@@ -96,7 +97,8 @@ KNOWN_OPS = [
     Literal("==").setName("eq").setDebugActions(*debug),
     Literal("!=").setName("neq").setDebugActions(*debug),
     OR.setName("or").setDebugActions(*debug),
-    AND.setName("and").setDebugActions(*debug)
+    AND.setName("and").setDebugActions(*debug),
+    LIKE.setName("like").setDebugActions(*debug)
 ]
 
 

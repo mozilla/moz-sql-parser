@@ -260,3 +260,20 @@ class TestSimple(FuzzyTestCase):
             'select': {'value': 'a'}
         }
         self.assertEqual(result, expected)
+
+    def test_like_in_where(self):
+        result = parse("select a from table1 where A like '%20%'")
+        expected = {
+            'from': 'table1',
+            'where': {'like': ['A', {"literal": "%20%"}]},
+            'select': {'value': 'a'}
+        }
+        self.assertEqual(result, expected)
+
+    def test_like_in_select(self):
+        result = parse("select case when A like 'bb%' then 1 else 0 end as bb from table1")
+        expected = {
+            'from': 'table1',
+            'select': {'name': 'bb', 'value': {"case": [{"when": {"like": ["A", {"literal": "bb%"}]}, "then": 1}, 0]}}
+        }
+        self.assertEqual(result, expected)
