@@ -12,9 +12,10 @@ from __future__ import division
 from __future__ import unicode_literals
 
 import json
+from collections import Mapping
 
 from mo_future import text_type, number_types, binary_type
-from pyparsing import ParseException
+from pyparsing import ParseException, ParseResults
 
 from moz_sql_parser.sql_parser import SQLParser, all_exceptions
 
@@ -44,15 +45,31 @@ def _scrub(result):
         return result
     elif not result:
         return {}
-    elif isinstance(result, list) or not list(result.items()):
+    elif isinstance(result, (list, ParseResults)):
         if not result:
             return None
         elif len(result) == 1:
             return _scrub(result[0])
         else:
-            return [_scrub(r) for r in result]
+            output = [
+                rr
+                for r in result
+                for rr in [_scrub(r)]
+                if rr != None
+            ]
+            # IF ALL MEMBERS OF A LIST ARE LITERALS, THEN MAKE THE LIST LITERAL
+            if all(isinstance(r, Mapping) and "literal" in r.keys() for r in output):
+                output = {"literal": [r['literal'] for r in output]}
+            return output
+    elif not list(result.items()):
+        return {}
     else:
-        return {k: _scrub(v) for k, v in result.items()}
+        return {
+            k: vv
+            for k, v in result.items()
+            for vv in [_scrub(v)]
+            if vv != None
+        }
 
 
 _ = json.dumps

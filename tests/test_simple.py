@@ -142,11 +142,7 @@ class TestSimple(FuzzyTestCase):
             "from": "dual",
             "where": {"in": [
                 "a",
-                [
-                    {"literal": "r"},
-                    {"literal": "g"},
-                    {"literal": "b"}
-                ]
+                {"literal": ["r", "g", "b"]}
             ]}
         }
         self.assertEqual(result, expected)
@@ -161,11 +157,7 @@ class TestSimple(FuzzyTestCase):
             "where": {"and": [
                 {"in": [
                     "a",
-                    [
-                        {"literal": "r"},
-                        {"literal": "g"},
-                        {"literal": "b"}
-                    ]
+                    {"literal": ["r", "g", "b"]}
                 ]},
                 {"in": [
                     "b",
@@ -240,6 +232,15 @@ class TestSimple(FuzzyTestCase):
         }
         self.assertEqual(result, expected)
 
+    def test_order_by_asc(self):
+        result = parse("select count(1) from dual order by a asc")
+        expected = {
+            "select": {"value": {"count": 1}},
+            "from": "dual",
+            "orderby": {"value": "a", "sort": "asc"}
+        }
+        self.assertEqual(result, expected)
+
     def test_debug_is_off(self):
         self.assertFalse(sql_parser.DEBUG, "Turn off debugging")
 
@@ -258,5 +259,46 @@ class TestSimple(FuzzyTestCase):
             'from': 'table1',
             'where': {'eq': ['A', -900]},
             'select': {'value': 'a'}
+        }
+        self.assertEqual(result, expected)
+
+    def test_like_in_where(self):
+        result = parse("select a from table1 where A like '%20%'")
+        expected = {
+            'from': 'table1',
+            'where': {'like': ['A', {"literal": "%20%"}]},
+            'select': {'value': 'a'}
+        }
+        self.assertEqual(result, expected)
+
+    def test_like_in_select(self):
+        result = parse("select case when A like 'bb%' then 1 else 0 end as bb from table1")
+        expected = {
+            'from': 'table1',
+            'select': {'name': 'bb', 'value': {"case": [{"when": {"like": ["A", {"literal": "bb%"}]}, "then": 1}, 0]}}
+        }
+        self.assertEqual(result, expected)
+
+    def test_in_expression(self):
+        result = parse("select * from task where repo.branch.name in ('try', 'mozilla-central')")
+        expected = {
+            'from': 'task',
+            'select': ["*"],
+            "where": {"in": [
+                "repo.branch.name",
+                {"literal": ["try", "mozilla-central"]}
+            ]}
+        }
+        self.assertEqual(result, expected)
+
+    def test_joined_table_name(self):
+        result = parse("SELECT * FROM table1 t1 JOIN table3 t3 ON t1.id = t3.id")
+
+        expected = {
+            'from': [
+                {'name': 't1', 'value': 'table1'},
+                {'on': {'eq': ['t1.id', 't3.id']}, 'join': {'name': 't3', 'value': 'table3'}}
+            ],
+            'select': '*'
         }
         self.assertEqual(result, expected)
