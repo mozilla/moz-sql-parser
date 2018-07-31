@@ -142,11 +142,7 @@ class TestSimple(FuzzyTestCase):
             "from": "dual",
             "where": {"in": [
                 "a",
-                [
-                    {"literal": "r"},
-                    {"literal": "g"},
-                    {"literal": "b"}
-                ]
+                {"literal": ["r", "g", "b"]}
             ]}
         }
         self.assertEqual(result, expected)
@@ -161,11 +157,7 @@ class TestSimple(FuzzyTestCase):
             "where": {"and": [
                 {"in": [
                     "a",
-                    [
-                        {"literal": "r"},
-                        {"literal": "g"},
-                        {"literal": "b"}
-                    ]
+                    {"literal": ["r", "g", "b"]}
                 ]},
                 {"in": [
                     "b",
@@ -296,5 +288,17 @@ class TestSimple(FuzzyTestCase):
                 "repo.branch.name",
                 {"literal": ["try", "mozilla-central"]}
             ]}
+        }
+        self.assertEqual(result, expected)
+
+    def test_joined_table_name(self):
+        result = parse("SELECT * FROM table1 t1 JOIN table3 t3 ON t1.id = t3.id")
+
+        expected = {
+            'from': [
+                {'name': 't1', 'value': 'table1'},
+                {'on': {'eq': ['t1.id', 't3.id']}, 'join': {'name': 't3', 'value': 'table3'}}
+            ],
+            'select': '*'
         }
         self.assertEqual(result, expected)

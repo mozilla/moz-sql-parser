@@ -173,7 +173,11 @@ def to_when_call(instring, tokensStart, retTokens):
 def to_join_call(instring, tokensStart, retTokens):
     tok = retTokens
 
-    output = {tok.op: tok.join}
+    if tok.join.name:
+        output = {tok.op: {"name": tok.join.name, "value": tok.join.value}}
+    else:
+        output = {tok.op: tok.join}
+
     if tok.on:
         output['on'] = tok.on
     return output
@@ -302,7 +306,7 @@ tableName = (
     ident.setName("table name").setDebugActions(*debug)
 )
 
-join = ((CROSSJOIN | INNERJOIN | JOIN)("op") + tableName("join") + Optional(ON + expr("on"))).addParseAction(to_join_call)
+join = ((CROSSJOIN | INNERJOIN | JOIN)("op") + Group(tableName)("join") + Optional(ON + expr("on"))).addParseAction(to_join_call)
 
 sortColumn = expr("value").setName("sort1").setDebugActions(*debug) + Optional(DESC("sort") | ASC("sort")) | \
              expr("value").setName("sort2").setDebugActions(*debug)
