@@ -277,3 +277,15 @@ class TestSimple(FuzzyTestCase):
             'select': {'name': 'bb', 'value': {"case": [{"when": {"like": ["A", {"literal": "bb%"}]}, "then": 1}, 0]}}
         }
         self.assertEqual(result, expected)
+
+    def test_in_expression(self):
+        result = parse("select * from task where repo.branch.name in ('try', 'mozilla-central')")
+        expected = {
+            'from': 'task',
+            'select': ["*"],
+            "where": {"in": [
+                "repo.branch.name",
+                {"literal": ["try", "mozilla-central"]}
+            ]}
+        }
+        self.assertEqual(result, expected)
