@@ -45,6 +45,7 @@ else:
 keywords = [
     "and",
     "as",
+    "asc",
     "between",
     "case",
     "collate nocase",
@@ -303,7 +304,7 @@ tableName = (
 
 join = ((CROSSJOIN | INNERJOIN | JOIN)("op") + tableName("join") + Optional(ON + expr("on"))).addParseAction(to_join_call)
 
-sortColumn = expr("value").setName("sort1").setDebugActions(*debug) + Optional(DESC("sort")) | \
+sortColumn = expr("value").setName("sort1").setDebugActions(*debug) + Optional(DESC("sort") | ASC("sort")) | \
              expr("value").setName("sort2").setDebugActions(*debug)
 
 # define SQL tokens

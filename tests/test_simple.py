@@ -240,6 +240,15 @@ class TestSimple(FuzzyTestCase):
         }
         self.assertEqual(result, expected)
 
+    def test_order_by_asc(self):
+        result = parse("select count(1) from dual order by a asc")
+        expected = {
+            "select": {"value": {"count": 1}},
+            "from": "dual",
+            "orderby": {"value": "a", "sort": "asc"}
+        }
+        self.assertEqual(result, expected)
+
     def test_debug_is_off(self):
         self.assertFalse(sql_parser.DEBUG, "Turn off debugging")
 
