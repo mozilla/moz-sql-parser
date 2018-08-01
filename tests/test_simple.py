@@ -283,7 +283,7 @@ class TestSimple(FuzzyTestCase):
         result = parse("select * from task where repo.branch.name in ('try', 'mozilla-central')")
         expected = {
             'from': 'task',
-            'select': ["*"],
+            'select': "*",
             "where": {"in": [
                 "repo.branch.name",
                 {"literal": ["try", "mozilla-central"]}
