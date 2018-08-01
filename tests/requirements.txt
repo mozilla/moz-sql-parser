@@ -1,3 +1,3 @@
 mo-future
-mo-testing>=1.2.18029
-mo-times>=1.6
+mo-testing
+mo-times
