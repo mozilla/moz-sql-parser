@@ -60,6 +60,7 @@ keywords = [
     "inner join",
     "is",
     "join",
+    "like",
     "limit",
     "like",
     "on",
@@ -92,6 +93,7 @@ KNOWN_OPS = [
     Literal("<").setName("lt").setDebugActions(*debug),
     Literal(">=").setName("gte").setDebugActions(*debug),
     Literal("<=").setName("lte").setDebugActions(*debug),
+    LIKE.setName("like").setDebugActions(*debug),
     IN.setName("in").setDebugActions(*debug),
     IS.setName("is").setDebugActions(*debug),
     Literal("=").setName("eq").setDebugActions(*debug),
@@ -137,7 +139,30 @@ def to_json_operator(instring, tokensStart, retTokens):
         else:
             return {"exists": tok[0]}
 
+    if op == 'like':
+        return get_like_op(tok, op)
+
     return {op: [tok[i * 2] for i in range(int((len(tok) + 1) / 2))]}
+
+def get_like_op(tok, op):
+    val_list = []
+    for i in range(int((len(tok) + 1) / 2)):
+        el = tok[i * 2]
+        if 'literal' in el:
+            val_like = el['literal']
+            if val_like.find('%') == 0:
+                if val_like.find('%', 1) == -1:
+                    val_list.append({'symbol': 'left'})
+                else:
+                    val_list.append({'symbol': 'both'})
+            else:
+                val_list.append({'symbol': 'right'})
+            val_list.append(val_like.strip('%'))
+
+        else:
+            val_list.append({'literal': tok[i * 2]})
+    return {op: val_list}
+
 
 
 def to_json_call(instring, tokensStart, retTokens):
