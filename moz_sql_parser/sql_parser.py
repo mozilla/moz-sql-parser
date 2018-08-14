@@ -92,14 +92,14 @@ KNOWN_OPS = [
     Literal("<").setName("lt").setDebugActions(*debug),
     Literal(">=").setName("gte").setDebugActions(*debug),
     Literal("<=").setName("lte").setDebugActions(*debug),
-    IN.setName("in").setDebugActions(*debug),
-    IS.setName("is").setDebugActions(*debug),
     Literal("=").setName("eq").setDebugActions(*debug),
     Literal("==").setName("eq").setDebugActions(*debug),
     Literal("!=").setName("neq").setDebugActions(*debug),
+    IN.setName("in").setDebugActions(*debug),
+    IS.setName("is").setDebugActions(*debug),
+    LIKE.setName("like").setDebugActions(*debug),
     OR.setName("or").setDebugActions(*debug),
-    AND.setName("and").setDebugActions(*debug),
-    LIKE.setName("like").setDebugActions(*debug)
+    AND.setName("and").setDebugActions(*debug)
 ]
 
 

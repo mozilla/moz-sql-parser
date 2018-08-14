@@ -279,6 +279,19 @@ class TestSimple(FuzzyTestCase):
         }
         self.assertEqual(result, expected)
 
+    def test_like_from_pr16(self):
+        result = parse("select * from trade where school LIKE '%shool' and name='abc' and id IN ('1','2')")
+        expected = {
+            'from': 'trade',
+            'where': {"and": [
+                {"like": ["school", {"literal": "%shool"}]},
+                {"eq": ["name", {"literal": "abc"}]},
+                {"in": ["id", {"literal": ["1", "2"]}]}
+            ]},
+            'select': "*"
+        }
+        self.assertEqual(result, expected)
+
     def test_in_expression(self):
         result = parse("select * from task where repo.branch.name in ('try', 'mozilla-central')")
         expected = {
@@ -302,3 +315,19 @@ class TestSimple(FuzzyTestCase):
             'select': '*'
         }
         self.assertEqual(result, expected)
+
+    def test_not_equal(self):
+        #               0         1         2         3         4         5         6        7          8
+        #               012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789
+        result = parse("select * from task where build.product is not null and build.product!='firefox'")
+
+        expected = {
+            'select': '*',
+            'from': "task",
+            "where": {"and": [
+                {"exists": "build.product"},
+                {"neq": {"build.product": "firefox"}}
+            ]}
+        }
+        self.assertEqual(result, expected)
+
