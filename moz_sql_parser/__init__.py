@@ -14,7 +14,7 @@ from __future__ import unicode_literals
 import json
 from collections import Mapping
 
-from mo_future import text_type, number_types, binary_type
+from mo_future import text_type, number_types, binary_type, items
 from pyparsing import ParseException, ParseResults
 
 from moz_sql_parser.sql_parser import SQLParser, all_exceptions
@@ -61,7 +61,7 @@ def _scrub(result):
             if all(isinstance(r, Mapping) and "literal" in r.keys() for r in output):
                 output = {"literal": [r['literal'] for r in output]}
             return output
-    elif not list(result.items()):
+    elif not items(result):
         return {}
     else:
         return {
