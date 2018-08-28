@@ -334,3 +334,12 @@ class TestSimple(FuzzyTestCase):
         }
         self.assertEqual(result, expected)
 
+
+    def test_pr19(self):
+        result = parse("select empid from emp where ename like 's%' ")
+        expected = {
+            'from': 'emp',
+            'where': {"like": ["ename", {"literal": "s%"}]},
+            'select': {"value": "empid"}
+        }
+        self.assertEqual(result, expected)
