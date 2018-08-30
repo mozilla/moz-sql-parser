@@ -14,10 +14,10 @@ from setuptools import setup
 root = os.path.abspath(os.path.dirname(__file__))
 path = lambda *p: os.path.join(root, *p)
 try:
-    long_desc = open(path('README.txt')).read()
+    long_desc = open(path('README.md')).read()
 except Exception:
-    long_desc = "<Missing README.txt>"
-    print("Missing README.txt")
+    long_desc = "<Missing README.md>"
+    print("Missing README.md")
 
 
 def find_packages(where='.', lib_prefix='', exclude=()):
@@ -45,6 +45,7 @@ setup(
     version="2.18.18240",
     description='Extract Parse Tree from SQL',
     long_description=long_desc,
+    long_description_content_type='text/markdown',
     author='Kyle Lahnakoski',
     author_email='kyle@lahnakoski.com',
     url='https://github.com/mozilla/moz-sql-parser',
