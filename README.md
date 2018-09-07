@@ -76,5 +76,5 @@ and you can see this pattern in the previous example:
 
 ### Notes
 
-* Uses the glorious `pyparsing` library (see http://pyparsing.wikispaces.com/) to define the grammar, and define the shape of the tokens it generates. 
+* Uses the glorious `pyparsing` library (see https://github.com/pyparsing/pyparsing) to define the grammar, and define the shape of the tokens it generates. 
 * `[sqlparse](https://pypi.python.org/pypi/sqlparse)` Does not provide a tree, rather a list of tokens. 
