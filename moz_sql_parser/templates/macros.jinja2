@@ -1,0 +1,227 @@
+{% macro block( content ) %}
+    {% if content|is_list %}
+        {% for field in content %}
+            {% if not loop.first %}
+                {% if not field|is_dict or not ( 'join' in field or 'cross join' in field )%}, {% endif %}
+            {% endif %}
+            {{ block(field) }}
+        {% endfor %}
+    {% elif content|is_dict %}
+
+        {% if 'select' in content or 'from' in content or 'where' in content or 'groupby' in content or 'orderby' in content or 'limit' in content or 'having' in content %}
+            {% if 'select' in content %}
+                select {{ block(content.select) }}
+            {% endif %}
+            {% if 'from' in content %}
+                {% if content.from|is_dict and 'union' in content.from %}
+                {{ block(content.from) }}
+                {% else %}
+                from {{ block(content.from) }}
+                {% endif %}
+            {% endif %}
+            {% if 'where' in content %}
+                where {{ block(content.where) }}
+            {% endif %}
+            {% if 'groupby' in content %}
+                group by {{ block(content.groupby) }}
+            {% endif %}
+            {% if 'having' in content %}
+                having {{ block(content.having) }}
+            {% endif %}
+            {% if 'orderby' in content %}
+                order by {{ block(content.orderby) }}
+            {% endif %}
+            {% if 'limit' in content %}
+                limit {{ block(content.limit) }}
+            {% endif %}
+        {% else %}
+            {% if 'value' in content %}
+                {{ block(content.value) }}{% if 'name' in content %} as {{ content.name }}{% endif %}{% if 'sort' in content %} {{ content.sort }}{% endif %}
+            {% elif 'literal' in content %}
+                {% if content.literal|is_list %}
+                    {% for field in content.literal %}
+                        '{{ field }}'{% if not loop.last %}, {% endif %}
+                    {% endfor %}
+                {% else %}
+                    '{{ content.literal }}'
+                {% endif %}
+            {% elif 'count' in content %}
+                count({{ block(content.count) }})
+            {% elif 'missing' in content %}
+                {{ block(content.missing) }} is NULL
+            {% elif 'exists' in content %}
+                {{ block(content.exists) }} is not NULL
+            {% elif 'join' in content %}
+                join {{ block(content.join) }} on {{ block(content.on) }}
+            {% elif 'when' in content %}
+                when {{ block(content.when) }}
+                {% if 'then' in content %}
+                    then {{ block(content.then) }}
+                {% endif %}
+            {% elif 'case' in content %}
+                case
+                {% if content.case|is_list %}
+                    {% for field in content.case %}
+                        {% if field|is_dict %}
+                            {% if 'when' in field %}
+                                {{ block(field) }}
+                            {% else %}
+                                else {{ block(field) }}
+                            {% endif %}
+                        {% else %}
+                            else {{ block(field) }}
+                        {% endif %}
+                    {% endfor %}
+                {% elif content.case|is_dict %}
+                    {{ block(content.case) }}
+                {% else %}
+                    else {{ block(content.case) }}
+                {% endif %}
+                end
+            {% elif 'max' in content %}
+                max({% if content.max|is_list %}
+                        {% for field in content.max %}
+                            {{ block(field) }}
+                            {% if not loop.last %}, {% endif %}
+                        {% endfor %}
+                    {% elif content.max|is_dict %}
+                        {{ block(content.max) }}
+                    {% else %}
+                        {{ content.max }}
+                    {% endif%})
+            {% elif 'coalesce' in content %}
+                coalesce({% if content.coalesce|is_list %}
+                        {% for field in content.coalesce %}
+                            {{ block(field) }}
+                            {% if not loop.last %}, {% endif %}
+                        {% endfor %}
+                    {% elif content.coalesce|is_dict %}
+                        {{ block(content.coalesce) }}
+                    {% else %}
+                        {{ content.coalesce }}
+                    {% endif%})
+            {% elif 'min' in content %}
+                min({% if content.min|is_list %}
+                        {% for field in content.min %}
+                            {{ block(field) }}
+                            {% if not loop.last %}, {% endif %}
+                        {% endfor %}
+                    {% elif content.min|is_dict %}
+                        {{ block(content.min) }}
+                    {% else %}
+                        {{ content.min }}
+                    {% endif%})
+            {% elif 'sum' in content %}
+                sum({% if content.sum|is_list %}
+                        {% for field in content.sum %}
+                            {{ block(field) }}
+                            {% if not loop.last %}, {% endif %}
+                        {% endfor %}
+                    {% elif content.sum|is_dict %}
+                        {{ block(content.sum) }}
+                    {% else %}
+                        {{ content.sum }}
+                    {% endif%})
+            {% elif 'union' in content %}
+                {% for field in content.union %} {{ block(field) }}{% if not loop.last %} union {% endif %} {% endfor %}
+            {% elif 'like' in content %}
+                {% for field in content.like %} {{ block(field) }}{% if not loop.last %} like {% endif %} {% endfor %}
+            {% elif 'and' in content %}
+                {% for field in content.and %} {{ block(field) }}{% if not loop.last %} and {% endif %} {% endfor %}
+            {% elif 'or' in content %}
+                {% for field in content.or %} {{ block(field) }}{% if not loop.last %} or {% endif %} {% endfor %}
+            {% elif 'concat' in content %}
+                ({% for field in content.concat %} {{ block(field) }}{% if not loop.last %} || {% endif %} {% endfor %})
+            {% elif 'mult' in content %}
+                ({% for field in content.mult %} {{ block(field) }}{% if not loop.last %} * {% endif %} {% endfor %})
+            {% elif 'div' in content %}
+                ({% for field in content.div %} {{ block(field) }}{% if not loop.last %} / {% endif %} {% endfor %})
+            {% elif 'add' in content %}
+                ({% for field in content.add %} {{ block(field) }}{% if not loop.last %} + {% endif %} {% endfor %})
+            {% elif 'sub' in content %}
+                ({% for field in content.sub %} {{ block(field) }}{% if not loop.last %} - {% endif %} {% endfor %})
+            {% elif 'not' in content %}
+                not ({{ block(content.not) }})
+            {% elif 'typeof' in content %}
+                typeof({{ block(content.typeof) }})
+            {% elif 'neq' in content %}
+                {% for field in content.neq %} {{ block(field) }}{% if not loop.last %} <> {% endif %} {% endfor %}
+            {% elif 'gt' in content %}
+                {% for field in content.gt %} {{ block(field) }}{% if not loop.last %} > {% endif %} {% endfor %}
+            {% elif 'lt' in content %}
+                {% for field in content.lt %} {{ block(field) }}{% if not loop.last %} < {% endif %} {% endfor %}
+            {% elif 'gte' in content %}
+                {% for field in content.gte %} {{ block(field) }}{% if not loop.last %} >= {% endif %} {% endfor %}
+            {% elif 'lte' in content %}
+                {% for field in content.lte %} {{ block(field) }}{% if not loop.last %} <= {% endif %} {% endfor %}
+            {% elif 'eq' in content %}
+                {% for field in content.eq %} {{ block(field) }}{% if not loop.last %} == {% endif %} {% endfor %}
+            {% elif 'collate nocase' in content %}
+                {{ block(content['collate nocase']) }} collate nocase as x
+            {% elif 'cross join' in content %}
+                cross join {{ block(content['cross join']) }}
+            {% elif 'in' in content %}
+                {{ content.in[0] }} in ( {% for field in content.in[1:] %} {{ block(field) }} {% endfor %} )
+            {% elif 'between' in content %}
+                {{ block(content.between[0]) }} between {{ block(content.between[1]) }} and {{ block(content.between[2]) }}
+            {% elif 'neg' in content %}
+                -({{ block(content.neg) }})
+            {% elif 'avg' in content %}
+                avg( {{ block(content.avg) }})
+            {% else %}
+                {% for key, value in content.items() %}
+                    {{ key }}({{ value }})
+                {% endfor %}
+            {% endif %}
+        {% endif %}
+    {% else %}
+{{ content }}
+    {% endif %}
+{% endmacro %}
+{#
+
+    "and",
+    "as",
+    "asc",
+    "between",
+    "case",
+    "collate nocase",
+    "cross join",
+    "desc",
+    "else",
+    "end",
+    "from",
+    "group by",
+    "having",
+    "in",
+    "inner join",
+    "is",
+    "join",
+    "limit",
+    "like",
+    "on",
+    "or",
+    "order by",
+    "select",
+    "then",
+    "union",
+    "when",
+    "where",
+    "with"
+
+    Literal("||").setName("concat").setDebugActions(*debug),
+    Literal("*").setName("mult").setDebugActions(*debug),
+    Literal("/").setName("div").setDebugActions(*debug),
+    Literal("+").setName("add").setDebugActions(*debug),
+    Literal("-").setName("sub").setDebugActions(*debug),
+    Literal("<>").setName("neq").setDebugActions(*debug),
+    Literal(">").setName("gt").setDebugActions(*debug),
+    Literal("<").setName("lt").setDebugActions(*debug),
+    Literal(">=").setName("gte").setDebugActions(*debug),
+    Literal("<=").setName("lte").setDebugActions(*debug),
+    Literal("=").setName("eq").setDebugActions(*debug),
+    Literal("==").setName("eq").setDebugActions(*debug),
+    Literal("!=").setName("neq").setDebugActions(*debug),
+
+#}
+{{ block(json) }}
