@@ -99,7 +99,7 @@ class TestSimple(FuzzyTestCase):
         }
         self.assertEqual(result, expected)
 
-    def select_many_column(self):
+    def test_select_many_column(self):
         result = parse("Select a, b, c from dual")
         expected = {
             "select": [
@@ -107,7 +107,7 @@ class TestSimple(FuzzyTestCase):
                 {"value": "b"},
                 {"value": "c"}
             ],
-            "from": ["dual"]
+            "from": "dual"
         }
         self.assertEqual(result, expected)
 
