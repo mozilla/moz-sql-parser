@@ -1,0 +1,23 @@
+{
+    "name": "moz-sql-parser",
+    "version": "2.18.18240",
+    "description": "Extract Parse Tree from SQL",
+    "long_description_content_type": "text/markdown",
+    "author": "Kyle Lahnakoski",
+    "author_email": "kyle@lahnakoski.com",
+    "url": "https://github.com/mozilla/moz-sql-parser",
+    "license": "MPL 2.0",
+    "install_requires": ["mo-future>=2.18.18240", "pyparsing"],
+    "include_package_data": true,
+    "zip_safe": true,
+    "classifiers": [
+        // https://pypi.python.org/pypi?%3Aaction=list_classifiers
+        "Development Status :: 3 - Alpha",
+        "Topic :: Software Development :: Libraries",
+        "Topic :: Software Development :: Libraries :: Python Modules",
+        "Programming Language :: SQL",
+        "Programming Language :: Python :: 2.7",
+        "Programming Language :: Python :: 3.6",
+        "License :: OSI Approved :: Mozilla Public License 2.0 (MPL 2.0)"
+    ]
+}
