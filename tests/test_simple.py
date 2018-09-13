@@ -37,11 +37,11 @@ class TestSimple(FuzzyTestCase):
         }
         self.assertEqual(result, expected)
 
-    def select_one_column(self):
+    def test_select_one_column(self):
         result = parse("Select A from dual")
         expected = {
-            "select": [{"value": "A"}],
-            "from": ["dual"]
+            "select": {"value": "A"},
+            "from": "dual"
         }
         self.assertEqual(result, expected)
 
