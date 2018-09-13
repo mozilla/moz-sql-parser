@@ -50,7 +50,7 @@ setup(
     url='https://github.com/mozilla/moz-sql-parser',
     license='MPL 2.0',
     packages=find_packages(".", lib_prefix=""),
-    install_requires=["mo-future>=2.18.18240","pyparsing"],
+    install_requires=["mo-future>=2.18.18240","pyparsing","six"],
     include_package_data=True,
     zip_safe=False,
     classifiers=[  #https://pypi.python.org/pypi?%3Aaction=list_classifiers
