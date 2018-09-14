@@ -1,6 +1,6 @@
 {
     "name": "moz-sql-parser",
-    "description": "Parse SQL and give you a parse tree. That's it.",
+    "description": "Extract Parse Tree from SQL",
     "repository": {
         "url": "https://github.com/mozilla/moz-sql-parser",
         "license": "MPL2",
@@ -28,3 +28,4 @@
         "mozilla"
     ]
 }
+
