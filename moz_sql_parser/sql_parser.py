@@ -61,6 +61,7 @@ keywords = [
     "is",
     "join",
     "limit",
+    "offset",
     "like",
     "on",
     "or",
@@ -322,14 +323,16 @@ selectStmt << Group(
                     Optional(WHERE.suppress().setDebugActions(*debug) + expr.setName("where"))("where") +
                     Optional(GROUPBY.suppress().setDebugActions(*debug) + delimitedList(Group(selectColumn))("groupby").setName("groupby")) +
                     Optional(HAVING.suppress().setDebugActions(*debug) + expr("having").setName("having")) +
-                    Optional(LIMIT.suppress().setDebugActions(*debug) + expr("limit"))
+                    Optional(LIMIT.suppress().setDebugActions(*debug) + expr("limit")) +
+                    Optional(OFFSET.suppress().setDebugActions(*debug) + expr("offset"))
                 )
             ),
             delim=UNION
         )
     )("union"))("from") +
     Optional(ORDERBY.suppress().setDebugActions(*debug) + delimitedList(Group(sortColumn))("orderby").setName("orderby")) +
-    Optional(LIMIT.suppress().setDebugActions(*debug) + expr("limit"))
+    Optional(LIMIT.suppress().setDebugActions(*debug) + expr("limit")) +
+    Optional(OFFSET.suppress().setDebugActions(*debug) + expr("offset"))
 ).addParseAction(to_union_call)
 
 
