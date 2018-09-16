@@ -138,7 +138,7 @@ class Formatter:
             method = getattr(self, attr)
             return method(value)
 
-        return '{0}({1})'.format(key.upper(), value)
+        return '{0}({1})'.format(key.upper(), self.dispatch(value))
 
     def _exists(self, value):
         return '{0} IS NOT NULL'.format(self.dispatch(value))
