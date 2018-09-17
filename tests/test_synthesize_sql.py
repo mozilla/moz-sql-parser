@@ -52,10 +52,6 @@ class TestSimple(FuzzyTestCase):
             new_json = parse(new_sql)
             self.assertEqual(new_json, expected_json)
         except Exception as e:
-            print("Expected SQL: %s" % (expected_sql))
-            print("Expected JSON: %s" % (expected_json))
-            print("Actual SQL: %s" % (new_sql))
-            print("Actual JSON: %s" % (new_json))
             raise VerificationException(expected_sql, expected_json, new_sql, new_json)
 
     def test_two_tables(self):
