@@ -110,7 +110,7 @@ class Formatter:
                 return self.op(json)
         if isinstance(json, string_types):
             return escape(json, self.ansi_quotes, self.should_quote)
-        
+
         return text_type(json)
 
     def delimited_list(self, json):
@@ -138,7 +138,8 @@ class Formatter:
             method = getattr(self, attr)
             return method(value)
 
-        return '{0}({1})'.format(key.upper(), value)
+        # treat as regular function call
+        return '{0}({1})'.format(key.upper(), self.dispatch(value))
 
     def _exists(self, value):
         return '{0} IS NOT NULL'.format(self.dispatch(value))
