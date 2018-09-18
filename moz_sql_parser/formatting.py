@@ -139,7 +139,10 @@ class Formatter:
             return method(value)
 
         # treat as regular function call
-        return '{0}({1})'.format(key.upper(), self.dispatch(value))
+        if isinstance(value, dict) and len(value) == 0:
+            return key.upper() + "()"  # NOT SURE IF AN EMPTY dict SHOULD BE DELT WITH HERE, OR IN self.dispatch()
+        else:
+            return '{0}({1})'.format(key.upper(), self.dispatch(value))
 
     def _exists(self, value):
         return '{0} IS NOT NULL'.format(self.dispatch(value))
