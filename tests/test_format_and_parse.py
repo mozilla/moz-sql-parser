@@ -42,7 +42,7 @@ Broken JSON:
         return res
 
 
-class TestSimple(FuzzyTestCase):
+class TestFormatAndParse(FuzzyTestCase):
 
     def verify_formatting(self, expected_sql, expected_json):
         new_sql = ""
