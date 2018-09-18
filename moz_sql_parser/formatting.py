@@ -138,7 +138,7 @@ class Formatter:
             method = getattr(self, attr)
             return method(value)
 
-        return '{0}({1})'.format(key.upper(), value)
+        return '{0}({1})'.format(key.upper(), self.dispatch(value))
 
     def _exists(self, value):
         return '{0} IS NOT NULL'.format(self.dispatch(value))
@@ -188,12 +188,12 @@ class Formatter:
         return ' UNION '.join(self.query(query) for query in json)
 
     def query(self, json):
-        parts = []
-        for clause in self.clauses:
-            method = getattr(self, clause, None)
-            if method:
-                parts.append(method(json))
-        return ' '.join(part for part in parts if part)
+        return ' '.join(
+            part
+            for clause in self.clauses
+            for part in [getattr(self, clause)(json)]
+            if part
+        )
 
     def select(self, json):
         if 'select' in json:
