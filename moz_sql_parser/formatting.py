@@ -104,7 +104,9 @@ class Formatter:
         if isinstance(json, list):
             return self.delimited_list(json)
         if isinstance(json, dict):
-            if 'value' in json:
+            if len(json) == 0:
+                return ''
+            elif 'value' in json:
                 return self.value(json)
             else:
                 return self.op(json)
