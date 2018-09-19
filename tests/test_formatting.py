@@ -320,3 +320,8 @@ class TestSimple(TestCase):
         result = format({'select': '*', 'from': 'a', 'limit': 10, 'offset': 10})
         expected = "SELECT * FROM a LIMIT 10 OFFSET 10"
         self.assertEqual(result, expected)
+
+    def test_count_literal(self):
+        result = format({'select': {'value': {'count': {'literal': 'literal'}}}, 'from': 'a'})
+        expected = "SELECT COUNT('literal') FROM a"
+        self.assertEqual(result, expected)
