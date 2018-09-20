@@ -47,12 +47,12 @@ class TestFormatAndParse(FuzzyTestCase):
     def verify_formatting(self, expected_sql, expected_json):
         new_sql = ""
         new_json = ""
-        try:
-            new_sql = format(expected_json)
-            new_json = parse(new_sql)
-            self.assertEqual(new_json, expected_json)
-        except Exception as e:
-            raise VerificationException(expected_sql, expected_json, new_sql, new_json)
+        # try:
+        new_sql = format(expected_json)
+        new_json = parse(new_sql)
+        self.assertEqual(new_json, expected_json)
+        # except Exception as e:
+        #     raise VerificationException(expected_sql, expected_json, new_sql, new_json)
 
     def test_two_tables(self):
         expected_sql = "SELECT * from XYZZY, ABC"
@@ -262,7 +262,7 @@ from benn.college_football_players
 
     def test_008(self):
         expected_sql = "SELECT *, * FROM test1"
-        expected_json = {'from': 'test1', 'select': ['*']}
+        expected_json = {'from': 'test1', 'select': '*'}
         self.verify_formatting(expected_sql, expected_json)
 
     def test_009(self):
