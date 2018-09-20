@@ -583,7 +583,7 @@ from benn.college_football_players
         expected_json = {'from': [{'value': 'test1', 'name': 'A'}, {'value': 'test1', 'name': 'B'}],
                          'select': [{'value': 'A.f1'}, {'value': 'B.f1'}],
                          'orderby': [{'value': 'A.f1'}, {'value': 'B.f1'}]}
-        self.verify_formatting(expected_sql, expected_json)\
+        self.verify_formatting(expected_sql, expected_json)
 
     @skip("broken")
     def test_086(self):
