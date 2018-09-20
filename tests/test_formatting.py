@@ -325,3 +325,8 @@ class TestSimple(TestCase):
         result = format({'select': {'value': {'count': {'literal': 'literal'}}}, 'from': 'a'})
         expected = "SELECT COUNT('literal') FROM a"
         self.assertEqual(result, expected)
+
+    def test_no_arguments(self):
+        result = format({'select': {'value': {'now': {}}}})
+        expected = "SELECT NOW()"
+        self.assertEqual(result, expected)
