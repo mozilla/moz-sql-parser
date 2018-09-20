@@ -79,7 +79,7 @@ class TestFormatAndParse(FuzzyTestCase):
 
     def test_select_expression(self):
         expected_sql = "SELECT a + b/2 + 45*c + (2/d) from dual"
-        expected_json = {'select': {'value': {'add': ['a', {'div': ['b', 2]}, {'mult': [45, 'c']}, {'div': [2, 'd']}]}},
+        expected_json = {'select': {'value': {'add': ['a', {'div': ['b', 2]}, {'mul': [45, 'c']}, {'div': [2, 'd']}]}},
                          'from': 'dual'}
         self.verify_formatting(expected_sql, expected_json)
 
@@ -931,14 +931,14 @@ from benn.college_football_players
 
     def test_167(self):
         expected_sql = "SELECT log*2+1, avg(n)-min(n) FROM t1 GROUP BY log ORDER BY log"
-        expected_json = {'from': 't1', 'select': [{'value': {'add': [{'mult': ['log', 2]}, 1]}},
+        expected_json = {'from': 't1', 'select': [{'value': {'add': [{'mul': ['log', 2]}, 1]}},
                                                   {'value': {'sub': [{'avg': 'n'}, {'min': 'n'}]}}],
                          'groupby': {'value': 'log'}, 'orderby': {'value': 'log'}}
         self.verify_formatting(expected_sql, expected_json)
 
     def test_168(self):
         expected_sql = "SELECT log*2+1 as x, count(*) FROM t1 GROUP BY x ORDER BY x"
-        expected_json = {'from': 't1', 'select': [{'value': {'add': [{'mult': ['log', 2]}, 1]}, 'name': 'x'},
+        expected_json = {'from': 't1', 'select': [{'value': {'add': [{'mul': ['log', 2]}, 1]}, 'name': 'x'},
                                                   {'value': {'count': '*'}}], 'groupby': {'value': 'x'},
                          'orderby': {'value': 'x'}}
         self.verify_formatting(expected_sql, expected_json)
@@ -946,14 +946,14 @@ from benn.college_football_players
     @skip("broken")
     def test_169(self):
         expected_sql = "SELECT log*2+1 AS x, count(*) AS y FROM t1 GROUP BY x ORDER BY y, x"
-        expected_json = {'from': 't1', 'select': [{'value': {'add': [{'mult': ['log', 2]}, 1]}, 'name': 'x'},
+        expected_json = {'from': 't1', 'select': [{'value': {'add': [{'mul': ['log', 2]}, 1]}, 'name': 'x'},
                                                   {'value': {'count': '*'}, 'name': 'y'}], 'groupby': {'value': 'x'},
                          'orderby': [{'value': 'y'}, {'value': 'x'}]}
         self.verify_formatting(expected_sql, expected_json)
 
     def test_170(self):
         expected_sql = "SELECT log*2+1 AS x, count(*) AS y FROM t1 GROUP BY x ORDER BY 10-(x+y)"
-        expected_json = {'from': 't1', 'select': [{'value': {'add': [{'mult': ['log', 2]}, 1]}, 'name': 'x'},
+        expected_json = {'from': 't1', 'select': [{'value': {'add': [{'mul': ['log', 2]}, 1]}, 'name': 'x'},
                                                   {'value': {'count': '*'}, 'name': 'y'}], 'groupby': {'value': 'x'},
                          'orderby': {'value': {'sub': [10, {'add': ['x', 'y']}]}}}
         self.verify_formatting(expected_sql, expected_json)
@@ -1002,9 +1002,9 @@ from benn.college_football_players
     def test_177(self):
         expected_sql = "SELECT log, count(*), avg(n), max(n+log*2) FROM t1 GROUP BY log ORDER BY max(n+log*2)+0, avg(n)+0"
         expected_json = {'from': 't1', 'select': [{'value': 'log'}, {'value': {'count': '*'}}, {'value': {'avg': 'n'}},
-                                                  {'value': {'max': {'add': ['n', {'mult': ['log', 2]}]}}}],
+                                                  {'value': {'max': {'add': ['n', {'mul': ['log', 2]}]}}}],
                          'groupby': {'value': 'log'},
-                         'orderby': [{'value': {'add': [{'max': {'add': ['n', {'mult': ['log', 2]}]}}, 0]}},
+                         'orderby': [{'value': {'add': [{'max': {'add': ['n', {'mul': ['log', 2]}]}}, 0]}},
                                      {'value': {'add': [{'avg': 'n'}, 0]}}]}
         self.verify_formatting(expected_sql, expected_json)
 
@@ -1012,9 +1012,9 @@ from benn.college_football_players
     def test_178(self):
         expected_sql = "SELECT log, count(*), avg(n), max(n+log*2) FROM t1 GROUP BY log ORDER BY max(n+log*2)+0, min(log,avg(n))+0"
         expected_json = {'from': 't1', 'select': [{'value': 'log'}, {'value': {'count': '*'}}, {'value': {'avg': 'n'}},
-                                                  {'value': {'max': {'add': ['n', {'mult': ['log', 2]}]}}}],
+                                                  {'value': {'max': {'add': ['n', {'mul': ['log', 2]}]}}}],
                          'groupby': {'value': 'log'},
-                         'orderby': [{'value': {'add': [{'max': {'add': ['n', {'mult': ['log', 2]}]}}, 0]}},
+                         'orderby': [{'value': {'add': [{'max': {'add': ['n', {'mul': ['log', 2]}]}}, 0]}},
                                      {'value': {'add': [{'min': ['log', {'avg': 'n'}]}, 0]}}]}
         self.verify_formatting(expected_sql, expected_json)
 

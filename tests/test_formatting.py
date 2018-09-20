@@ -69,7 +69,7 @@ class TestSimple(TestCase):
             "select": {"value": {"add": [
                 "a",
                 {"div": ["b", 2]},
-                {"mult": [45, "c"]},
+                {"mul": [45, "c"]},
                 {"div": [2, "d"]},
             ]}},
             "from": "dual",
