@@ -554,19 +554,16 @@ from benn.college_football_players
         expected_json = {'from': 't5', 'select': '*', 'orderby': {'value': 2}}
         self.verify_formatting(expected_sql, expected_json)
 
-    @skip("broken")
     def test_070(self):
         expected_sql = "SELECT * FROM t5 ORDER BY 2, 1 DESC"
         expected_json = {'from': 't5', 'select': '*', 'orderby': [{'value': 2}, {'value': 1, 'sort': 'desc'}]}
         self.verify_formatting(expected_sql, expected_json)
 
-    @skip("broken")
     def test_071(self):
         expected_sql = "SELECT * FROM t5 ORDER BY 1 DESC, b"
         expected_json = {'from': 't5', 'select': '*', 'orderby': [{'value': 1, 'sort': 'desc'}, {'value': 'b'}]}
         self.verify_formatting(expected_sql, expected_json)
 
-    @skip("broken")
     def test_072(self):
         expected_sql = "SELECT * FROM t5 ORDER BY b DESC, 1"
         expected_json = {'from': 't5', 'select': '*', 'orderby': [{'value': 'b', 'sort': 'desc'}, {'value': 1}]}
@@ -577,7 +574,6 @@ from benn.college_football_players
         expected_json = {'from': 'test1', 'select': {'value': {'max': 'f1'}}, 'orderby': {'value': 'f2'}}
         self.verify_formatting(expected_sql, expected_json)
 
-    @skip("broken")
     def test_078(self):
         expected_sql = "SELECT A.f1, B.f1 FROM test1 as A, test1 as B ORDER BY A.f1, B.f1"
         expected_json = {'from': [{'value': 'test1', 'name': 'A'}, {'value': 'test1', 'name': 'B'}],
@@ -626,7 +622,6 @@ from benn.college_football_players
         expected_json = {'from': 'test1', 'select': {'value': {'count': ['f1', 'f2']}}}
         self.verify_formatting(expected_sql, expected_json)
 
-    @skip("broken")
     def test_094(self):
         expected_sql = "SELECT f1 FROM test1 ORDER BY f2, f1"
         expected_json = {'from': 'test1', 'select': {'value': 'f1'}, 'orderby': [{'value': 'f2'}, {'value': 'f1'}]}
@@ -943,7 +938,6 @@ from benn.college_football_players
                          'orderby': {'value': 'x'}}
         self.verify_formatting(expected_sql, expected_json)
 
-    @skip("broken")
     def test_169(self):
         expected_sql = "SELECT log*2+1 AS x, count(*) AS y FROM t1 GROUP BY x ORDER BY y, x"
         expected_json = {'from': 't1', 'select': [{'value': {'add': [{'mul': ['log', 2]}, 1]}, 'name': 'x'},
@@ -998,7 +992,6 @@ from benn.college_football_players
                          'having': {'gte': [{'count': '*'}, 4]}, 'orderby': {'value': {'add': [{'max': 'n'}, 0]}}}
         self.verify_formatting(expected_sql, expected_json)
 
-    @skip("broken")
     def test_177(self):
         expected_sql = "SELECT log, count(*), avg(n), max(n+log*2) FROM t1 GROUP BY log ORDER BY max(n+log*2)+0, avg(n)+0"
         expected_json = {'from': 't1', 'select': [{'value': 'log'}, {'value': {'count': '*'}}, {'value': {'avg': 'n'}},
@@ -1008,7 +1001,6 @@ from benn.college_football_players
                                      {'value': {'add': [{'avg': 'n'}, 0]}}]}
         self.verify_formatting(expected_sql, expected_json)
 
-    @skip("broken")
     def test_178(self):
         expected_sql = "SELECT log, count(*), avg(n), max(n+log*2) FROM t1 GROUP BY log ORDER BY max(n+log*2)+0, min(log,avg(n))+0"
         expected_json = {'from': 't1', 'select': [{'value': 'log'}, {'value': {'count': '*'}}, {'value': {'avg': 'n'}},
