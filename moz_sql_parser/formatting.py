@@ -77,7 +77,7 @@ class Formatter:
 
     # simple operators
     _concat = Operator('||')
-    _mult = Operator('*')
+    _mul = Operator('*')
     _div = Operator('/', parentheses=True)
     _add = Operator('+')
     _sub = Operator('-', parentheses=True)

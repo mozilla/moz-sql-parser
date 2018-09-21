@@ -84,7 +84,7 @@ RESERVED = MatchFirst(reserved)
 KNOWN_OPS = [
     (BETWEEN, AND),
     Literal("||").setName("concat").setDebugActions(*debug),
-    Literal("*").setName("mult").setDebugActions(*debug),
+    Literal("*").setName("mul").setDebugActions(*debug),
     Literal("/").setName("div").setDebugActions(*debug),
     Literal("+").setName("add").setDebugActions(*debug),
     Literal("-").setName("sub").setDebugActions(*debug),
