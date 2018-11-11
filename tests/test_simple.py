@@ -348,3 +348,8 @@ class TestSimple(FuzzyTestCase):
         result = parse("SELECT `user ID` FROM a")
         expected = {'select': {'value': 'user ID'}, 'from': 'a'}
         self.assertEqual(result, expected)
+
+    def test_backticki_escape(self):
+        result = parse("SELECT `user`` ID` FROM a")
+        expected = {'select': {'value': 'user` ID'}, 'from': 'a'}
+        self.assertEqual(result, expected)
