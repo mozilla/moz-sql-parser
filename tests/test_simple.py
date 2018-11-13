@@ -343,3 +343,33 @@ class TestSimple(FuzzyTestCase):
             'select': {"value": "empid"}
         }
         self.assertEqual(result, expected)
+
+    def test_backtick(self):
+        result = parse("SELECT `user ID` FROM a")
+        expected = {'select': {'value': 'user ID'}, 'from': 'a'}
+        self.assertEqual(result, expected)
+
+    def test_backtick_escape(self):
+        result = parse("SELECT `user`` ID` FROM a")
+        expected = {'select': {'value': 'user` ID'}, 'from': 'a'}
+        self.assertEqual(result, expected)
+
+    def test_left_join(self):
+        result = parse("SELECT t1.field1 FROM t1 LEFT JOIN t2 ON t1.id = t2.id")
+        expected = {'select': {'value': 't1.field1'},
+                    'from': ['t1',
+                    {'left join': 't2', 'on': {'eq': ['t1.id', 't2.id']}}]}
+        self.assertEqual(result, expected)
+
+    def test_multiple_left_join(self):
+        result = parse("SELECT t1.field1 "
+                       "FROM t1 "
+                       "LEFT JOIN t2 ON t1.id = t2.id "
+                       "LEFT JOIN t3 ON t1.id = t3.id"
+                       )
+        expected = {'select': {'value': 't1.field1'},
+                    'from': ['t1',
+                    {'left join': 't2', 'on': {'eq': ['t1.id', 't2.id']}},
+                    {'left join': 't3', 'on': {'eq': ['t1.id', 't3.id']}}
+                            ]}
+        self.assertEqual(result, expected)

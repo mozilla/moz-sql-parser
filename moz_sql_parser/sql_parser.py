@@ -60,6 +60,7 @@ keywords = [
     "inner join",
     "is",
     "join",
+    "left join",
     "limit",
     "offset",
     "like",
@@ -222,6 +223,8 @@ def unquote(instring, tokensStart, retTokens):
     elif val.startswith('"') and val.endswith('"'):
         val = '"'+val[1:-1].replace('""', '\\"')+'"'
         # val = val.replace(".", "\\.")
+    elif val.startswith('`') and val.endswith('`'):
+          val = "'" + val[1:-1].replace("``","`") + "'"
     elif val.startswith("+"):
         val = val[1:]
     un = ast.literal_eval(val)
@@ -240,7 +243,8 @@ intNum = Regex(r"[+-]?\d+([eE]\+?\d+)?").addParseAction(unquote)
 # STRINGS, NUMBERS, VARIABLES
 sqlString = Regex(r"\'(\'\'|\\.|[^'])*\'").addParseAction(to_string)
 identString = Regex(r'\"(\"\"|\\.|[^"])*\"').addParseAction(unquote)
-ident = Combine(~RESERVED + (delimitedList(Literal("*") | Word(alphas + "_", alphanums + "_$") | identString, delim=".", combine=True))).setName("identifier")
+mysqlidentString = Regex(r'\`(\`\`|\\.|[^`])*\`').addParseAction(unquote)
+ident = Combine(~RESERVED + (delimitedList(Literal("*") | Word(alphas + "_", alphanums + "_$") | identString | mysqlidentString, delim=".", combine=True))).setName("identifier")
 
 # EXPRESSIONS
 expr = Forward()
@@ -307,7 +311,7 @@ tableName = (
     ident.setName("table name").setDebugActions(*debug)
 )
 
-join = ((CROSSJOIN | INNERJOIN | JOIN)("op") + Group(tableName)("join") + Optional(ON + expr("on"))).addParseAction(to_join_call)
+join = ((CROSSJOIN | INNERJOIN |LEFTJOIN | JOIN)("op") + Group(tableName)("join") + Optional(ON + expr("on"))).addParseAction(to_join_call)
 
 sortColumn = expr("value").setName("sort1").setDebugActions(*debug) + Optional(DESC("sort") | ASC("sort")) | \
              expr("value").setName("sort2").setDebugActions(*debug)

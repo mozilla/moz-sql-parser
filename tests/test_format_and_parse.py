@@ -1080,3 +1080,19 @@ from benn.college_football_players
         expected_sql = "SELECT typeof(sum(a3)) FROM a GROUP BY a1"
         expected_json = {'from': 'a', 'select': {'value': {'typeof': {'sum': 'a3'}}}, 'groupby': {'value': 'a1'}}
         self.verify_formatting(expected_sql, expected_json)
+
+    @skip("The escape function does not recognize the backticks,"
+          " and is wrapping the identifier in double quotes.")
+    def test_191(self):
+        expected_sql = "SELECT `user ID` FROM a"
+        expected_json = {'select': {'value': 'user ID'}, 'from': 'a'}
+        self.verify_formatting(expected_sql, expected_json)
+
+    @skip("No handling in formatter for two-word joins (inner, cross, left join)")
+    def test_192(self):
+        expected_sql = parse("SELECT t1.field1 "
+                             "FROM t1 LEFT JOIN t2 ON t1.id = t2.id")
+        expected_json = {'select': {'value': 't1.field1'},
+                    'from': ['t1',
+                    {'left join': 't2', 'on': {'eq': ['t1.id', 't2.id']}}]}
+        self.verify_formatting(expected_sql, expected_json)
