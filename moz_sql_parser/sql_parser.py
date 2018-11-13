@@ -60,6 +60,7 @@ keywords = [
     "inner join",
     "is",
     "join",
+    "left join",
     "limit",
     "offset",
     "like",
@@ -223,7 +224,7 @@ def unquote(instring, tokensStart, retTokens):
         val = '"'+val[1:-1].replace('""', '\\"')+'"'
         # val = val.replace(".", "\\.")
     elif val.startswith('`') and val.endswith('`'):
-          val = "'" + val[1:-1].replace("''", "\\'").replace("``","`") + "'"
+          val = "'" + val[1:-1].replace("``","`") + "'"
     elif val.startswith("+"):
         val = val[1:]
     un = ast.literal_eval(val)
@@ -310,7 +311,7 @@ tableName = (
     ident.setName("table name").setDebugActions(*debug)
 )
 
-join = ((CROSSJOIN | INNERJOIN | JOIN)("op") + Group(tableName)("join") + Optional(ON + expr("on"))).addParseAction(to_join_call)
+join = ((CROSSJOIN | INNERJOIN |LEFTJOIN | JOIN)("op") + Group(tableName)("join") + Optional(ON + expr("on"))).addParseAction(to_join_call)
 
 sortColumn = expr("value").setName("sort1").setDebugActions(*debug) + Optional(DESC("sort") | ASC("sort")) | \
              expr("value").setName("sort2").setDebugActions(*debug)
