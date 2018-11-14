@@ -1,2 +1,2 @@
-mo-future
+mo-future>=2.20
 pyparsing

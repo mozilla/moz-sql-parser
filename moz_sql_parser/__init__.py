@@ -26,7 +26,7 @@ def parse(sql):
         parse_result = SQLParser.parseString(sql, parseAll=True)
     except Exception as e:
         if isinstance(e, ParseException) and e.msg == "Expected end of text":
-            problems = all_exceptions[e.loc]
+            problems = all_exceptions.get(e.loc, [])
             expecting = [
                 f
                 for f in (set(p.msg.lstrip("Expected").strip() for p in problems)-{"Found unwanted token"})

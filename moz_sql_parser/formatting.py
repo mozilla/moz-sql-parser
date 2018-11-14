@@ -13,10 +13,9 @@ from __future__ import unicode_literals
 
 import re
 
-from six import string_types, text_type
+from mo_future import string_types, text_type
 
 from moz_sql_parser.sql_parser import RESERVED
-
 
 VALID = re.compile(r'[a-zA-Z_]\w*')
 

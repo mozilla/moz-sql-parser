@@ -14,7 +14,7 @@ from __future__ import unicode_literals
 import ast
 import sys
 
-from pyparsing import CaselessLiteral, Word, delimitedList, Optional, Combine, Group, alphas, nums, alphanums, Forward, restOfLine, Keyword, Literal, ParserElement, infixNotation, opAssoc, Regex, MatchFirst, ZeroOrMore, _ustr
+from pyparsing import Word, delimitedList, Optional, Combine, Group, alphas, alphanums, Forward, restOfLine, Keyword, Literal, ParserElement, infixNotation, opAssoc, Regex, MatchFirst, ZeroOrMore
 
 ParserElement.enablePackrat()
 
@@ -311,7 +311,7 @@ tableName = (
     ident.setName("table name").setDebugActions(*debug)
 )
 
-join = ((CROSSJOIN | INNERJOIN |LEFTJOIN | JOIN)("op") + Group(tableName)("join") + Optional(ON + expr("on"))).addParseAction(to_join_call)
+join = ((CROSSJOIN | INNERJOIN | LEFTJOIN | JOIN)("op") + Group(tableName)("join") + Optional(ON + expr("on"))).addParseAction(to_join_call)
 
 sortColumn = expr("value").setName("sort1").setDebugActions(*debug) + Optional(DESC("sort") | ASC("sort")) | \
              expr("value").setName("sort2").setDebugActions(*debug)
