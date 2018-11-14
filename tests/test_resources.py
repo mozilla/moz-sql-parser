@@ -1374,7 +1374,7 @@ class TestResources(FuzzyTestCase):
         expected = {
             "from": "t1",
             "select": [
-                {"value": {"add": [{"mult": ["log", 2]}, 1]}},
+                {"value": {"add": [{"mul": ["log", 2]}, 1]}},
                 {"value": {"sub": [{"avg": "n"}, {"min": "n"}]}}
             ],
             "groupby": {"value": "log"},
@@ -1388,7 +1388,7 @@ class TestResources(FuzzyTestCase):
         expected = {
             "from": "t1",
             "select": [
-                {"value": {"add": [{"mult": ["log", 2]}, 1]}, "name": "x"},
+                {"value": {"add": [{"mul": ["log", 2]}, 1]}, "name": "x"},
                 {"value": {"count": "*"}}
             ],
             "groupby": {"value": "x"},
@@ -1402,7 +1402,7 @@ class TestResources(FuzzyTestCase):
         expected = {
             "from": "t1",
             "select": [
-                {"value": {"add": [{"mult": ["log", 2]}, 1]}, "name": "x"},
+                {"value": {"add": [{"mul": ["log", 2]}, 1]}, "name": "x"},
                 {"value": {"count": "*"}, "name": "y"}
             ],
             "groupby": {"value": "x"},
@@ -1416,7 +1416,7 @@ class TestResources(FuzzyTestCase):
         expected = {
             "from": "t1",
             "select": [
-                {"value": {"add": [{"mult": ["log", 2]}, 1]}, "name": "x"},
+                {"value": {"add": [{"mul": ["log", 2]}, 1]}, "name": "x"},
                 {"value": {"count": "*"}, "name": "y"}
             ],
             "groupby": {"value": "x"},
@@ -1519,12 +1519,12 @@ class TestResources(FuzzyTestCase):
                 {"value": "log"},
                 {"value": {"count": "*"}},
                 {"value": {"avg": "n"}},
-                {"value": {"max": {"add": ["n", {"mult": ["log", 2]}]}}}
+                {"value": {"max": {"add": ["n", {"mul": ["log", 2]}]}}}
             ],
             "groupby": {"value": "log"},
             "orderby": [
                 {"value": {"add": [
-                    {"max": {"add": ["n", {"mult": ["log", 2]}]}},
+                    {"max": {"add": ["n", {"mul": ["log", 2]}]}},
                     0
                 ]}},
                 {"value": {"add": [{"avg": "n"}, 0]}}
@@ -1541,12 +1541,12 @@ class TestResources(FuzzyTestCase):
                 {"value": "log"},
                 {"value": {"count": "*"}},
                 {"value": {"avg": "n"}},
-                {"value": {"max": {"add": ["n", {"mult": ["log", 2]}]}}}
+                {"value": {"max": {"add": ["n", {"mul": ["log", 2]}]}}}
             ],
             "groupby": {"value": "log"},
             "orderby": [
                 {"value": {"add": [
-                    {"max": {"add": ["n", {"mult": ["log", 2]}]}},
+                    {"max": {"add": ["n", {"mul": ["log", 2]}]}},
                     0
                 ]}},
                 {"value": {"add": [{"min": ["log", {"avg": "n"}]}, 0]}}

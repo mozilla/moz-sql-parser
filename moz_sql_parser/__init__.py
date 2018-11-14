@@ -18,6 +18,7 @@ from mo_future import text_type, number_types, binary_type, items
 from pyparsing import ParseException, ParseResults
 
 from moz_sql_parser.sql_parser import SQLParser, all_exceptions
+from moz_sql_parser.formatting import Formatter
 
 
 def parse(sql):
@@ -25,7 +26,7 @@ def parse(sql):
         parse_result = SQLParser.parseString(sql, parseAll=True)
     except Exception as e:
         if isinstance(e, ParseException) and e.msg == "Expected end of text":
-            problems = all_exceptions[e.loc]
+            problems = all_exceptions.get(e.loc, [])
             expecting = [
                 f
                 for f in (set(p.msg.lstrip("Expected").strip() for p in problems)-{"Found unwanted token"})
@@ -34,6 +35,10 @@ def parse(sql):
             raise ParseException(sql, e.loc, "Expecting one of (" + (", ".join(expecting)) + ")")
         raise
     return _scrub(parse_result)
+
+
+def format(json, **kwargs):
+    return Formatter(**kwargs).format(json)
 
 
 def _scrub(result):

@@ -37,11 +37,11 @@ class TestSimple(FuzzyTestCase):
         }
         self.assertEqual(result, expected)
 
-    def select_one_column(self):
+    def test_select_one_column(self):
         result = parse("Select A from dual")
         expected = {
-            "select": [{"value": "A"}],
-            "from": ["dual"]
+            "select": {"value": "A"},
+            "from": "dual"
         }
         self.assertEqual(result, expected)
 
@@ -72,7 +72,7 @@ class TestSimple(FuzzyTestCase):
             "select": {"value": {"add": [
                 "a",
                 {"div": ["b", 2]},
-                {"mult": [45, "c"]},
+                {"mul": [45, "c"]},
                 {"div": [2, "d"]}
             ]}},
             "from": "dual"
@@ -99,7 +99,7 @@ class TestSimple(FuzzyTestCase):
         }
         self.assertEqual(result, expected)
 
-    def select_many_column(self):
+    def test_select_many_column(self):
         result = parse("Select a, b, c from dual")
         expected = {
             "select": [
@@ -107,7 +107,7 @@ class TestSimple(FuzzyTestCase):
                 {"value": "b"},
                 {"value": "c"}
             ],
-            "from": ["dual"]
+            "from": "dual"
         }
         self.assertEqual(result, expected)
 
@@ -334,3 +334,42 @@ class TestSimple(FuzzyTestCase):
         }
         self.assertEqual(result, expected)
 
+
+    def test_pr19(self):
+        result = parse("select empid from emp where ename like 's%' ")
+        expected = {
+            'from': 'emp',
+            'where': {"like": ["ename", {"literal": "s%"}]},
+            'select': {"value": "empid"}
+        }
+        self.assertEqual(result, expected)
+
+    def test_backtick(self):
+        result = parse("SELECT `user ID` FROM a")
+        expected = {'select': {'value': 'user ID'}, 'from': 'a'}
+        self.assertEqual(result, expected)
+
+    def test_backtick_escape(self):
+        result = parse("SELECT `user`` ID` FROM a")
+        expected = {'select': {'value': 'user` ID'}, 'from': 'a'}
+        self.assertEqual(result, expected)
+
+    def test_left_join(self):
+        result = parse("SELECT t1.field1 FROM t1 LEFT JOIN t2 ON t1.id = t2.id")
+        expected = {'select': {'value': 't1.field1'},
+                    'from': ['t1',
+                    {'left join': 't2', 'on': {'eq': ['t1.id', 't2.id']}}]}
+        self.assertEqual(result, expected)
+
+    def test_multiple_left_join(self):
+        result = parse("SELECT t1.field1 "
+                       "FROM t1 "
+                       "LEFT JOIN t2 ON t1.id = t2.id "
+                       "LEFT JOIN t3 ON t1.id = t3.id"
+                       )
+        expected = {'select': {'value': 't1.field1'},
+                    'from': ['t1',
+                    {'left join': 't2', 'on': {'eq': ['t1.id', 't2.id']}},
+                    {'left join': 't3', 'on': {'eq': ['t1.id', 't3.id']}}
+                            ]}
+        self.assertEqual(result, expected)
