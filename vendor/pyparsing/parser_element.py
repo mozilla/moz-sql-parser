@@ -327,7 +327,7 @@ class ParserElement(object):
 
         tokens = self.postParse( instring, loc, tokens )
 
-        retTokens = ParseResults( tokens, self.resultsName, asList=self.saveAsList, modal=self.modalResults )
+        retTokens = ParseResults( tokens, self, self.resultsName, asList=self.saveAsList, modal=self.modalResults )
         if self.parseAction and (doActions or self.callDuringTry):
             if debugging:
                 try:
@@ -340,7 +340,8 @@ class ParserElement(object):
                             raise exc
 
                         if tokens is not None and tokens is not retTokens:
-                            retTokens = ParseResults( tokens,
+                            retTokens = ParseResults( tokens, 
+                                                      self,
                                                       self.resultsName,
                                                       asList=self.saveAsList and isinstance(tokens,(ParseResults,list)),
                                                       modal=self.modalResults )
@@ -359,7 +360,8 @@ class ParserElement(object):
                         raise exc
 
                     if tokens is not None and tokens is not retTokens:
-                        retTokens = ParseResults( tokens,
+                        retTokens = ParseResults( tokens, 
+                                                  self,
                                                   self.resultsName,
                                                   asList=self.saveAsList and isinstance(tokens,(ParseResults,list)),
                                                   modal=self.modalResults )
@@ -670,7 +672,7 @@ class ParserElement(object):
             ['More', 'Iron', 'Lead', 'Gold', 'I', 'Electricity']
         """
         try:
-            return ParseResults([ t for t,s,e in self.scanString( instring, maxMatches ) ])
+            return ParseResults([ t for t,s,e in self.scanString( instring, maxMatches ) ], self)
         except ParseBaseException as exc:
             if ParserElement.verbose_stacktrace:
                 raise

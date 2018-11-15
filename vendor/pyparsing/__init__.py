@@ -365,7 +365,7 @@ class CloseMatch(Token):
                         break
             else:
                 loc = match_stringloc + 1
-                results = ParseResults([instring[start:loc]])
+                results = ParseResults([instring[start:loc]], self)
                 results['original'] = self.match_string
                 results['mismatches'] = mismatches
                 return loc, results
@@ -609,7 +609,7 @@ class Regex(Token):
         elif self.asGroupList:
             ret = result.groups()
         else:
-            ret = ParseResults(result.group())
+            ret = ParseResults(result.group(), self)
             if d:
                 for k in d:
                     ret[k] = d[k]
@@ -1508,7 +1508,7 @@ class Each(ParseExpression):
             loc,results = e._parse(instring,loc,doActions)
             resultlist.append(results)
 
-        finalResults = sum(resultlist, ParseResults([]))
+        finalResults = sum(resultlist, ParseResults([], self))
         return loc, finalResults
 
     def __str__( self ):
@@ -1907,7 +1907,7 @@ class Optional(ParseElementEnhance):
         except (ParseException,IndexError):
             if self.defaultValue is not _optionalNotMatched:
                 if self.expr.resultsName:
-                    tokens = ParseResults([ self.defaultValue ])
+                    tokens = ParseResults([ self.defaultValue ], self)
                     tokens[self.expr.resultsName] = self.defaultValue
                 else:
                     tokens = [ self.defaultValue ]
@@ -2031,7 +2031,7 @@ class SkipTo(ParseElementEnhance):
         # build up return values
         loc = tmploc
         skiptext = instring[startloc:loc]
-        skipresult = ParseResults(skiptext)
+        skipresult = ParseResults(skiptext, self)
 
         if self.includeMatch:
             loc, mat = expr_parse(instring,loc,doActions,callPreParse=False)
@@ -2169,7 +2169,7 @@ class Combine(TokenConverter):
     def postParse( self, instring, loc, tokenlist ):
         retToks = tokenlist.copy()
         del retToks[:]
-        retToks += ParseResults([ "".join(tokenlist._asStringList(self.joinString)) ], modal=self.modalResults)
+        retToks += ParseResults([ "".join(tokenlist._asStringList(self.joinString)) ], self, modal=self.modalResults)
 
         if self.resultsName and retToks.haskeys():
             return [ retToks ]

@@ -56,7 +56,7 @@ class ParseResults(object):
         - month: 12
         - year: 1999
     """
-    def __new__(cls, toklist=None, name=None, asList=True, modal=True ):
+    def __new__(cls, toklist, token_type, name=None, asList=True, modal=True ):
         if isinstance(toklist, cls):
             return toklist
         retobj = object.__new__(cls)
@@ -65,7 +65,8 @@ class ParseResults(object):
 
     # Performance tuning: we construct a *lot* of these, so keep this
     # constructor as small and fast as possible
-    def __init__( self, toklist=None, name=None, asList=True, modal=True, isinstance=isinstance ):
+    def __init__( self, toklist, token_type, name=None, asList=True, modal=True, isinstance=isinstance ):
+        self.token_type = token_type
         if self.__doinit:
             self.__doinit = False
             self.__name = None
@@ -94,9 +95,9 @@ class ParseResults(object):
                     toklist = [ toklist ]
                 if asList:
                     if isinstance(toklist,ParseResults):
-                        self[name] = _ParseResultsWithOffset(ParseResults(toklist.__toklist), 0)
+                        self[name] = _ParseResultsWithOffset(ParseResults(toklist.__toklist, token_type), 0)
                     else:
-                        self[name] = _ParseResultsWithOffset(ParseResults(toklist[0]),0)
+                        self[name] = _ParseResultsWithOffset(ParseResults(toklist[0], token_type),0)
                     self[name].__name = name
                 else:
                     try:
@@ -111,7 +112,7 @@ class ParseResults(object):
             if i not in self.__accumNames:
                 return self.__tokdict[i][-1][0]
             else:
-                return ParseResults([ v[0] for v in self.__tokdict[i] ])
+                return ParseResults([ v[0] for v in self.__tokdict[i] ], self)
 
     def __setitem__( self, k, v, isinstance=isinstance ):
         if isinstance(v,_ParseResultsWithOffset):
@@ -343,13 +344,13 @@ class ParseResults(object):
         except KeyError:
             return ""
 
-        if name in self.__tokdict:
-            if name not in self.__accumNames:
-                return self.__tokdict[name][-1][0]
-            else:
-                return ParseResults([ v[0] for v in self.__tokdict[name] ])
-        else:
-            return ""
+        # if name in self.__tokdict:
+        #     if name not in self.__accumNames:
+        #         return self.__tokdict[name][-1][0]
+        #     else:
+        #         return ParseResults([ v[0] for v in self.__tokdict[name] ], self)
+        # else:
+        #     return ""
 
     def __add__( self, other ):
         ret = self.copy()
@@ -452,7 +453,7 @@ class ParseResults(object):
         """
         Returns a new copy of a C{ParseResults} object.
         """
-        ret = ParseResults( self.__toklist )
+        ret = ParseResults( self.__toklist, self.token_type)
         ret.__tokdict = dict(self.__tokdict.items())
         ret.__parent = self.__parent
         ret.__accumNames.update( self.__accumNames )
