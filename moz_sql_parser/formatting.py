@@ -128,6 +128,11 @@ class Formatter:
             return self._on(json)
 
         if len(json) > 1:
+            # Nested queries
+            if 'from' in json:
+                return '({})'.format(self.format(json))
+            if 'select' in json:
+                return '({})'.format(self.format(json))
             raise Exception('Operators should have only one key!')
         key, value = list(json.items())[0]
 
@@ -208,6 +213,8 @@ class Formatter:
         is_join = False
         if 'from' in json:
             from_ = json['from']
+            if 'union' in from_:
+                return self.union(from_['union'])
             if not isinstance(from_, list):
                 from_ = [from_]
 
@@ -240,7 +247,8 @@ class Formatter:
 
     def limit(self, json):
         if 'limit' in json:
-            return 'LIMIT {0}'.format(self.dispatch(json['limit']))
+            if json['limit']:
+                return 'LIMIT {0}'.format(self.dispatch(json['limit']))
 
     def offset(self, json):
         if 'offset' in json:
