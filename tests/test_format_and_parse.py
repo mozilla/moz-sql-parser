@@ -585,7 +585,6 @@ from benn.college_football_players
                          'orderby': [{'value': 'A.f1'}, {'value': 'B.f1'}]}
         self.verify_formatting(expected_sql, expected_json)
 
-    @skip("broken")
     def test_086(self):
         expected_sql = "SELECT a FROM t6 WHERE b IN (SELECT b FROM t6 WHERE a<='b' UNION SELECT '3' AS x ORDER BY 1 LIMIT 1)"
         expected_json = {'from': 't6', 'select': {'value': 'a'}, 'where': {'in': ['b', {'from': {
@@ -593,7 +592,6 @@ from benn.college_football_players
                       {'select': {'value': {'literal': '3'}, 'name': 'x'}}]}, 'orderby': {'value': 1}, 'limit': 1}]}}
         self.verify_formatting(expected_sql, expected_json)
 
-    @skip("broken")
     def test_087(self):
         expected_sql = "SELECT a FROM t6 WHERE b IN (SELECT b FROM t6 WHERE a<='b' UNION SELECT '3' AS x ORDER BY 1 DESC LIMIT 1)"
         expected_json = {'from': 't6', 'select': {'value': 'a'}, 'where': {'in': ['b', {'from': {
@@ -602,7 +600,6 @@ from benn.college_football_players
             'limit': 1}]}}
         self.verify_formatting(expected_sql, expected_json)
 
-    @skip("broken")
     def test_088(self):
         expected_sql = "SELECT a FROM t6 WHERE b IN (SELECT b FROM t6 WHERE a<='b' UNION SELECT '3' AS x ORDER BY b LIMIT 2) ORDER BY a"
         expected_json = {'from': 't6', 'select': {'value': 'a'}, 'where': {'in': ['b', {'from': {
@@ -611,7 +608,6 @@ from benn.college_football_players
                          'orderby': {'value': 'a'}}
         self.verify_formatting(expected_sql, expected_json)
 
-    @skip("broken")
     def test_089(self):
         expected_sql = "SELECT a FROM t6 WHERE b IN (SELECT b FROM t6 WHERE a<='b' UNION SELECT '3' AS x ORDER BY x DESC LIMIT 2) ORDER BY a"
         expected_json = {'from': 't6', 'select': {'value': 'a'}, 'where': {'in': ['b', {'from': {
