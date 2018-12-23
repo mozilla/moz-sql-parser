@@ -99,7 +99,7 @@ KNOWN_OPS = [
     Literal("==").setName("eq").setDebugActions(*debug),
     Literal("!=").setName("neq").setDebugActions(*debug),
     IN.setName("in").setDebugActions(*debug),
-    NOTIN.setName("not in").setDebugActions(*debug),
+    NOTIN.setName("nin").setDebugActions(*debug),
     IS.setName("is").setDebugActions(*debug),
     LIKE.setName("like").setDebugActions(*debug),
     OR.setName("or").setDebugActions(*debug),
