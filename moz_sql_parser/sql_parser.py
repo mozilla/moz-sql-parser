@@ -70,6 +70,7 @@ keywords = [
     "select",
     "then",
     "union",
+    "union all",
     "when",
     "where",
     "with"
@@ -331,7 +332,7 @@ selectStmt << Group(
                     Optional(OFFSET.suppress().setDebugActions(*debug) + expr("offset"))
                 )
             ),
-            delim=UNION
+            delim=(UNION | UNIONALL)
         )
     )("union"))("from") +
     Optional(ORDERBY.suppress().setDebugActions(*debug) + delimitedList(Group(sortColumn))("orderby").setName("orderby")) +
