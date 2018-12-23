@@ -108,6 +108,13 @@ class Formatter:
             elif 'value' in json:
                 return self.value(json)
             else:
+                if len(json) > 1:
+                    # Nested queries
+                    if 'from' in json:
+                        return '({})'.format(self.format(json))
+                    if 'select' in json:
+                        return '({})'.format(self.format(json))
+                    raise Exception('Unrecognized JSON structure with more than 1 key')
                 return self.op(json)
         if isinstance(json, string_types):
             return escape(json, self.ansi_quotes, self.should_quote)
@@ -128,12 +135,7 @@ class Formatter:
             return self._on(json)
 
         if len(json) > 1:
-            # Nested queries
-            if 'from' in json:
-                return '({})'.format(self.format(json))
-            if 'select' in json:
-                return '({})'.format(self.format(json))
-            raise Exception('Operators should have only one key!')
+            self.dispatch(json)
         key, value = list(json.items())[0]
 
         # check if the attribute exists, and call the corresponding method;
