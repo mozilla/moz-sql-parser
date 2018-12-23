@@ -200,21 +200,17 @@ def to_union_call(instring, tokensStart, retTokens):
     unions = tok['from']['union']
     if len(unions) == 1:
         output = unions[0]
-        if tok.get('orderby'):
-            output["orderby"] = tok.get('orderby')
-        if tok.get('limit'):
-            output["limit"] = tok.get('limit')
-        return output
     else:
         if not tok.get('orderby') and not tok.get('limit'):
             return tok['from']
         else:
-            return {
-                "from": {"union": unions},
-                "orderby": tok.get('orderby') if tok.get('orderby') else None,
-                "limit": tok.get('limit') if tok.get('limit') else None
-            }
+            output = {"from": {"union": unions}}
 
+    if tok.get('orderby'):
+        output["orderby"] = tok.get('orderby')
+    if tok.get('limit'):
+        output["limit"] = tok.get('limit')
+    return output
 
 def unquote(instring, tokensStart, retTokens):
     val = retTokens[0]

@@ -13,6 +13,7 @@ from __future__ import unicode_literals
 
 from unittest import skip
 
+from jx_base.expressions import NULL
 from mo_testing.fuzzytestcase import FuzzyTestCase
 
 from moz_sql_parser import parse
@@ -372,4 +373,16 @@ class TestSimple(FuzzyTestCase):
                     {'left join': 't2', 'on': {'eq': ['t1.id', 't2.id']}},
                     {'left join': 't3', 'on': {'eq': ['t1.id', 't3.id']}}
                             ]}
+        self.assertEqual(result, expected)
+
+    def test_union(self):
+        result = parse("SELECT b FROM t6 UNION SELECT '3' AS x ORDER BY x")
+        expected = {
+            "from": {'union': [
+                {'from': 't6', 'select': {'value': 'b'}},
+                {'select': {'value': {'literal': '3'}, 'name': 'x'}}
+            ]},
+            'orderby': {"value": 'x'},
+            "limit": NULL
+        }
         self.assertEqual(result, expected)
