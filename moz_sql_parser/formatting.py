@@ -154,7 +154,7 @@ class Formatter:
     def _like(self, pair):
         return '{0} LIKE {1}'.format(self.dispatch(pair[0]), self.dispatch(pair[1]))
 
-    def _notlike(self, pair):
+    def _nlike(self, pair):
         return '{0} NOT LIKE {1}'.format(self.dispatch(pair[0]), self.dispatch(pair[1]))
 
     def _is(self, pair):

@@ -277,7 +277,7 @@ class TestSimple(FuzzyTestCase):
         result = parse("select a from table1 where A not like '%20%'")
         expected = {
             'from': 'table1',
-            'where': {'notlike': ['A', {"literal": "%20%"}]},
+            'where': {'nlike': ['A', {"literal": "%20%"}]},
             'select': {'value': 'a'}
         }
         self.assertEqual(result, expected)
