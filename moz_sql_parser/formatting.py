@@ -114,8 +114,6 @@ class Formatter:
                 # Nested queries
                 return '({})'.format(self.format(json))
             else:
-                if len(json) > 1:
-                    raise Exception('Unrecognized JSON structure with more than 1 key')
                 return self.op(json)
         if isinstance(json, string_types):
             return escape(json, self.ansi_quotes, self.should_quote)
@@ -136,7 +134,7 @@ class Formatter:
             return self._on(json)
 
         if len(json) > 1:
-            self.dispatch(json)
+            raise Exception('Unrecognized JSON structure with more than 1 key')
         key, value = list(json.items())[0]
 
         # check if the attribute exists, and call the corresponding method;
