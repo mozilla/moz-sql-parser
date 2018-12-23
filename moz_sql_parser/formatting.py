@@ -134,7 +134,7 @@ class Formatter:
             return self._on(json)
 
         if len(json) > 1:
-            raise Exception('Unrecognized JSON structure with more than 1 key')
+            raise Exception('Operators should have only one key!')
         key, value = list(json.items())[0]
 
         # check if the attribute exists, and call the corresponding method;
