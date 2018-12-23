@@ -107,13 +107,14 @@ class Formatter:
                 return ''
             elif 'value' in json:
                 return self.value(json)
+            elif 'from' in json:
+                # Nested queries
+                return '({})'.format(self.format(json))
+            elif 'select' in json:
+                # Nested queries
+                return '({})'.format(self.format(json))
             else:
                 if len(json) > 1:
-                    # Nested queries
-                    if 'from' in json:
-                        return '({})'.format(self.format(json))
-                    if 'select' in json:
-                        return '({})'.format(self.format(json))
                     raise Exception('Unrecognized JSON structure with more than 1 key')
                 return self.op(json)
         if isinstance(json, string_types):
