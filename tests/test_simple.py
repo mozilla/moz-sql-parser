@@ -290,6 +290,14 @@ class TestSimple(FuzzyTestCase):
         }
         self.assertEqual(result, expected)
 
+    def test_not_like_in_select(self):
+        result = parse("select case when A not like 'bb%' then 1 else 0 end as bb from table1")
+        expected = {
+            'from': 'table1',
+            'select': {'name': 'bb', 'value': {"case": [{"when": {"nlike": ["A", {"literal": "bb%"}]}, "then": 1}, 0]}}
+        }
+        self.assertEqual(result, expected)
+
     def test_like_from_pr16(self):
         result = parse("select * from trade where school LIKE '%shool' and name='abc' and id IN ('1','2')")
         expected = {
