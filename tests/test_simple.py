@@ -373,3 +373,12 @@ class TestSimple(FuzzyTestCase):
                     {'left join': 't3', 'on': {'eq': ['t1.id', 't3.id']}}
                             ]}
         self.assertEqual(result, expected)
+
+    @skip("Please fix the parser")
+    def test_union(self):
+        result = parse("SELECT b FROM t6 UNION SELECT '3' AS x LIMIT 1)")
+        expected = {'union': [
+            {'from': 't6', 'select': {'value': 'b'}},
+            {'select': {'value': {'literal': '3'}, 'name': 'x'}, 'limit': 1}
+        ]}
+        self.assertEqual(result, expected)
