@@ -101,7 +101,7 @@ KNOWN_OPS = [
     IN.setName("in").setDebugActions(*debug),
     IS.setName("is").setDebugActions(*debug),
     LIKE.setName("like").setDebugActions(*debug),
-    NOTLIKE.setName("not like").setDebugActions(*debug),
+    NOTLIKE.setName("notlike").setDebugActions(*debug),
     OR.setName("or").setDebugActions(*debug),
     AND.setName("and").setDebugActions(*debug)
 ]
