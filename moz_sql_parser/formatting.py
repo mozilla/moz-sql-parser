@@ -166,6 +166,15 @@ class Formatter:
 
         return '{0} IN {1}'.format(json[0], valid)
 
+    def _nin(self, json):
+        valid = self.dispatch(json[1])
+        # `(10, 11, 12)` does not get parsed as literal, so it's formatted as
+        # `10, 11, 12`. This fixes it.
+        if not valid.startswith('('):
+            valid = '({0})'.format(valid)
+
+        return '{0} NOT IN {1}'.format(json[0], valid)
+
     def _case(self, checks):
         parts = ['CASE']
         for check in checks:
