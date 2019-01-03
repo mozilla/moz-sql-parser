@@ -245,8 +245,10 @@ class Formatter:
             orderby = json['orderby']
             if isinstance(orderby, dict):
                 orderby = [orderby]
-            return 'ORDER BY {0}'.format(
-                ','.join(['{0} {1}'.format(self.dispatch(o), o.get('sort', '').upper()).strip() for o in orderby]))
+            return 'ORDER BY {0}'.format(','.join([
+                '{0} {1}'.format(self.dispatch(o), o.get('sort', '').upper()).strip()
+                for o in orderby
+            ]))
 
     def limit(self, json):
         if 'limit' in json:
