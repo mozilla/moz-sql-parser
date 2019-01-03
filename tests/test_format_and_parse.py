@@ -19,6 +19,15 @@ from mo_testing.fuzzytestcase import FuzzyTestCase
 from moz_sql_parser import format
 from moz_sql_parser import parse
 
+EXCEPTION_MESSAGE = """
+SQL:         %s
+Broken SQL:  %s
+
+JSON:
+%s
+Broken JSON:
+%s
+"""
 
 class VerificationException(Exception):
     """exception thrown if anything called by the verify_formatting function raises an exception"""
@@ -30,29 +39,20 @@ class VerificationException(Exception):
         self.new_json = new_json
 
     def __str__(self):
-        res = """
-SQL:         %s
-Broken SQL:  %s
-
-JSON:
-%s
-Broken JSON:
-%s
-""" % (self.expected_sql, self.new_sql, pformat(self.expected_json), pformat(self.new_json))
+        res = EXCEPTION_MESSAGE % (self.expected_sql, self.new_sql, pformat(self.expected_json), pformat(self.new_json))
         return res
-
 
 class TestFormatAndParse(FuzzyTestCase):
 
     def verify_formatting(self, expected_sql, expected_json):
         new_sql = ""
         new_json = ""
-        # try:
-        new_sql = format(expected_json)
-        new_json = parse(new_sql)
-        self.assertEqual(new_json, expected_json)
-        # except Exception as e:
-        #     raise VerificationException(expected_sql, expected_json, new_sql, new_json)
+        try:
+            new_sql = format(expected_json)
+            new_json = parse(new_sql)
+            self.assertEqual(new_json, expected_json)
+        except Exception as e:
+            raise VerificationException(expected_sql, expected_json, new_sql, new_json)
 
     def test_two_tables(self):
         expected_sql = "SELECT * from XYZZY, ABC"
