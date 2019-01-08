@@ -218,6 +218,15 @@ class TestSimple(TestCase):
         expected = "SELECT COUNT(1) FROM dual ORDER BY a ASC"
         self.assertEqual(result, expected)
 
+    def test_order_by_desc(self):
+        result = format({
+            "select": {"value": {"count": 1}},
+            "from": "dual",
+            "orderby": {"value": "a", "sort": "desc"},
+        })
+        expected = "SELECT COUNT(1) FROM dual ORDER BY a DESC"
+        self.assertEqual(result, expected)
+
     def test_neg_or_precedence(self):
         result = format({
             'from': 'table1',

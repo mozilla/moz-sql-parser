@@ -13,6 +13,7 @@ from __future__ import unicode_literals
 
 from unittest import skip
 
+from jx_base.expressions import NULL
 from mo_testing.fuzzytestcase import FuzzyTestCase
 
 from moz_sql_parser import parse
@@ -372,4 +373,51 @@ class TestSimple(FuzzyTestCase):
                     {'left join': 't2', 'on': {'eq': ['t1.id', 't2.id']}},
                     {'left join': 't3', 'on': {'eq': ['t1.id', 't3.id']}}
                             ]}
+        self.assertEqual(result, expected)
+
+    def test_union(self):
+        result = parse("SELECT b FROM t6 UNION SELECT '3' AS x ORDER BY x")
+        expected = {
+            "from": {'union': [
+                {'from': 't6', 'select': {'value': 'b'}},
+                {'select': {'value': {'literal': '3'}, 'name': 'x'}}
+            ]},
+            'orderby': {"value": 'x'},
+            "limit": NULL
+        }
+        self.assertEqual(result, expected)
+
+    def test_left_outer_join(self):
+        result = parse("SELECT t1.field1 FROM t1 LEFT OUTER JOIN t2 ON t1.id = t2.id")
+        expected = {'select': {'value': 't1.field1'},
+                    'from': ['t1',
+                    {'left outer join': 't2', 'on': {'eq': ['t1.id', 't2.id']}}]}
+        self.assertEqual(result, expected)
+
+    def test_right_join(self):
+        result = parse("SELECT t1.field1 FROM t1 RIGHT JOIN t2 ON t1.id = t2.id")
+        expected = {'select': {'value': 't1.field1'},
+                    'from': ['t1',
+                    {'right join': 't2', 'on': {'eq': ['t1.id', 't2.id']}}]}
+        self.assertEqual(result, expected)
+
+    def test_right_outer_join(self):
+        result = parse("SELECT t1.field1 FROM t1 RIGHT OUTER JOIN t2 ON t1.id = t2.id")
+        expected = {'select': {'value': 't1.field1'},
+                    'from': ['t1',
+                    {'right outer join': 't2', 'on': {'eq': ['t1.id', 't2.id']}}]}
+        self.assertEqual(result, expected)
+
+    def test_full_join(self):
+        result = parse("SELECT t1.field1 FROM t1 FULL JOIN t2 ON t1.id = t2.id")
+        expected = {'select': {'value': 't1.field1'},
+                    'from': ['t1',
+                    {'full join': 't2', 'on': {'eq': ['t1.id', 't2.id']}}]}
+        self.assertEqual(result, expected)
+
+    def test_full_outer_join(self):
+        result = parse("SELECT t1.field1 FROM t1 FULL OUTER JOIN t2 ON t1.id = t2.id")
+        expected = {'select': {'value': 't1.field1'},
+                    'from': ['t1',
+                    {'full outer join': 't2', 'on': {'eq': ['t1.id', 't2.id']}}]}
         self.assertEqual(result, expected)

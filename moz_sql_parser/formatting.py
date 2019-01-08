@@ -107,6 +107,12 @@ class Formatter:
                 return ''
             elif 'value' in json:
                 return self.value(json)
+            elif 'from' in json:
+                # Nested queries
+                return '({})'.format(self.format(json))
+            elif 'select' in json:
+                # Nested queries
+                return '({})'.format(self.format(json))
             else:
                 return self.op(json)
         if isinstance(json, string_types):
@@ -208,6 +214,8 @@ class Formatter:
         is_join = False
         if 'from' in json:
             from_ = json['from']
+            if 'union' in from_:
+                return self.union(from_['union'])
             if not isinstance(from_, list):
                 from_ = [from_]
 
@@ -234,13 +242,18 @@ class Formatter:
 
     def orderby(self, json):
         if 'orderby' in json:
-            sort = json['orderby'].get('sort', '').upper()
-            return 'ORDER BY {0} {1}'.format(
-                self.dispatch(json['orderby']), sort).strip()
+            orderby = json['orderby']
+            if isinstance(orderby, dict):
+                orderby = [orderby]
+            return 'ORDER BY {0}'.format(','.join([
+                '{0} {1}'.format(self.dispatch(o), o.get('sort', '').upper()).strip()
+                for o in orderby
+            ]))
 
     def limit(self, json):
         if 'limit' in json:
-            return 'LIMIT {0}'.format(self.dispatch(json['limit']))
+            if json['limit']:
+                return 'LIMIT {0}'.format(self.dispatch(json['limit']))
 
     def offset(self, json):
         if 'offset' in json:
