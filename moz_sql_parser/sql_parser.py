@@ -54,6 +54,8 @@ keywords = [
     "else",
     "end",
     "from",
+    "full join",
+    "full outer join",
     "group by",
     "having",
     "in",
@@ -61,12 +63,15 @@ keywords = [
     "is",
     "join",
     "left join",
+    "left outer join",
     "limit",
     "offset",
     "like",
     "on",
     "or",
     "order by",
+    "right join",
+    "right outer join",
     "select",
     "then",
     "union",
@@ -308,7 +313,7 @@ tableName = (
     ident.setName("table name").setDebugActions(*debug)
 )
 
-join = ((CROSSJOIN | INNERJOIN | LEFTJOIN | JOIN)("op") + Group(tableName)("join") + Optional(ON + expr("on"))).addParseAction(to_join_call)
+join = ((CROSSJOIN | FULLJOIN | FULLOUTERJOIN | INNERJOIN | JOIN | LEFTJOIN | LEFTOUTERJOIN | RIGHTJOIN | RIGHTOUTERJOIN)("op") + Group(tableName)("join") + Optional(ON + expr("on"))).addParseAction(to_join_call)
 
 sortColumn = expr("value").setName("sort1").setDebugActions(*debug) + Optional(DESC("sort") | ASC("sort")) | \
              expr("value").setName("sort2").setDebugActions(*debug)
