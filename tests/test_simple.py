@@ -7,20 +7,16 @@
 # Author: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import unicode_literals
+from __future__ import absolute_import, division, unicode_literals
 
-from unittest import skip
+from unittest import TestCase, skip
 
-from jx_base.expressions import NULL
-from mo_testing.fuzzytestcase import FuzzyTestCase
+from mo_future import text_type
 
-from moz_sql_parser import parse
-from moz_sql_parser import sql_parser
+from moz_sql_parser import parse, sql_parser
 
 
-class TestSimple(FuzzyTestCase):
+class TestSimple(TestCase):
 
     def test_two_tables(self):
         result = parse("SELECT * from XYZZY, ABC")
@@ -113,19 +109,19 @@ class TestSimple(FuzzyTestCase):
         self.assertEqual(result, expected)
 
     def test_bad_select1(self):
-        self.assertRaises('Expected select', lambda: parse("se1ect A, B, C from dual"))
+        assertRaises('Expected select', lambda: parse("se1ect A, B, C from dual"))
 
     def test_bad_select2(self):
-        self.assertRaises('Expected {{expression1 [{[as] column_name1}]}', lambda: parse("Select &&& FROM dual"))
+        assertRaises('Expected {{expression1 [{[as] column_name1}]}', lambda: parse("Select &&& FROM dual"))
 
     def test_bad_from(self):
-        self.assertRaises('(at char 20)', lambda: parse("select A, B, C frum dual"))
+        assertRaises('(at char 20)', lambda: parse("select A, B, C frum dual"))
 
     def test_incomplete1(self):
-        self.assertRaises('Expected {{expression1 [{[as] column_name1}]}', lambda: parse("SELECT"))
+        assertRaises('Expected {{expression1 [{[as] column_name1}]}', lambda: parse("SELECT"))
 
     def test_incomplete2(self):
-        self.assertRaises("", lambda: parse("SELECT * FROM"))
+        assertRaises("", lambda: parse("SELECT * FROM"))
 
     def test_where_neq(self):
         #                         1         2         3         4         5         6
@@ -382,8 +378,7 @@ class TestSimple(FuzzyTestCase):
                 {'from': 't6', 'select': {'value': 'b'}},
                 {'select': {'value': {'literal': '3'}, 'name': 'x'}}
             ]},
-            'orderby': {"value": 'x'},
-            "limit": NULL
+            'orderby': {"value": 'x'}
         }
         self.assertEqual(result, expected)
 
@@ -421,3 +416,13 @@ class TestSimple(FuzzyTestCase):
                     'from': ['t1',
                     {'full outer join': 't2', 'on': {'eq': ['t1.id', 't2.id']}}]}
         self.assertEqual(result, expected)
+
+
+def assertRaises(expected_text_in_error, method):
+    try:
+        method()
+        raise Exception("expecting an exception")
+    except Exception as e:
+        if expected_text_in_error not in text_type(e):
+            raise Exception("wrong error raised")
+
