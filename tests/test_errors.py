@@ -11,21 +11,14 @@ from __future__ import absolute_import, division, unicode_literals
 
 from unittest import TestCase
 
-from mo_logs import Except
-
 from moz_sql_parser import parse
+from tests.util import assertRaises
 
 
 class TestErrors(TestCase):
 
     def test_dash_in_tablename(self):
-        try:
-            result = parse("select * from coverage-summary.source.file.covered limit 20")
-            self.assertTrue(False, "expecting to fail")
-        except Exception as e:
-            e = Except.wrap(e)
-            self.assertTrue(
-                all(v in str(e) for v in ["group by", "order by", "having", "limit", "where"]),
-                "expecting mention of other expected clauses"
-            )
-
+        assertRaises(
+            ["group by", "order by", "having", "limit", "where"],
+            lambda: parse("select * from coverage-summary.source.file.covered limit 20")
+        )

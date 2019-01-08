@@ -11,9 +11,8 @@ from __future__ import absolute_import, division, unicode_literals
 
 from unittest import TestCase, skip
 
-from mo_future import text_type
-
 from moz_sql_parser import parse, sql_parser
+from tests.util import assertRaises
 
 
 class TestSimple(TestCase):
@@ -417,12 +416,4 @@ class TestSimple(TestCase):
                     {'full outer join': 't2', 'on': {'eq': ['t1.id', 't2.id']}}]}
         self.assertEqual(result, expected)
 
-
-def assertRaises(expected_text_in_error, method):
-    try:
-        method()
-        raise Exception("expecting an exception")
-    except Exception as e:
-        if expected_text_in_error not in text_type(e):
-            raise Exception("wrong error raised")
 
