@@ -7,17 +7,12 @@
 # Author: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import unicode_literals
+from __future__ import absolute_import, division, unicode_literals
 
 from pprint import pformat
-from unittest import skip
+from unittest import skip, TestCase
 
-from mo_testing.fuzzytestcase import FuzzyTestCase
-
-from moz_sql_parser import format
-from moz_sql_parser import parse
+from moz_sql_parser import format, parse
 
 EXCEPTION_MESSAGE = """
 SQL:         %s
@@ -42,7 +37,7 @@ class VerificationException(Exception):
         res = EXCEPTION_MESSAGE % (self.expected_sql, self.new_sql, pformat(self.expected_json), pformat(self.new_json))
         return res
 
-class TestFormatAndParse(FuzzyTestCase):
+class TestFormatAndParse(TestCase):
 
     def verify_formatting(self, expected_sql, expected_json):
         new_sql = ""
