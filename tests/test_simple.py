@@ -416,4 +416,9 @@ class TestSimple(TestCase):
                     {'full outer join': 't2', 'on': {'eq': ['t1.id', 't2.id']}}]}
         self.assertEqual(result, expected)
 
-
+    def test_join_via_using(self):
+        result = parse("SELECT t1.field1 FROM t1 JOIN t2 USING (id)")
+        expected = {'select': {'value': 't1.field1'},
+                    'from': ['t1',
+                    {'join': 't2', 'using': 'id'}]}
+        self.assertEqual(result, expected)
