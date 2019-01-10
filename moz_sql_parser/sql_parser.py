@@ -320,8 +320,7 @@ tableName = (
 join = (
     (CROSSJOIN | FULLJOIN | FULLOUTERJOIN | INNERJOIN | JOIN | LEFTJOIN | LEFTOUTERJOIN | RIGHTJOIN | RIGHTOUTERJOIN)("op") +
     Group(tableName)("join") +
-    Optional(ON + expr("on")) +
-    Optional(USING + expr("using"))
+    Optional((ON + expr("on")) | (USING + expr("using")))
 ).addParseAction(to_join_call)
 
 sortColumn = expr("value").setName("sort1").setDebugActions(*debug) + Optional(DESC("sort") | ASC("sort")) | \
