@@ -34,13 +34,16 @@ def __deploy__():
 parseLocker = Lock()  # ENSURE ONLY ONE PARSING AT A TIME
 
 
-def parse(sql):
+def parse(sql,json=True):
     with parseLocker:
         try:
             all_exceptions.clear()
             sql = sql.rstrip().rstrip(";")
             parse_result = SQLParser.parseString(sql, parseAll=True)
-            return _scrub(parse_result)
+            if json:
+                return _scrub(parse_result)
+            else:
+                return parse_result
         except Exception as e:
             if isinstance(e, ParseException) and e.msg == "Expected end of text":
                 problems = all_exceptions.get(e.loc, [])

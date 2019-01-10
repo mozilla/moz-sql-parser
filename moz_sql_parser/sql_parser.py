@@ -5,11 +5,16 @@
 # You can obtain one at http://mozilla.org/MPL/2.0/.
 #
 # Author: Kyle Lahnakoski (kyle@lahnakoski.com)
+# Modifed by: Erwin de Haan (http://github.com/EraYaN)
+#
+# Made the returned structure be a proper AST.
 #
 
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import unicode_literals
+
+from . import ast_nodes as an
 
 import ast
 import sys
@@ -23,7 +28,7 @@ sys.setrecursionlimit(2000)
 
 
 DEBUG = False
-END = None
+#END = None
 
 all_exceptions = {}
 def record_exception(instring, loc, expr, exc):
@@ -41,224 +46,137 @@ if DEBUG:
 else:
     debug = (nothing, nothing, record_exception)
 
-join_keywords = {
-    "join",
-    "full join",
-    "cross join",
-    "inner join",
-    "left join",
-    "right join",
-    "full outer join",
-    "right outer join",
-    "left outer join",
-}
-keywords = {
-    "and",
-    "as",
-    "asc",
-    "between",
-    "case",
-    "collate nocase",
-    "desc",
-    "else",
-    "end",
-    "from",
-    "group by",
-    "having",
-    "in",
-    "not in",
-    "is",
-    "limit",
-    "offset",
-    "like",
-    "not between",
-    "not like",
-    "on",
-    "or",
-    "order by",
-    "select",
-    "then",
-    "union",
-    "union all",
-    "using",
-    "when",
-    "where",
-    "with"
-} | join_keywords
-locs = locals()
-reserved = []
-for k in keywords:
-    name = k.upper().replace(" ", "")
-    locs[name] = value = Keyword(k, caseless=True).setName(k.lower()).setDebugActions(*debug)
-    reserved.append(value)
-RESERVED = MatchFirst(reserved)
+AND = Keyword("and", caseless=True).setName("and").addParseAction(an.AndKeyword.from_tokens).setDebugActions(*debug)
+AS = Keyword("as", caseless=True).setName("as").addParseAction(an.AsKeyword.from_tokens).setDebugActions(*debug)
+ASC = Keyword("asc", caseless=True).setName("asc").addParseAction(an.AscKeyword.from_tokens).setDebugActions(*debug)
+BETWEEN = Keyword("between", caseless=True).setName("between").addParseAction(an.BetweenKeyword.from_tokens).setDebugActions(*debug)
+CASE = Keyword("case", caseless=True).setName("case").addParseAction(an.CaseKeyword.from_tokens).setDebugActions(*debug)
+COLLATENOCASE = Keyword("collate nocase", caseless=True).setName("collate nocase").addParseAction(an.CollateNoCaseKeyword.from_tokens).setDebugActions(*debug)
+CROSSJOIN = Keyword("cross join", caseless=True).setName("cross join").addParseAction(an.CrossJoinKeyword.from_tokens).setDebugActions(*debug)
+DESC = Keyword("desc", caseless=True).setName("desc").addParseAction(an.DescKeyword.from_tokens).setDebugActions(*debug)
+ELSE = Keyword("else", caseless=True).setName("else").addParseAction(an.ElseKeyword.from_tokens).setDebugActions(*debug)
+END = Keyword("end", caseless=True).setName("end").addParseAction(an.EndKeyword.from_tokens).setDebugActions(*debug)
+FROM = Keyword("from", caseless=True).setName("from").addParseAction(an.FromKeyword.from_tokens).setDebugActions(*debug)
+FULLJOIN = Keyword("full join", caseless=True).setName("full join").addParseAction(an.FullJoinKeyword.from_tokens).setDebugActions(*debug)
+FULLOUTERJOIN = Keyword("full outer join", caseless=True).setName("full outer join").addParseAction(an.FullOuterJoinKeyword.from_tokens).setDebugActions(*debug)
+GROUPBY = Keyword("group by", caseless=True).setName("group by").addParseAction(an.GroupByKeyword.from_tokens).setDebugActions(*debug)
+HAVING = Keyword("having", caseless=True).setName("having").addParseAction(an.HavingKeyword.from_tokens).setDebugActions(*debug)
+IN = Keyword("in", caseless=True).setName("in").addParseAction(an.InKeyword.from_tokens).setDebugActions(*debug)
+NOTIN = Keyword("not in", caseless=True).setName("not in").addParseAction(an.NotInKeyword.from_tokens).setDebugActions(*debug)
+INNERJOIN = Keyword("inner join", caseless=True).setName("inner join").addParseAction(an.InnerJoinKeyword.from_tokens).setDebugActions(*debug)
+IS = Keyword("is", caseless=True).setName("is").addParseAction(an.IsKeyword.from_tokens).setDebugActions(*debug)
+JOIN = Keyword("join", caseless=True).setName("join").addParseAction(an.JoinKeyword.from_tokens).setDebugActions(*debug)
+LEFTJOIN = Keyword("left join", caseless=True).setName("left join").addParseAction(an.LeftJoinKeyword.from_tokens).setDebugActions(*debug)
+LEFTOUTERJOIN = Keyword("left outer join", caseless=True).setName("left outer join").addParseAction(an.LeftOuterJoinKeyword.from_tokens).setDebugActions(*debug)
+LIMIT = Keyword("limit", caseless=True).setName("limit").addParseAction(an.LimitKeyword.from_tokens).setDebugActions(*debug)
+OFFSET = Keyword("offset", caseless=True).setName("offset").addParseAction(an.OffsetKeyword.from_tokens).setDebugActions(*debug)
+LIKE = Keyword("like", caseless=True).setName("like").addParseAction(an.LikeKeyword.from_tokens).setDebugActions(*debug)
+NOTLIKE = Keyword("not like", caseless=True).setName("not like").addParseAction(an.NotLikeKeyword.from_tokens).setDebugActions(*debug)
+ON = Keyword("on", caseless=True).setName("on").addParseAction(an.OnKeyword.from_tokens).setDebugActions(*debug)
+USING = Keyword("using", caseless=True).setName("using").addParseAction(an.UsingKeyword.from_tokens).setDebugActions(*debug)
+OR = Keyword("or", caseless=True).setName("or").addParseAction(an.OrKeyword.from_tokens).setDebugActions(*debug)
+ORDERBY = Keyword("order by", caseless=True).setName("order by").addParseAction(an.OrderByKeyword.from_tokens).setDebugActions(*debug)
+RIGHTJOIN = Keyword("right join", caseless=True).setName("right join").addParseAction(an.RightJoinKeyword.from_tokens).setDebugActions(*debug)
+RIGHTOUTERJOIN = Keyword("right outer join", caseless=True).setName("right outer join").addParseAction(an.RightOuterJoinKeyword.from_tokens).setDebugActions(*debug)
+SELECT = Keyword("select", caseless=True).setName("select").addParseAction(an.SelectKeyword.from_tokens).setDebugActions(*debug)
+THEN = Keyword("then", caseless=True).setName("then").addParseAction(an.ThenKeyword.from_tokens).setDebugActions(*debug)
+UNION = Keyword("union", caseless=True).setName("union").addParseAction(an.UnionKeyword.from_tokens).setDebugActions(*debug)
+UNIONALL = Keyword("union all", caseless=True).setName("union all").addParseAction(an.UnionAllKeyword.from_tokens).setDebugActions(*debug)
+WHEN = Keyword("when", caseless=True).setName("when").addParseAction(an.WhenKeyword.from_tokens).setDebugActions(*debug)
+WHERE = Keyword("where", caseless=True).setName("where").addParseAction(an.WhereKeyword.from_tokens).setDebugActions(*debug)
+WITH = Keyword("with", caseless=True).setName("with").addParseAction(an.WithKeyword.from_tokens).setDebugActions(*debug)
 
-KNOWN_OPS = [
-    (BETWEEN, AND),
-    (NOTBETWEEN, AND),
-    Literal("||").setName("concat").setDebugActions(*debug),
-    Literal("*").setName("mul").setDebugActions(*debug),
-    Literal("/").setName("div").setDebugActions(*debug),
-    Literal("+").setName("add").setDebugActions(*debug),
-    Literal("-").setName("sub").setDebugActions(*debug),
-    Literal("<>").setName("neq").setDebugActions(*debug),
-    Literal(">").setName("gt").setDebugActions(*debug),
-    Literal("<").setName("lt").setDebugActions(*debug),
-    Literal(">=").setName("gte").setDebugActions(*debug),
-    Literal("<=").setName("lte").setDebugActions(*debug),
-    Literal("=").setName("eq").setDebugActions(*debug),
-    Literal("==").setName("eq").setDebugActions(*debug),
-    Literal("!=").setName("neq").setDebugActions(*debug),
-    IN.setName("in").setDebugActions(*debug),
-    NOTIN.setName("nin").setDebugActions(*debug),
-    IS.setName("is").setDebugActions(*debug),
-    LIKE.setName("like").setDebugActions(*debug),
-    NOTLIKE.setName("nlike").setDebugActions(*debug),
-    OR.setName("or").setDebugActions(*debug),
-    AND.setName("and").setDebugActions(*debug)
+
+KEYWORDS = [
+    AND,
+    AS,
+    ASC,
+    BETWEEN,
+    CASE,
+    COLLATENOCASE,
+    CROSSJOIN,
+    DESC,
+    ELSE,
+    END,
+    FROM,
+    FULLJOIN,
+    FULLOUTERJOIN,
+    GROUPBY,
+    HAVING,
+    IN,
+    NOTIN,
+    INNERJOIN,
+    IS,
+    JOIN,
+    LEFTJOIN,
+    LEFTOUTERJOIN,
+    LIMIT,
+    OFFSET,
+    LIKE,
+    NOTLIKE,
+    ON,
+    USING,
+    OR,
+    ORDERBY,
+    RIGHTJOIN,
+    RIGHTOUTERJOIN,
+    SELECT,
+    THEN,
+    UNION,
+    UNIONALL,
+    WHEN,
+    WHERE,
+    WITH
 ]
 
+RESERVED = MatchFirst(KEYWORDS)
 
-def to_json_operator(instring, tokensStart, retTokens):
-    # ARRANGE INTO {op: params} FORMAT
-    tok = retTokens[0]
-    for o in KNOWN_OPS:
-        if isinstance(o, tuple):
-            if o[0].match == tok[1]:
-                op = o[0].name
-                break
-        elif o.match == tok[1]:
-            op = o.name
-            break
-    else:
-        if tok[1] == COLLATENOCASE.match:
-            op = COLLATENOCASE.name
-            return {op: tok[0]}
-        else:
-            raise "not found"
+KNOWN_OPS = [
+    {"op":Literal("||").setName("concat").setParseAction(an.ConcatOperator.from_tokens).setDebugActions(*debug),"ast_elem":an.BinOp.from_tokens},
+    {"op":Literal("*").setName("mul").setParseAction(an.MulOperator.from_tokens).setDebugActions(*debug),"ast_elem":an.BinOp.from_tokens},
+    {"op":Literal("/").setName("div").setParseAction(an.DivOperator.from_tokens).setDebugActions(*debug),"ast_elem":an.BinOp.from_tokens},
+    {"op":Literal("+").setName("add").setParseAction(an.AddOperator.from_tokens).setDebugActions(*debug),"ast_elem":an.BinOp.from_tokens},
+    {"op":Literal("-").setName("sub").setParseAction(an.SubOperator.from_tokens).setDebugActions(*debug),"ast_elem":an.BinOp.from_tokens},
+    {"op":Literal("<<").setName("lshift").setParseAction(an.LShiftOperator.from_tokens).setDebugActions(*debug),"ast_elem":an.BinOp.from_tokens},
+    {"op":Literal(">>").setName("rshift").setParseAction(an.RShiftOperator.from_tokens).setDebugActions(*debug),"ast_elem":an.BinOp.from_tokens},
+    {"op":Literal("&").setName("bitand").setParseAction(an.BitAndOperator.from_tokens).setDebugActions(*debug),"ast_elem":an.BinOp.from_tokens},
+    {"op":Literal("|").setName("bitor").setParseAction(an.BitOrOperator.from_tokens).setDebugActions(*debug),"ast_elem":an.BinOp.from_tokens},
+    {"op":Literal("^").setName("bitxor").setParseAction(an.BitXorOperator.from_tokens).setDebugActions(*debug),"ast_elem":an.BinOp.from_tokens},
 
-    if op == "eq":
-        if tok[2] == "null":
-            return {"missing": tok[0]}
-        elif tok[0] == "null":
-            return {"missing": tok[2]}
-    elif op == "neq":
-        if tok[2] == "null":
-            return {"exists": tok[0]}
-        elif tok[0] == "null":
-            return {"exists": tok[2]}
-    elif op == "is":
-        if tok[2] == 'null':
-            return {"missing": tok[0]}
-        else:
-            return {"exists": tok[0]}
+    {"op":Literal("<>").setName("neq").setParseAction(an.NEqOperator.from_tokens).setDebugActions(*debug),"ast_elem":an.CompOp.from_tokens},
+    {"op":Literal(">").setName("gt").setParseAction(an.GtOperator.from_tokens).setDebugActions(*debug),"ast_elem":an.CompOp.from_tokens},
+    {"op":Literal("<").setName("lt").setParseAction(an.LtOperator.from_tokens).setDebugActions(*debug),"ast_elem":an.CompOp.from_tokens},
+    {"op":Literal(">=").setName("gte").setParseAction(an.GtEOperator.from_tokens).setDebugActions(*debug),"ast_elem":an.CompOp.from_tokens},
+    {"op":Literal("<=").setName("lte").setParseAction(an.LtEOperator.from_tokens).setDebugActions(*debug),"ast_elem":an.CompOp.from_tokens},
+    {"op":Literal("=").setName("eq").setParseAction(an.EqOperator.from_tokens).setDebugActions(*debug),"ast_elem":an.CompOp.from_tokens},
+    {"op":Literal("==").setName("eq").setParseAction(an.EqOperator.from_tokens).setDebugActions(*debug),"ast_elem":an.CompOp.from_tokens},
+    {"op":Literal("!=").setName("neq").setParseAction(an.NEqOperator.from_tokens).setDebugActions(*debug),"ast_elem":an.CompOp.from_tokens},
+    {"op":IN.setName("in").setParseAction(an.InOperator.from_tokens).setDebugActions(*debug),"ast_elem":an.CompOp.from_tokens},
+    {"op":NOTIN.setName("notin").setParseAction(an.NotInOperator.from_tokens).setDebugActions(*debug),"ast_elem":an.CompOp.from_tokens},
+    {"op":IS.setName("is").setParseAction(an.IsOperator.from_tokens).setDebugActions(*debug),"ast_elem":an.CompOp.from_tokens},
+    {"op":LIKE.setName("like").setParseAction(an.LikeOperator.from_tokens).setDebugActions(*debug),"ast_elem":an.CompOp.from_tokens},
+    {"op":NOTLIKE.setName("not like").setParseAction(an.NotLikeOperator.from_tokens).setDebugActions(*debug),"ast_elem":an.CompOp.from_tokens},
 
-    return {op: [tok[i * 2] for i in range(int((len(tok) + 1) / 2))]}
-
-
-def to_json_call(instring, tokensStart, retTokens):
-    # ARRANGE INTO {op: params} FORMAT
-    tok = retTokens
-    op = tok.op.lower()
-
-    if op == "-":
-        op = "neg"
-
-    params = tok.params
-    if not params:
-        params = None
-    elif len(params) == 1:
-        params = params[0]
-    return {op: params}
-
-
-def to_case_call(instring, tokensStart, retTokens):
-    tok = retTokens
-    cases = list(tok.case)
-    elze = getattr(tok, "else", None)
-    if elze:
-        cases.append(elze)
-    return {"case": cases}
-
-
-def to_when_call(instring, tokensStart, retTokens):
-    tok = retTokens
-    return {"when": tok.when, "then":tok.then}
-
-
-def to_join_call(instring, tokensStart, retTokens):
-    tok = retTokens
-
-    if tok.join.name:
-        output = {tok.op: {"name": tok.join.name, "value": tok.join.value}}
-    else:
-        output = {tok.op: tok.join}
-
-    if tok.on:
-        output['on'] = tok.on
-
-    if tok.using:
-        output['using'] = tok.using
-    return output
-
-
-def to_select_call(instring, tokensStart, retTokens):
-    tok = retTokens[0].asDict()
-
-    if tok.get('value')[0][0] == '*':
-        return '*'
-    else:
-        return tok
-
-
-def to_union_call(instring, tokensStart, retTokens):
-    tok = retTokens[0].asDict()
-    unions = tok['from']['union']
-    if len(unions) == 1:
-        output = unions[0]
-    else:
-        if not tok.get('orderby') and not tok.get('limit'):
-            return tok['from']
-        else:
-            output = {"from": {"union": unions}}
-
-    if tok.get('orderby'):
-        output["orderby"] = tok.get('orderby')
-    if tok.get('limit'):
-        output["limit"] = tok.get('limit')
-    return output
-
-
-def unquote(instring, tokensStart, retTokens):
-    val = retTokens[0]
-    if val.startswith("'") and val.endswith("'"):
-        val = "'"+val[1:-1].replace("''", "\\'")+"'"
-        # val = val.replace(".", "\\.")
-    elif val.startswith('"') and val.endswith('"'):
-        val = '"'+val[1:-1].replace('""', '\\"')+'"'
-        # val = val.replace(".", "\\.")
-    elif val.startswith('`') and val.endswith('`'):
-        val = "'" + val[1:-1].replace("``","`") + "'"
-    elif val.startswith("+"):
-        val = val[1:]
-    un = ast.literal_eval(val)
-    return un
-
-
-def to_string(instring, tokensStart, retTokens):
-    val = retTokens[0]
-    val = "'"+val[1:-1].replace("''", "\\'")+"'"
-    return {"literal": ast.literal_eval(val)}
+    {"op":OR.setName("or").setParseAction(an.OrOperator.from_tokens).setDebugActions(*debug),"ast_elem":an.BinOp.from_tokens},
+    {"op":AND.setName("and").setParseAction(an.AndOperator.from_tokens).setDebugActions(*debug),"ast_elem":an.BinOp.from_tokens},
+]
 
 # NUMBERS
-realNum = Regex(r"[+-]?(\d+\.\d*|\.\d+)([eE][+-]?\d+)?").addParseAction(unquote)
-intNum = Regex(r"[+-]?\d+([eE]\+?\d+)?").addParseAction(unquote)
+realNum = Regex(r"[+-]?(\d+\.\d*|\.\d+)([eE][+-]?\d+)?").addParseAction(an.DoubleValue.from_tokens)
+intNum = Regex(r"[+-]?\d+([eE]\+?\d+)?").addParseAction(an.IntValue.from_tokens)
 
 # STRINGS, NUMBERS, VARIABLES
-sqlString = Regex(r"\'(\'\'|\\.|[^'])*\'").addParseAction(to_string)
-identString = Regex(r'\"(\"\"|\\.|[^"])*\"').addParseAction(unquote)
-mysqlidentString = Regex(r'\`(\`\`|\\.|[^`])*\`').addParseAction(unquote)
-ident = Combine(~RESERVED + (delimitedList(Literal("*") | Word(alphas + "_", alphanums + "_$") | identString | mysqlidentString, delim=".", combine=True))).setName("identifier")
+sqlString = Regex(r"\'(\'\'|\\.|[^'])*\'").addParseAction(an.StringValue.from_tokens)
+wildcard = Literal("*").setName("wildcard").addParseAction(an.Wildcard.from_tokens)
+identString = Regex(r'\"(\"\"|\\.|[^"])*\"')
+mysqlidentString = Regex(r'\`(\`\`|\\.|[^`])*\`')
+
+tableident = Group(~RESERVED + (delimitedList(Word(alphas + "_", alphanums + "_$") | identString | mysqlidentString, delim=".", combine=False))).setName("table identifier").addParseAction(an.TableReference.from_tokens)
+
+colident = Group(~RESERVED + (delimitedList(wildcard | Word(alphas + "_", alphanums + "_$") | identString | mysqlidentString, delim=".", combine=False))).setName("column identifier").addParseAction(an.ColumnReference.from_tokens)
+
+alias = Group(~RESERVED + (delimitedList(wildcard | Word(alphas + "_", alphanums + "_$") | identString | mysqlidentString, delim=".", combine=False))).setName("alias identifier").addParseAction(an.Alias.from_tokens)
+
 
 # EXPRESSIONS
 expr = Forward()
@@ -266,39 +184,50 @@ expr = Forward()
 # CASE
 case = (
     CASE +
-    Group(ZeroOrMore((WHEN + expr("when") + THEN + expr("then")).addParseAction(to_when_call)))("case") +
+    Group(ZeroOrMore((WHEN + expr("when") + THEN + expr("then")).addParseAction(an.When.from_tokens)))("case") +
     Optional(ELSE + expr("else")) +
     END
-).addParseAction(to_case_call)
+).addParseAction(an.Case.from_tokens)
 
 selectStmt = Forward()
 compound = (
-    (Keyword("not", caseless=True)("op").setDebugActions(*debug) + expr("params")).addParseAction(to_json_call) |
-    (Keyword("distinct", caseless=True)("op").setDebugActions(*debug) + expr("params")).addParseAction(to_json_call) |
-    Keyword("null", caseless=True).setName("null").setDebugActions(*debug) |
+    (Keyword("not", caseless=True)("op").setDebugActions(*debug) + expr("params")).addParseAction(an.Not.from_tokens) |
+    (Keyword("distinct", caseless=True).suppress().setDebugActions(*debug) + expr("params")).addParseAction(an.Distinct.from_tokens) |
+    Keyword("null", caseless=True).setName("null").addParseAction(an.NullValue.from_tokens).setDebugActions(*debug) |
+    Keyword("true", caseless=True).setName("true").addParseAction(an.TrueValue.from_tokens).setDebugActions(*debug) |
+    Keyword("false", caseless=True).setName("true").addParseAction(an.FalseValue.from_tokens).setDebugActions(*debug) |
     case |
     (Literal("(").setDebugActions(*debug).suppress() + selectStmt + Literal(")").suppress()) |
     (Literal("(").setDebugActions(*debug).suppress() + Group(delimitedList(expr)) + Literal(")").suppress()) |
     realNum.setName("float").setDebugActions(*debug) |
     intNum.setName("int").setDebugActions(*debug) |
-    (Literal("-")("op").setDebugActions(*debug) + expr("params")).addParseAction(to_json_call) |
+    (Literal("-")("op").addParseAction(an.USubOperator.from_tokens).setDebugActions(*debug) + expr("params")).addParseAction(an.UnOp.from_tokens) |
+    (Literal("+")("op").addParseAction(an.UAddOperator.from_tokens).setDebugActions(*debug) + expr("params")).addParseAction(an.UnOp.from_tokens) |
+    (Literal("~")("op").addParseAction(an.BitNotOperator.from_tokens).setDebugActions(*debug) + expr("params")).addParseAction(an.UnOp.from_tokens) |
     sqlString.setName("string").setDebugActions(*debug) |
     (
         Word(alphas)("op").setName("function name").setDebugActions(*debug) +
-        Literal("(").setName("func_param").setDebugActions(*debug) +
+        Literal("(").setName("func_param").suppress().setDebugActions(*debug) +
         Optional(selectStmt | Group(delimitedList(expr)))("params") +
-        ")"
-    ).addParseAction(to_json_call).setDebugActions(*debug) |
-    ident.copy().setName("variable").setDebugActions(*debug)
+        Literal(")").setName("func_param_end").suppress().setDebugActions(*debug)
+    ).addParseAction(an.FunctionCall.from_tokens).setDebugActions(*debug) |
+    colident.copy().setName("variable").setDebugActions(*debug)
 )
 expr << Group(infixNotation(
     compound,
     [
         (
-            o,
-            3 if isinstance(o, tuple) else 2,
+            (BETWEEN, AND),
+            3,
             opAssoc.LEFT,
-            to_json_operator
+            an.Between.from_tokens
+        )
+    ]+[
+        (
+            o["op"],
+            2,
+            opAssoc.LEFT,
+            o["ast_elem"]
         )
         for o in KNOWN_OPS
     ]+[
@@ -306,16 +235,15 @@ expr << Group(infixNotation(
             COLLATENOCASE,
             1,
             opAssoc.LEFT,
-            to_json_operator
+            an.BinOp.from_tokens
         )
     ]
 ).setName("expression").setDebugActions(*debug))
 
 # SQL STATEMENT
 selectColumn = Group(
-    Group(expr).setName("expression1")("value").setDebugActions(*debug) + Optional(Optional(AS) + ident.copy().setName("column_name1")("name").setDebugActions(*debug)) |
-    Literal('*')("value").setDebugActions(*debug)
-).setName("column").addParseAction(to_select_call)
+    Group(expr).setName("expression1")("value").setDebugActions(*debug) + Optional(Optional(AS) + alias("name").setDebugActions(*debug))
+).setName("column").addParseAction(an.SelectColumn.from_tokens)
 
 table_source = (
     (
@@ -327,52 +255,70 @@ table_source = (
     )("value") +
     Optional(
         Optional(AS) +
-        ident("name").setName("table alias").setDebugActions(*debug)
+        alias("name").setName("table alias").setDebugActions(*debug)
     )
     |
     (
-        ident("value").setName("table name").setDebugActions(*debug) +
+        tableident("value").setName("table name").setDebugActions(*debug) +
         Optional(AS) +
-        ident("name").setName("table alias").setDebugActions(*debug)
+        alias("name").setName("table alias").setDebugActions(*debug)
     )
     |
-    ident.setName("table name").setDebugActions(*debug)
-)
+    tableident.setName("table name").setDebugActions(*debug)
+).addParseAction(an.FromSource.from_tokens)
 
 join = (
-    (CROSSJOIN | FULLJOIN | FULLOUTERJOIN | INNERJOIN | JOIN | LEFTJOIN | LEFTOUTERJOIN | RIGHTJOIN | RIGHTOUTERJOIN)("op") +
-    Group(table_source)("join") +
-    Optional((ON + expr("on")) | (USING + expr("using")))
-).addParseAction(to_join_call)
+    (
+        CROSSJOIN.addParseAction(an.JoinCross.from_tokens) |
+        FULLJOIN.addParseAction(an.JoinFull.from_tokens) |
+        FULLOUTERJOIN.addParseAction(an.JoinFullOuter.from_tokens) |
+        INNERJOIN.addParseAction(an.JoinInner.from_tokens) |
+        JOIN.addParseAction(an.JoinOuter.from_tokens) |
+        LEFTJOIN.addParseAction(an.JoinLeft.from_tokens) |
+        LEFTOUTERJOIN.addParseAction(an.JoinLeftOuter.from_tokens) |
+        RIGHTJOIN.addParseAction(an.JoinRight.from_tokens) |
+        RIGHTOUTERJOIN.addParseAction(an.JoinRightOuter.from_tokens)
+        )("op") +
+        Group(table_source)("join") +
+         Optional(
+             (
+                 ON.addParseAction(an.JoinConstraintTypeOn.from_tokens)|
+                 USING.addParseAction(an.JoinConstraintTypeUsing.from_tokens)
+            )("constrainttype") +
+             expr("constraints")
+             )
+    ).addParseAction(an.Join.from_tokens)
 
-sortColumn = expr("value").setName("sort1").setDebugActions(*debug) + Optional(DESC("sort") | ASC("sort")) | \
-             expr("value").setName("sort2").setDebugActions(*debug)
+sortColumn = (expr("value").setName("sort1").setDebugActions(*debug) +
+              Optional(DESC("sort").addParseAction(an.OrderDescending.from_tokens) | ASC("sort").addParseAction(an.OrderAscending.from_tokens)) |
+              expr("value").setName("sort2").setDebugActions(*debug)).addParseAction(an.OrderByColumn.from_tokens)
+
+unions = (UNION.addParseAction(an.UnionDistinct.from_tokens) ^ UNIONALL.addParseAction(an.UnionAll.from_tokens))
+
+selectCore = Group(
+                SELECT.suppress().setDebugActions(*debug) + delimitedList(selectColumn)("select").addParseAction(an.Select.from_tokens) +
+                Optional(
+                    FROM.suppress().setDebugActions(*debug) + (delimitedList(Group(table_source)) + ZeroOrMore(join))("from").addParseAction(an.From.from_tokens) +
+                    Optional(WHERE.suppress().setDebugActions(*debug) + expr.setName("where"))("where").addParseAction(an.Where.from_tokens) +
+                    Optional(GROUPBY.suppress().setDebugActions(*debug) + delimitedList(Group(selectColumn))("groupby").setName("groupby").addParseAction(an.GroupBy.from_tokens)) +
+                    Optional(HAVING.suppress().setDebugActions(*debug) + expr("having").setName("having").addParseAction(an.Having.from_tokens)) +
+                    Optional(LIMIT.suppress().setDebugActions(*debug) + expr("limit").addParseAction(an.Limit.from_tokens)) +
+                    Optional(OFFSET.suppress().setDebugActions(*debug) + expr("offset").addParseAction(an.Offset.from_tokens))
+                )
+            )
 
 # define SQL tokens
 selectStmt << Group(
-    Group(Group(
-        delimitedList(
-            Group(
-                SELECT.suppress().setDebugActions(*debug) + delimitedList(selectColumn)("select") +
-                Optional(
-                    (FROM.suppress().setDebugActions(*debug) + delimitedList(Group(table_source)) + ZeroOrMore(join))("from") +
-                    Optional(WHERE.suppress().setDebugActions(*debug) + expr.setName("where"))("where") +
-                    Optional(GROUPBY.suppress().setDebugActions(*debug) + delimitedList(Group(selectColumn))("groupby").setName("groupby")) +
-                    Optional(HAVING.suppress().setDebugActions(*debug) + expr("having").setName("having")) +
-                    Optional(LIMIT.suppress().setDebugActions(*debug) + expr("limit")) +
-                    Optional(OFFSET.suppress().setDebugActions(*debug) + expr("offset"))
-                )
-            ),
-            delim=(UNION | UNIONALL)
+    Group(Group(selectCore)^Group(
+        (selectCore + ZeroOrMore(unions + selectCore)
         )
-    )("union"))("from") +
-    Optional(ORDERBY.suppress().setDebugActions(*debug) + delimitedList(Group(sortColumn))("orderby").setName("orderby")) +
-    Optional(LIMIT.suppress().setDebugActions(*debug) + expr("limit")) +
-    Optional(OFFSET.suppress().setDebugActions(*debug) + expr("offset"))
-).addParseAction(to_union_call)
+    )("union").addParseAction(an.Union.from_tokens))("from") +
+    Optional(ORDERBY.suppress().setDebugActions(*debug) + delimitedList(Group(sortColumn))("orderby").setName("orderby").addParseAction(an.OrderBy.from_tokens)) +
+    Optional(LIMIT.suppress().setDebugActions(*debug) + expr("limit").addParseAction(an.Limit.from_tokens)) +
+    Optional(OFFSET.suppress().setDebugActions(*debug) + expr("offset").addParseAction(an.Offset.from_tokens))
+).addParseAction(an.Query.from_tokens)
 
-
-SQLParser = selectStmt
+SQLParser = delimitedList(selectStmt, delim=";")
 
 # IGNORE SOME COMMENTS
 oracleSqlComment = Literal("--") + restOfLine
