@@ -22,3 +22,9 @@ class TestErrors(TestCase):
             ["group by", "order by", "having", "limit", "where"],
             lambda: parse("select * from coverage-summary.source.file.covered limit 20")
         )
+
+    def test_join_on_using_together(self):
+        assertRaises(
+            "Expecting one of",
+            lambda: parse("SELECT * FROM t1 JOIN t2 ON t1.id=t2.id USING (id)")
+        )

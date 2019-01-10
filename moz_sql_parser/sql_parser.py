@@ -76,6 +76,7 @@ keywords = [
     "then",
     "union",
     "union all",
+    "using",
     "when",
     "where",
     "with"
@@ -188,6 +189,9 @@ def to_join_call(instring, tokensStart, retTokens):
 
     if tok.on:
         output['on'] = tok.on
+
+    if tok.using:
+        output['using'] = tok.using
     return output
 
 
@@ -313,7 +317,11 @@ tableName = (
     ident.setName("table name").setDebugActions(*debug)
 )
 
-join = ((CROSSJOIN | FULLJOIN | FULLOUTERJOIN | INNERJOIN | JOIN | LEFTJOIN | LEFTOUTERJOIN | RIGHTJOIN | RIGHTOUTERJOIN)("op") + Group(tableName)("join") + Optional(ON + expr("on"))).addParseAction(to_join_call)
+join = (
+    (CROSSJOIN | FULLJOIN | FULLOUTERJOIN | INNERJOIN | JOIN | LEFTJOIN | LEFTOUTERJOIN | RIGHTJOIN | RIGHTOUTERJOIN)("op") +
+    Group(tableName)("join") +
+    Optional((ON + expr("on")) | (USING + expr("using")))
+).addParseAction(to_join_call)
 
 sortColumn = expr("value").setName("sort1").setDebugActions(*debug) + Optional(DESC("sort") | ASC("sort")) | \
              expr("value").setName("sort2").setDebugActions(*debug)
@@ -348,4 +356,3 @@ SQLParser = selectStmt
 oracleSqlComment = Literal("--") + restOfLine
 mySqlComment = Literal("#") + restOfLine
 SQLParser.ignore(oracleSqlComment | mySqlComment)
-
