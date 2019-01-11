@@ -67,6 +67,7 @@ keywords = [
     "limit",
     "offset",
     "like",
+    "not like",
     "on",
     "or",
     "order by",
@@ -107,6 +108,7 @@ KNOWN_OPS = [
     IN.setName("in").setDebugActions(*debug),
     IS.setName("is").setDebugActions(*debug),
     LIKE.setName("like").setDebugActions(*debug),
+    NOTLIKE.setName("nlike").setDebugActions(*debug),
     OR.setName("or").setDebugActions(*debug),
     AND.setName("and").setDebugActions(*debug)
 ]
