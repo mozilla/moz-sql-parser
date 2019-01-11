@@ -319,6 +319,18 @@ class TestSimple(TestCase):
         }
         self.assertEqual(result, expected)
 
+    def test_not_in_expression(self):
+        result = parse("select * from task where repo.branch.name not in ('try', 'mozilla-central')")
+        expected = {
+            'from': 'task',
+            'select': "*",
+            "where": {"nin": [
+                "repo.branch.name",
+                {"literal": ["try", "mozilla-central"]}
+            ]}
+        }
+        self.assertEqual(result, expected)
+
     def test_joined_table_name(self):
         result = parse("SELECT * FROM table1 t1 JOIN table3 t3 ON t1.id = t3.id")
 
