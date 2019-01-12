@@ -1236,7 +1236,7 @@ class TestResources(TestCase):
         self.assertEqual(result, expected)
 
     def test_153(self):
-        sql = "SELECT * FROM aa, bb WHERE NOT (min(a,b))"
+        sql = "SELECT * FROM aa, bb WHERE NOT min(a,b)"
         result = parse(sql)
         expected = {
             "from": ["aa", "bb"],
