@@ -19,7 +19,7 @@ from pyparsing import Word, delimitedList, Optional, Combine, Group, alphas, alp
 ParserElement.enablePackrat()
 
 # THE PARSING DEPTH IS NASTY
-sys.setrecursionlimit(1500)
+sys.setrecursionlimit(2000)
 
 
 DEBUG = False
