@@ -239,9 +239,6 @@ class TestSimple(TestCase):
         }
         self.assertEqual(result, expected)
 
-    def test_debug_is_off(self):
-        self.assertFalse(sql_parser.DEBUG, "Turn off debugging")
-
     def test_neg_or_precedence(self):
         result = parse("select B,C from table1 where A=-900 or B=100")
         expected = {
