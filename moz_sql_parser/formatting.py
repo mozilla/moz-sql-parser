@@ -15,7 +15,7 @@ import re
 
 from mo_future import string_types, text_type
 
-from moz_sql_parser.sql_parser import RESERVED
+from moz_sql_parser.sql_parser import RESERVED, join_keywords
 
 VALID = re.compile(r'[a-zA-Z_]\w*')
 
@@ -204,8 +204,20 @@ class Formatter:
             return str(json)
 
     def _on(self, json):
-        return 'JOIN {0} ON {1}'.format(
-            self.dispatch(json['join']), self.dispatch(json['on']))
+        detected_join = set(json.keys()).intersection(join_keywords)
+        if len(detected_join) == 0:
+            raise Exception(
+                'Fail to detect join type! Detected: "{}" Except one of: "{}"'.format(
+                    [on_keyword for on_keyword in json if on_keyword != 'on'][0],
+                    '", "'.join(join_keywords)
+                )
+            )
+
+        join_keyword = detected_join.pop()
+
+        return '{0} {1} ON {2}'.format(
+            join_keyword.upper(), self.dispatch(json[join_keyword]), self.dispatch(json['on'])
+        )
 
     def union(self, json):
         return ' UNION '.join(self.query(query) for query in json)
@@ -233,7 +245,7 @@ class Formatter:
 
             parts = []
             for token in from_:
-                if 'join' in token:
+                if join_keywords.intersection(set(token)):
                     is_join = True
                 parts.append(self.dispatch(token))
             joiner = ' ' if is_join else ', '

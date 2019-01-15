@@ -1071,11 +1071,14 @@ from benn.college_football_players
         expected_json = {'select': {'value': 'user ID'}, 'from': 'a'}
         self.verify_formatting(expected_sql, expected_json)
 
-    @skip("No handling in formatter for two-word joins (inner, cross, left join)")
     def test_192(self):
-        expected_sql = parse("SELECT t1.field1 "
-                             "FROM t1 LEFT JOIN t2 ON t1.id = t2.id")
+        expected_sql = "SELECT t1.field1 FROM t1 LEFT JOIN t2 ON t1.id = t2.id"
         expected_json = {'select': {'value': 't1.field1'},
-                    'from': ['t1',
-                    {'left join': 't2', 'on': {'eq': ['t1.id', 't2.id']}}]}
+                         'from': ['t1', {'left join': 't2', 'on': {'eq': ['t1.id', 't2.id']}}]}
         self.verify_formatting(expected_sql, expected_json)
+
+    def test_193(self):
+        with self.assertRaises(Exception) as error:
+            bad_json = {'select': {'value': 't1.field1'},
+                        'from': ['t1', {'left intro join': 't2', 'on': {'eq': ['t1.id', 't2.id']}}]}
+            format(bad_json)
