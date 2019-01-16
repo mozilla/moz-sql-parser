@@ -66,11 +66,14 @@ keywords = {
     "group by",
     "having",
     "in",
+    "inner join",
     "not in",
     "is",
     "limit",
     "offset",
     "like",
+    "not between",
+    "not in",
     "not like",
     "on",
     "or",
@@ -95,6 +98,7 @@ RESERVED = MatchFirst(reserved)
 
 KNOWN_OPS = [
     (BETWEEN, AND),
+    (NOTBETWEEN, AND),
     Literal("||").setName("concat").setDebugActions(*debug),
     Literal("*").setName("mul").setDebugActions(*debug),
     Literal("/").setName("div").setDebugActions(*debug),

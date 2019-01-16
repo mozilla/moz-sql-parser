@@ -448,3 +448,21 @@ class TestSimple(TestCase):
                     'from': ['t1',
                     {'join': 't2', 'using': 'id'}]}
         self.assertEqual(result, expected)
+
+    def test_where_between(self):
+        result = parse("SELECT a FROM dual WHERE a BETWEEN 1 and 2")
+        expected = {
+            "select": {"value": "a"},
+            "from": "dual",
+            "where": {"between": ["a", 1, 2]}
+        }
+        self.assertEqual(result, expected)
+
+    def test_where_not_between(self):
+        result = parse("SELECT a FROM dual WHERE a NOT BETWEEN 1 and 2")
+        expected = {
+            "select": {"value": "a"},
+            "from": "dual",
+            "where": {"not between": ["a", 1, 2]}
+        }
+        self.assertEqual(result, expected)
