@@ -12,7 +12,8 @@ from __future__ import absolute_import, division, unicode_literals
 from pprint import pformat
 from unittest import skip, TestCase
 
-from moz_sql_parser import format, parse, join_keywords
+from moz_sql_parser import format, parse
+from moz_sql_parser.sql_parser import join_keywords
 
 EXCEPTION_MESSAGE = """
 SQL:         %s
