@@ -17,7 +17,7 @@ from collections import Mapping
 from mo_future import text_type, number_types, binary_type, items
 from pyparsing import ParseException, ParseResults
 
-from moz_sql_parser.sql_parser import SQLParser, all_exceptions
+from moz_sql_parser.sql_parser import SQLParser, all_exceptions, join_keywords
 from moz_sql_parser.formatting import Formatter
 
 
@@ -78,3 +78,10 @@ def _scrub(result):
 
 
 _ = json.dumps
+
+
+__all__ = [
+    'parse',
+    'format',
+    'join_keywords'
+]

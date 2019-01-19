@@ -204,7 +204,7 @@ class Formatter:
             return str(json)
 
     def _on(self, json):
-        detected_join = join_keywords.intersection(set(json.keys()))
+        detected_join = join_keywords & set(json.keys())
         if len(detected_join) == 0:
             raise Exception(
                 'Fail to detect join type! Detected: "{}" Except one of: "{}"'.format(
@@ -245,7 +245,7 @@ class Formatter:
 
             parts = []
             for token in from_:
-                if join_keywords.intersection(set(token)):
+                if join_keywords & set(token):
                     is_join = True
                 parts.append(self.dispatch(token))
             joiner = ' ' if is_join else ', '

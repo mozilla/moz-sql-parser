@@ -11,7 +11,7 @@ from __future__ import absolute_import, division, unicode_literals
 
 from unittest import TestCase
 
-from moz_sql_parser import parse
+from moz_sql_parser import parse, format
 from tests.util import assertRaises
 
 
@@ -27,4 +27,12 @@ class TestErrors(TestCase):
         assertRaises(
             "Expecting one of",
             lambda: parse("SELECT * FROM t1 JOIN t2 ON t1.id=t2.id USING (id)")
+        )
+
+    def test_bad_join_name(self):
+        bad_json = {'select': {'value': 't1.field1'},
+                    'from': ['t1', {'left intro join': 't2', 'on': {'eq': ['t1.id', 't2.id']}}]}
+        assertRaises(
+            ["Fail to detect join type", 'left intro join'],
+            lambda: format(bad_json)
         )

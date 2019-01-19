@@ -66,14 +66,12 @@ keywords = {
     "group by",
     "having",
     "in",
-    "inner join",
     "not in",
     "is",
     "limit",
     "offset",
     "like",
     "not between",
-    "not in",
     "not like",
     "on",
     "or",
@@ -86,8 +84,7 @@ keywords = {
     "when",
     "where",
     "with"
-}
-keywords.update(join_keywords)
+} | join_keywords
 locs = locals()
 reserved = []
 for k in keywords:
