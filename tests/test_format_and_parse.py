@@ -1079,5 +1079,4 @@ from benn.college_football_players
             )
             expected_json = {'select': {'value': 't1.field1'},
                              'from': ['t1', {join_keyword: 't2', 'on': {'eq': ['t1.id', 't2.id']}}]}
-            with self.subTest(join_keyword):
-                self.verify_formatting(expected_sql, expected_json)
+            self.verify_formatting(expected_sql, expected_json)
