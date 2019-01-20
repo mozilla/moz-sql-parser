@@ -13,6 +13,7 @@ from pprint import pformat
 from unittest import skip, TestCase
 
 from moz_sql_parser import format, parse
+from moz_sql_parser.sql_parser import join_keywords
 
 EXCEPTION_MESSAGE = """
 SQL:         %s
@@ -1071,11 +1072,11 @@ from benn.college_football_players
         expected_json = {'select': {'value': 'user ID'}, 'from': 'a'}
         self.verify_formatting(expected_sql, expected_json)
 
-    @skip("No handling in formatter for two-word joins (inner, cross, left join)")
     def test_192(self):
-        expected_sql = parse("SELECT t1.field1 "
-                             "FROM t1 LEFT JOIN t2 ON t1.id = t2.id")
-        expected_json = {'select': {'value': 't1.field1'},
-                    'from': ['t1',
-                    {'left join': 't2', 'on': {'eq': ['t1.id', 't2.id']}}]}
-        self.verify_formatting(expected_sql, expected_json)
+        for join_keyword in join_keywords:
+            expected_sql = "SELECT t1.field1 FROM t1 {join_type} t2 ON t1.id = t2.id".format(
+                join_type=join_keyword.upper()
+            )
+            expected_json = {'select': {'value': 't1.field1'},
+                             'from': ['t1', {join_keyword: 't2', 'on': {'eq': ['t1.id', 't2.id']}}]}
+            self.verify_formatting(expected_sql, expected_json)

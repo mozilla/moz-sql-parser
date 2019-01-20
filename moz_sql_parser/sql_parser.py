@@ -41,40 +41,41 @@ if DEBUG:
 else:
     debug = (nothing, nothing, record_exception)
 
-
-keywords = [
+join_keywords = {
+    "join",
+    "full join",
+    "cross join",
+    "inner join",
+    "left join",
+    "right join",
+    "full outer join",
+    "right outer join",
+    "left outer join",
+}
+keywords = {
     "and",
     "as",
     "asc",
     "between",
     "case",
     "collate nocase",
-    "cross join",
     "desc",
     "else",
     "end",
     "from",
-    "full join",
-    "full outer join",
     "group by",
     "having",
     "in",
-    "inner join",
+    "not in",
     "is",
-    "join",
-    "left join",
-    "left outer join",
     "limit",
     "offset",
     "like",
     "not between",
-    "not in",
     "not like",
     "on",
     "or",
     "order by",
-    "right join",
-    "right outer join",
     "select",
     "then",
     "union",
@@ -83,7 +84,7 @@ keywords = [
     "when",
     "where",
     "with"
-]
+} | join_keywords
 locs = locals()
 reserved = []
 for k in keywords:
