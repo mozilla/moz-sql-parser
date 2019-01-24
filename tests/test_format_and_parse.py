@@ -64,7 +64,6 @@ class TestFormatAndParse(FuzzyTestCase):
         expected_json = {'select': '*', 'from': 'SYS.XYZZY'}
         self.verify_formatting(expected_sql, expected_json)
 
-    @skip("Not sure why")
     def select_one_column(self):
         expected_sql = "Select A from dual"
         expected_json = {'select': [{'value': 'A'}], 'from': ['dual']}
