@@ -65,7 +65,6 @@ class TestFormatAndParse(TestCase):
         expected_json = {'select': [{'value': 'A'}], 'from': ['dual']}
         self.verify_formatting(expected_sql, expected_json)
 
-    @skip("Still need to figure out how to handle quotes")
     def test_select_quoted_name(self):
         expected_sql = 'Select a "@*#&", b as test."g.g".c from dual'
         expected_json = {'select': [{'name': '@*#&', 'value': 'a'}, {'name': 'test.g.g.c', 'value': 'b'}],
@@ -88,7 +87,6 @@ class TestFormatAndParse(TestCase):
         expected_json = {'select': {'value': 'a.b.c._d'}, 'from': 'dual'}
         self.verify_formatting(expected_sql, expected_json)
 
-    @skip("Not sure why")
     def select_many_column(self):
         expected_sql = "Select a, b, c from dual"
         expected_json = {'select': [{'value': 'a'}, {'value': 'b'}, {'value': 'c'}], 'from': ['dual']}
@@ -169,7 +167,6 @@ class TestFormatAndParse(TestCase):
             'case': [{'when': {'like': ['A', {'literal': 'bb%'}]}, 'then': 1}, 0]}}}
         self.verify_formatting(expected_sql, expected_json)
 
-    @skip("broken")
     def test_ugly_case_statement(self):
         expected_sql = """
 select player_name,
