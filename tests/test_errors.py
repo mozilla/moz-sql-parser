@@ -7,26 +7,32 @@
 # Author: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import unicode_literals
+from __future__ import absolute_import, division, unicode_literals
 
-from mo_logs import Except
-from mo_testing.fuzzytestcase import FuzzyTestCase
+from unittest import TestCase
 
-from moz_sql_parser import parse
+from moz_sql_parser import parse, format
+from tests.util import assertRaises
 
 
-class TestErrors(FuzzyTestCase):
+class TestErrors(TestCase):
 
     def test_dash_in_tablename(self):
-        try:
-            result = parse("select * from coverage-summary.source.file.covered limit 20")
-            self.assertTrue(False, "expecting to fail")
-        except Exception as e:
-            e = Except.wrap(e)
-            self.assertTrue(
-                all(v in str(e) for v in ["group by", "order by", "having", "limit", "where"]),
-                "expecting mention of other expected clauses"
-            )
+        assertRaises(
+            ["group by", "order by", "having", "limit", "where"],
+            lambda: parse("select * from coverage-summary.source.file.covered limit 20")
+        )
 
+    def test_join_on_using_together(self):
+        assertRaises(
+            "Expecting one of",
+            lambda: parse("SELECT * FROM t1 JOIN t2 ON t1.id=t2.id USING (id)")
+        )
+
+    def test_bad_join_name(self):
+        bad_json = {'select': {'value': 't1.field1'},
+                    'from': ['t1', {'left intro join': 't2', 'on': {'eq': ['t1.id', 't2.id']}}]}
+        assertRaises(
+            ["Fail to detect join type", 'left intro join'],
+            lambda: format(bad_json)
+        )

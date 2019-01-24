@@ -19,7 +19,7 @@ from pyparsing import Word, delimitedList, Optional, Combine, Group, alphas, alp
 ParserElement.enablePackrat()
 
 # THE PARSING DEPTH IS NASTY
-sys.setrecursionlimit(1500)
+sys.setrecursionlimit(2000)
 
 
 DEBUG = False
@@ -41,15 +41,24 @@ if DEBUG:
 else:
     debug = (nothing, nothing, record_exception)
 
-
-keywords = [
+join_keywords = {
+    "join",
+    "full join",
+    "cross join",
+    "inner join",
+    "left join",
+    "right join",
+    "full outer join",
+    "right outer join",
+    "left outer join",
+}
+keywords = {
     "and",
     "as",
     "asc",
     "between",
     "case",
     "collate nocase",
-    "cross join",
     "desc",
     "else",
     "end",
@@ -57,13 +66,13 @@ keywords = [
     "group by",
     "having",
     "in",
-    "inner join",
+    "not in",
     "is",
-    "join",
-    "left join",
     "limit",
     "offset",
     "like",
+    "not between",
+    "not like",
     "on",
     "or",
     "order by",
@@ -71,10 +80,11 @@ keywords = [
     "then",
     "union",
     "union all",
+    "using",
     "when",
     "where",
     "with"
-]
+} | join_keywords
 locs = locals()
 reserved = []
 for k in keywords:
@@ -85,6 +95,7 @@ RESERVED = MatchFirst(reserved)
 
 KNOWN_OPS = [
     (BETWEEN, AND),
+    (NOTBETWEEN, AND),
     Literal("||").setName("concat").setDebugActions(*debug),
     Literal("*").setName("mul").setDebugActions(*debug),
     Literal("/").setName("div").setDebugActions(*debug),
@@ -99,8 +110,10 @@ KNOWN_OPS = [
     Literal("==").setName("eq").setDebugActions(*debug),
     Literal("!=").setName("neq").setDebugActions(*debug),
     IN.setName("in").setDebugActions(*debug),
+    NOTIN.setName("nin").setDebugActions(*debug),
     IS.setName("is").setDebugActions(*debug),
     LIKE.setName("like").setDebugActions(*debug),
+    NOTLIKE.setName("nlike").setDebugActions(*debug),
     OR.setName("or").setDebugActions(*debug),
     AND.setName("and").setDebugActions(*debug)
 ]
@@ -183,6 +196,9 @@ def to_join_call(instring, tokensStart, retTokens):
 
     if tok.on:
         output['on'] = tok.on
+
+    if tok.using:
+        output['using'] = tok.using
     return output
 
 
@@ -308,7 +324,11 @@ tableName = (
     ident.setName("table name").setDebugActions(*debug)
 )
 
-join = ((CROSSJOIN | INNERJOIN | LEFTJOIN | JOIN)("op") + Group(tableName)("join") + Optional(ON + expr("on"))).addParseAction(to_join_call)
+join = (
+    (CROSSJOIN | FULLJOIN | FULLOUTERJOIN | INNERJOIN | JOIN | LEFTJOIN | LEFTOUTERJOIN | RIGHTJOIN | RIGHTOUTERJOIN)("op") +
+    Group(tableName)("join") +
+    Optional((ON + expr("on")) | (USING + expr("using")))
+).addParseAction(to_join_call)
 
 sortColumn = expr("value").setName("sort1").setDebugActions(*debug) + Optional(DESC("sort") | ASC("sort")) | \
              expr("value").setName("sort2").setDebugActions(*debug)
@@ -343,4 +363,3 @@ SQLParser = selectStmt
 oracleSqlComment = Literal("--") + restOfLine
 mySqlComment = Literal("#") + restOfLine
 SQLParser.ignore(oracleSqlComment | mySqlComment)
-

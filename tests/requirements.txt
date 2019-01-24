@@ -1,6 +1,0 @@
-mo-future
-mo-logs
-mo-testing
-mo-times
-pyparsing
-pyLibrary

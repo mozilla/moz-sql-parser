@@ -7,20 +7,15 @@
 # Author: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import unicode_literals
+from __future__ import absolute_import, division, unicode_literals
 
-from unittest import skip
+from unittest import TestCase, skip
 
-from jx_base.expressions import NULL
-from mo_testing.fuzzytestcase import FuzzyTestCase
-
-from moz_sql_parser import parse
-from moz_sql_parser import sql_parser
+from moz_sql_parser import parse, sql_parser
+from tests.util import assertRaises
 
 
-class TestSimple(FuzzyTestCase):
+class TestSimple(TestCase):
 
     def test_two_tables(self):
         result = parse("SELECT * from XYZZY, ABC")
@@ -113,19 +108,19 @@ class TestSimple(FuzzyTestCase):
         self.assertEqual(result, expected)
 
     def test_bad_select1(self):
-        self.assertRaises('Expected select', lambda: parse("se1ect A, B, C from dual"))
+        assertRaises('Expected select', lambda: parse("se1ect A, B, C from dual"))
 
     def test_bad_select2(self):
-        self.assertRaises('Expected {{expression1 [{[as] column_name1}]}', lambda: parse("Select &&& FROM dual"))
+        assertRaises('Expected {{expression1 [{[as] column_name1}]}', lambda: parse("Select &&& FROM dual"))
 
     def test_bad_from(self):
-        self.assertRaises('(at char 20)', lambda: parse("select A, B, C frum dual"))
+        assertRaises('(at char 20)', lambda: parse("select A, B, C frum dual"))
 
     def test_incomplete1(self):
-        self.assertRaises('Expected {{expression1 [{[as] column_name1}]}', lambda: parse("SELECT"))
+        assertRaises('Expected {{expression1 [{[as] column_name1}]}', lambda: parse("SELECT"))
 
     def test_incomplete2(self):
-        self.assertRaises("", lambda: parse("SELECT * FROM"))
+        assertRaises("", lambda: parse("SELECT * FROM"))
 
     def test_where_neq(self):
         #                         1         2         3         4         5         6
@@ -244,9 +239,6 @@ class TestSimple(FuzzyTestCase):
         }
         self.assertEqual(result, expected)
 
-    def test_debug_is_off(self):
-        self.assertFalse(sql_parser.DEBUG, "Turn off debugging")
-
     def test_neg_or_precedence(self):
         result = parse("select B,C from table1 where A=-900 or B=100")
         expected = {
@@ -274,11 +266,28 @@ class TestSimple(FuzzyTestCase):
         }
         self.assertEqual(result, expected)
 
+    def test_not_like_in_where(self):
+        result = parse("select a from table1 where A not like '%20%'")
+        expected = {
+            'from': 'table1',
+            'where': {'nlike': ['A', {"literal": "%20%"}]},
+            'select': {'value': 'a'}
+        }
+        self.assertEqual(result, expected)
+
     def test_like_in_select(self):
         result = parse("select case when A like 'bb%' then 1 else 0 end as bb from table1")
         expected = {
             'from': 'table1',
             'select': {'name': 'bb', 'value': {"case": [{"when": {"like": ["A", {"literal": "bb%"}]}, "then": 1}, 0]}}
+        }
+        self.assertEqual(result, expected)
+
+    def test_not_like_in_select(self):
+        result = parse("select case when A not like 'bb%' then 1 else 0 end as bb from table1")
+        expected = {
+            'from': 'table1',
+            'select': {'name': 'bb', 'value': {"case": [{"when": {"nlike": ["A", {"literal": "bb%"}]}, "then": 1}, 0]}}
         }
         self.assertEqual(result, expected)
 
@@ -301,6 +310,18 @@ class TestSimple(FuzzyTestCase):
             'from': 'task',
             'select': "*",
             "where": {"in": [
+                "repo.branch.name",
+                {"literal": ["try", "mozilla-central"]}
+            ]}
+        }
+        self.assertEqual(result, expected)
+
+    def test_not_in_expression(self):
+        result = parse("select * from task where repo.branch.name not in ('try', 'mozilla-central')")
+        expected = {
+            'from': 'task',
+            'select': "*",
+            "where": {"nin": [
                 "repo.branch.name",
                 {"literal": ["try", "mozilla-central"]}
             ]}
@@ -382,7 +403,66 @@ class TestSimple(FuzzyTestCase):
                 {'from': 't6', 'select': {'value': 'b'}},
                 {'select': {'value': {'literal': '3'}, 'name': 'x'}}
             ]},
-            'orderby': {"value": 'x'},
-            "limit": NULL
+            'orderby': {"value": 'x'}
+        }
+        self.assertEqual(result, expected)
+
+    def test_left_outer_join(self):
+        result = parse("SELECT t1.field1 FROM t1 LEFT OUTER JOIN t2 ON t1.id = t2.id")
+        expected = {'select': {'value': 't1.field1'},
+                    'from': ['t1',
+                    {'left outer join': 't2', 'on': {'eq': ['t1.id', 't2.id']}}]}
+        self.assertEqual(result, expected)
+
+    def test_right_join(self):
+        result = parse("SELECT t1.field1 FROM t1 RIGHT JOIN t2 ON t1.id = t2.id")
+        expected = {'select': {'value': 't1.field1'},
+                    'from': ['t1',
+                    {'right join': 't2', 'on': {'eq': ['t1.id', 't2.id']}}]}
+        self.assertEqual(result, expected)
+
+    def test_right_outer_join(self):
+        result = parse("SELECT t1.field1 FROM t1 RIGHT OUTER JOIN t2 ON t1.id = t2.id")
+        expected = {'select': {'value': 't1.field1'},
+                    'from': ['t1',
+                    {'right outer join': 't2', 'on': {'eq': ['t1.id', 't2.id']}}]}
+        self.assertEqual(result, expected)
+
+    def test_full_join(self):
+        result = parse("SELECT t1.field1 FROM t1 FULL JOIN t2 ON t1.id = t2.id")
+        expected = {'select': {'value': 't1.field1'},
+                    'from': ['t1',
+                    {'full join': 't2', 'on': {'eq': ['t1.id', 't2.id']}}]}
+        self.assertEqual(result, expected)
+
+    def test_full_outer_join(self):
+        result = parse("SELECT t1.field1 FROM t1 FULL OUTER JOIN t2 ON t1.id = t2.id")
+        expected = {'select': {'value': 't1.field1'},
+                    'from': ['t1',
+                    {'full outer join': 't2', 'on': {'eq': ['t1.id', 't2.id']}}]}
+        self.assertEqual(result, expected)
+
+    def test_join_via_using(self):
+        result = parse("SELECT t1.field1 FROM t1 JOIN t2 USING (id)")
+        expected = {'select': {'value': 't1.field1'},
+                    'from': ['t1',
+                    {'join': 't2', 'using': 'id'}]}
+        self.assertEqual(result, expected)
+
+    def test_where_between(self):
+        result = parse("SELECT a FROM dual WHERE a BETWEEN 1 and 2")
+        expected = {
+            "select": {"value": "a"},
+            "from": "dual",
+            "where": {"between": ["a", 1, 2]}
+        }
+        self.assertEqual(result, expected)
+
+    def test_where_not_between(self):
+        result = parse("SELECT a FROM dual WHERE a NOT BETWEEN 1 and 2")
+        expected = {
+            "select": {"value": "a"},
+            "from": "dual",
+            "where": {"not between": ["a", 1, 2]}
         }
         self.assertEqual(result, expected)
