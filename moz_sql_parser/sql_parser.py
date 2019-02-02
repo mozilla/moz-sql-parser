@@ -333,6 +333,17 @@ join = (
 sortColumn = expr("value").setName("sort1").setDebugActions(*debug) + Optional(DESC("sort") | ASC("sort")) | \
              expr("value").setName("sort2").setDebugActions(*debug)
 
+from_clause = (
+    FROM.suppress().setDebugActions(*debug) + (
+        (
+            Literal("(").setDebugActions(*debug).suppress() +
+            selectStmt +
+            Literal(")").suppress()
+        ) |
+        (delimitedList(Group(tableName)) + ZeroOrMore(join))
+    )
+)
+
 # define SQL tokens
 selectStmt << Group(
     Group(Group(
@@ -340,7 +351,7 @@ selectStmt << Group(
             Group(
                 SELECT.suppress().setDebugActions(*debug) + delimitedList(selectColumn)("select") +
                 Optional(
-                    FROM.suppress().setDebugActions(*debug) + (delimitedList(Group(tableName)) + ZeroOrMore(join))("from") +
+                    from_clause("from") +
                     Optional(WHERE.suppress().setDebugActions(*debug) + expr.setName("where"))("where") +
                     Optional(GROUPBY.suppress().setDebugActions(*debug) + delimitedList(Group(selectColumn))("groupby").setName("groupby")) +
                     Optional(HAVING.suppress().setDebugActions(*debug) + expr("having").setName("having")) +

@@ -214,6 +214,8 @@ class TestSimple(TestCase):
         self.assertEqual(result, expected)
 
     def test_function(self):
+        #               0         1         2
+        #               0123456789012345678901234567890
         result = parse("select count(1) from mytable")
         expected = {
             "select": {"value": {"count": 1}},
