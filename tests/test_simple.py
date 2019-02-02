@@ -470,12 +470,16 @@ class TestSimple(TestCase):
         self.assertEqual(result, expected)
 
     def test_select_from_select(self):
+        #               0         1         2         3
+        #               0123456789012345678901234567890123456789
         result = parse("SELECT b.a FROM ( SELECT 2 AS a ) b")
         expected = {
             'select': {'value': 'b.a'},
             'from': {
                 "name": "b",
-                "value": {"from": "dual", "select": {"value": 2, "name": "a"}}
+                "value": {
+                    "select": {"value": 2, "name": "a"}
+                }
             }
         }
         self.assertEqual(result, expected)
