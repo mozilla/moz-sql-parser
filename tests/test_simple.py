@@ -448,3 +448,16 @@ class TestSimple(TestCase):
                     'from': ['t1',
                     {'join': 't2', 'using': 'id'}]}
         self.assertEqual(result, expected)
+
+    def test_select_from_select(self):
+        result = parse("SELECT b.a FROM ( SELECT 2 AS a ) b")
+        expected = {
+            'select': {'value': 'b.a'},
+            'from': {
+                "name": "b",
+                "value": {"from": "dual", "select": {"value": 2, "name": "a"}}
+            }
+        }
+        self.assertEqual(result, expected)
+
+
