@@ -2,16 +2,15 @@
 # PyParsing Student Project (GSOC 2019)
 
 
-## Background 
+## Background
 
 `moz-sql-parser` uses the [pyparsing library](https://github.com/pyparsing/pyparsing): This library makes the language specification easy, much like a [PEG](https://en.wikipedia.org/wiki/Parsing_expression_grammar).  Personally, this library provides the best parser specification language I have seen anywhere else: taking advantage pf Python's operator overloading and visual simplicity to provide a simple-yet-powerful domain specific language.
 
-## Problem
+## Problem 1
 
-Mozilla has a [simple SQL parser](https://github.com/mozilla/moz-sql-parser), but [it does not work for "complex" SQL](https://github.com/mozilla/moz-sql-parser/issues/41). Actually, we can hardly call the SQL "complex" when it breaks with so few tokens. 
+Mozilla has a [simple SQL parser](https://github.com/mozilla/moz-sql-parser), but [it does not work for "complex" SQL](https://github.com/mozilla/moz-sql-parser/issues/41). Actually, we can hardly call the SQL "complex" when it breaks with so few tokens.
 
-
-## Solutions
+## Solutions for Problem 1
 
 
 Depending on how deep you look, there are three ways this problem can be solved
@@ -21,6 +20,7 @@ Depending on how deep you look, there are three ways this problem can be solved
 The language specification for infix operators uses too much stack space. To reduce this stack space, the operators (and their operands) should be parsed as an alternating sequence of operators and operands, with some post-processing to assemble the parse tree in precedence order.
 
 I do not like this solution because it is working around `pyparsing` rather than with it. The grammar gets complicated, without doing any more. Plus, this type of solution can be made to work in general, for the benefit of others. 
+
 
 ### The pyparsing infixNotation is busted
 
@@ -47,8 +47,22 @@ The project steps would look something like:
 * Write prototype parser re-writer to remove left recursion, including the "book keeping" required to assemble final parse tree **this is the hard part**
 * At this point we have a better parser.
 * Split up project into a number of refactoring PRs for pyparsing project; separating the many DSL features from the core parsing logic; merging the fork back into pyparsing.
-
- 
-
+* One final PR to pyparsing that will replace the old parser with the new one
 
 
+## Problem 2
+
+The runtime of parsing an SQL statement with the Mozilla SQL Parser is relatively slow. When compared with the popular [sqlparse](https://github.com/andialbrecht/sqlparse) Python project, getting an initial result with Mozilla's parser is upwards of 10x slower. (However, the downside of sqlparse is that the outputted format is simply a list of tokens, which would require extensive post-processing to generate the desired tree structure that moz-sql-parser provides.
+
+## Solutions for Problem 2
+
+There are probably multiple areas where the runtime can be improved; here are a few options:
+
+### Solve problem 1
+The solutions for problem 1 may also improve the runtime for parsing, at least for more simple SQL statements.
+
+## Revise how pyparsing used
+The pyparsing project recently include a list of [performance tips](https://github.com/pyparsing/pyparsing/wiki/Performance-Tips), and some of these can probably be used to speed up the Mozilla parser.
+
+## Improvements to pyparsing
+The pyparsing library could benefit from optimizations.  This includes cleaning up the basic data structures it uses: Using less attributes, not copying whole objects, using **slots_**, etc. Additionally, some of the code could be ported to Cython or C extensions, where certain operations can be much faster in a lower-level language.
