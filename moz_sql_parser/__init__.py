@@ -18,7 +18,6 @@ from mo_future import text_type, number_types, binary_type, items
 from pyparsing import ParseException, ParseResults
 
 from moz_sql_parser.sql_parser import SQLParser, all_exceptions
-from moz_sql_parser.formatting import Formatter
 
 
 def parse(sql):
@@ -38,6 +37,7 @@ def parse(sql):
 
 
 def format(json, **kwargs):
+    from moz_sql_parser.formatting import Formatter
     return Formatter(**kwargs).format(json)
 
 
