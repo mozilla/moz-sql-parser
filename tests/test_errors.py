@@ -20,6 +20,7 @@ class TestErrors(TestCase):
     def test_dash_in_tablename(self):
         assertRaises(
             ["group by", "order by", "having", "limit", "where"],
+            #              012345678901234567890123456789012345678901234567890123456789
             lambda: parse("select * from coverage-summary.source.file.covered limit 20")
         )
 

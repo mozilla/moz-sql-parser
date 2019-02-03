@@ -316,17 +316,31 @@ selectColumn = Group(
     Literal('*')("value").setDebugActions(*debug)
 ).setName("column").addParseAction(to_select_call)
 
-
-tableName = (
-    ident("value").setName("table name").setDebugActions(*debug) +
-    Optional(AS) +
-    ident("name").setName("table alias").setDebugActions(*debug) |
+table_source = (
+    (
+        (
+            Literal("(").setDebugActions(*debug).suppress() +
+            selectStmt +
+            Literal(")").setDebugActions(*debug).suppress()
+        ).setName("table source").setDebugActions(*debug)
+    )("value") +
+    Optional(
+        Optional(AS) +
+        ident("name").setName("table alias").setDebugActions(*debug)
+    )
+    |
+    (
+        ident("value").setName("table name").setDebugActions(*debug) +
+        Optional(AS) +
+        ident("name").setName("table alias").setDebugActions(*debug)
+    )
+    |
     ident.setName("table name").setDebugActions(*debug)
 )
 
 join = (
     (CROSSJOIN | FULLJOIN | FULLOUTERJOIN | INNERJOIN | JOIN | LEFTJOIN | LEFTOUTERJOIN | RIGHTJOIN | RIGHTOUTERJOIN)("op") +
-    Group(tableName)("join") +
+    Group(table_source)("join") +
     Optional((ON + expr("on")) | (USING + expr("using")))
 ).addParseAction(to_join_call)
 
@@ -340,7 +354,7 @@ selectStmt << Group(
             Group(
                 SELECT.suppress().setDebugActions(*debug) + delimitedList(selectColumn)("select") +
                 Optional(
-                    FROM.suppress().setDebugActions(*debug) + (delimitedList(Group(tableName)) + ZeroOrMore(join))("from") +
+                    (FROM.suppress().setDebugActions(*debug) + delimitedList(Group(table_source)) + ZeroOrMore(join))("from") +
                     Optional(WHERE.suppress().setDebugActions(*debug) + expr.setName("where"))("where") +
                     Optional(GROUPBY.suppress().setDebugActions(*debug) + delimitedList(Group(selectColumn))("groupby").setName("groupby")) +
                     Optional(HAVING.suppress().setDebugActions(*debug) + expr("having").setName("having")) +

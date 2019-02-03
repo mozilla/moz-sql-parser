@@ -214,6 +214,8 @@ class TestSimple(TestCase):
         self.assertEqual(result, expected)
 
     def test_function(self):
+        #               0         1         2
+        #               0123456789012345678901234567890
         result = parse("select count(1) from mytable")
         expected = {
             "select": {"value": {"count": 1}},
@@ -466,3 +468,20 @@ class TestSimple(TestCase):
             "where": {"not between": ["a", 1, 2]}
         }
         self.assertEqual(result, expected)
+
+    def test_select_from_select(self):
+        #               0         1         2         3
+        #               0123456789012345678901234567890123456789
+        result = parse("SELECT b.a FROM ( SELECT 2 AS a ) b")
+        expected = {
+            'select': {'value': 'b.a'},
+            'from': {
+                "name": "b",
+                "value": {
+                    "select": {"value": 2, "name": "a"}
+                }
+            }
+        }
+        self.assertEqual(result, expected)
+
+
