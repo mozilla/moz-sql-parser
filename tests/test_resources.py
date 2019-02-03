@@ -846,6 +846,7 @@ class TestResources(TestCase):
         }
         self.assertEqual(result, expected)
 
+    @skipIf(IS_MASTER, "does not work on master, not enough stack space")
     def test_098(self):
         sql = "SELECT coalesce(f1/(f1-11),'x'),\ncoalesce(min(f1/(f1-11),5),'y'),\ncoalesce(max(f1/(f1-33),6),'z')\nFROM test1 ORDER BY f1"
         result = parse(sql)
