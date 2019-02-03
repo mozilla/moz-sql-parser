@@ -19,7 +19,7 @@ from pyparsing import Word, delimitedList, Optional, Combine, Group, alphas, alp
 ParserElement.enablePackrat()
 
 # THE PARSING DEPTH IS NASTY
-sys.setrecursionlimit(1500)
+sys.setrecursionlimit(2000)
 
 
 DEBUG = False
@@ -41,45 +41,50 @@ if DEBUG:
 else:
     debug = (nothing, nothing, record_exception)
 
-
-keywords = [
+join_keywords = {
+    "join",
+    "full join",
+    "cross join",
+    "inner join",
+    "left join",
+    "right join",
+    "full outer join",
+    "right outer join",
+    "left outer join",
+}
+keywords = {
     "and",
     "as",
     "asc",
     "between",
     "case",
     "collate nocase",
-    "cross join",
     "desc",
     "else",
     "end",
     "from",
-    "full join",
-    "full outer join",
     "group by",
     "having",
     "in",
-    "inner join",
+    "not in",
     "is",
-    "join",
-    "left join",
-    "left outer join",
     "limit",
     "offset",
     "like",
+    "not between",
+    "not like",
     "on",
     "or",
     "order by",
-    "right join",
-    "right outer join",
     "select",
     "then",
     "union",
     "union all",
+    "using",
     "when",
     "where",
     "with"
-]
+} | join_keywords
 locs = locals()
 reserved = []
 for k in keywords:
@@ -90,6 +95,7 @@ RESERVED = MatchFirst(reserved)
 
 KNOWN_OPS = [
     (BETWEEN, AND),
+    (NOTBETWEEN, AND),
     Literal("||").setName("concat").setDebugActions(*debug),
     Literal("*").setName("mul").setDebugActions(*debug),
     Literal("/").setName("div").setDebugActions(*debug),
@@ -104,8 +110,10 @@ KNOWN_OPS = [
     Literal("==").setName("eq").setDebugActions(*debug),
     Literal("!=").setName("neq").setDebugActions(*debug),
     IN.setName("in").setDebugActions(*debug),
+    NOTIN.setName("nin").setDebugActions(*debug),
     IS.setName("is").setDebugActions(*debug),
     LIKE.setName("like").setDebugActions(*debug),
+    NOTLIKE.setName("nlike").setDebugActions(*debug),
     OR.setName("or").setDebugActions(*debug),
     AND.setName("and").setDebugActions(*debug)
 ]
@@ -188,6 +196,9 @@ def to_join_call(instring, tokensStart, retTokens):
 
     if tok.on:
         output['on'] = tok.on
+
+    if tok.using:
+        output['using'] = tok.using
     return output
 
 
@@ -305,15 +316,33 @@ selectColumn = Group(
     Literal('*')("value").setDebugActions(*debug)
 ).setName("column").addParseAction(to_select_call)
 
-
-tableName = (
-    ident("value").setName("table name").setDebugActions(*debug) +
-    Optional(AS) +
-    ident("name").setName("table alias").setDebugActions(*debug) |
+table_source = (
+    (
+        (
+            Literal("(").setDebugActions(*debug).suppress() +
+            selectStmt +
+            Literal(")").setDebugActions(*debug).suppress()
+        ).setName("table source").setDebugActions(*debug)
+    )("value") +
+    Optional(
+        Optional(AS) +
+        ident("name").setName("table alias").setDebugActions(*debug)
+    )
+    |
+    (
+        ident("value").setName("table name").setDebugActions(*debug) +
+        Optional(AS) +
+        ident("name").setName("table alias").setDebugActions(*debug)
+    )
+    |
     ident.setName("table name").setDebugActions(*debug)
 )
 
-join = ((CROSSJOIN | FULLJOIN | FULLOUTERJOIN | INNERJOIN | JOIN | LEFTJOIN | LEFTOUTERJOIN | RIGHTJOIN | RIGHTOUTERJOIN)("op") + Group(tableName)("join") + Optional(ON + expr("on"))).addParseAction(to_join_call)
+join = (
+    (CROSSJOIN | FULLJOIN | FULLOUTERJOIN | INNERJOIN | JOIN | LEFTJOIN | LEFTOUTERJOIN | RIGHTJOIN | RIGHTOUTERJOIN)("op") +
+    Group(table_source)("join") +
+    Optional((ON + expr("on")) | (USING + expr("using")))
+).addParseAction(to_join_call)
 
 sortColumn = expr("value").setName("sort1").setDebugActions(*debug) + Optional(DESC("sort") | ASC("sort")) | \
              expr("value").setName("sort2").setDebugActions(*debug)
@@ -325,7 +354,7 @@ selectStmt << Group(
             Group(
                 SELECT.suppress().setDebugActions(*debug) + delimitedList(selectColumn)("select") +
                 Optional(
-                    FROM.suppress().setDebugActions(*debug) + (delimitedList(Group(tableName)) + ZeroOrMore(join))("from") +
+                    (FROM.suppress().setDebugActions(*debug) + delimitedList(Group(table_source)) + ZeroOrMore(join))("from") +
                     Optional(WHERE.suppress().setDebugActions(*debug) + expr.setName("where"))("where") +
                     Optional(GROUPBY.suppress().setDebugActions(*debug) + delimitedList(Group(selectColumn))("groupby").setName("groupby")) +
                     Optional(HAVING.suppress().setDebugActions(*debug) + expr("having").setName("having")) +
@@ -348,4 +377,3 @@ SQLParser = selectStmt
 oracleSqlComment = Literal("--") + restOfLine
 mySqlComment = Literal("#") + restOfLine
 SQLParser.ignore(oracleSqlComment | mySqlComment)
-

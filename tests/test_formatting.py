@@ -7,16 +7,11 @@
 # Author: Beto Dealmeida (beto@dealmeida.net)
 #
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import unicode_literals
+from __future__ import absolute_import, division, unicode_literals
 
-from unittest import skip
 from unittest import TestCase
 
 from moz_sql_parser import format
-from moz_sql_parser import parse
-from moz_sql_parser import sql_parser
 
 
 class TestSimple(TestCase):
