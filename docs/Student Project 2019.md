@@ -103,7 +103,7 @@ Refactoring is probably best; it will give you a head start in the `pyparsing` i
 4. start a refactoring
 5. make a pull request **on your own repo**, and ask me for a "review"
  
-we can discuss the program in detail better that way
+The Github Pull Request will allow us to discuss code easier.
 
 
 **What if I get the project done early?**
