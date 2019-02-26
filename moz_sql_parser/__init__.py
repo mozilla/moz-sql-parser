@@ -32,6 +32,7 @@ def __deploy__():
 
 def parse(sql):
     try:
+        sql = sql.rstrip().rstrip(";")
         parse_result = SQLParser.parseString(sql, parseAll=True)
     except Exception as e:
         if isinstance(e, ParseException) and e.msg == "Expected end of text":
