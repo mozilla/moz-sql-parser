@@ -9,3 +9,5 @@ out
 /dist
 /moz-sql-parser
 vendor/
+._*
+.DS_Store
