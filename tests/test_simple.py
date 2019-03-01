@@ -484,4 +484,19 @@ class TestSimple(TestCase):
         }
         self.assertEqual(result, expected)
 
+    def test_unicode_strings(self):
+        result = parse("select '0:普通,1:旗舰' from mobile")
+        expected = {
+            'select': {'value': {"literal": '0:普通,1:旗舰'}},
+            'from': "mobile"
+        }
+        self.assertEqual(result, expected)
 
+    @skip("crashes python")
+    def test_issue68(self):
+        result = parse("select deflate(sum(int(mobile_price.price))) from mobile")
+        expected = {
+            'select': {'value': {"deflate": {"sum": {"int": "mobile_price.price"}}}},
+            'from': "mobile"
+        }
+        self.assertEqual(result, expected)
