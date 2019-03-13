@@ -8,7 +8,7 @@ The test suite has over 160 tests, all passing.
 	cd moz-sql-parser
 	pip install -r requirements.txt
 	set PYTHONPATH=.	
-	python.exe -m unittest discover tests
+	python -m unittest discover tests
 
 ### Debugging Suggestions
 
