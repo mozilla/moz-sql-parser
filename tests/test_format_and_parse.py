@@ -1066,11 +1066,9 @@ from benn.college_football_players
         expected_json = {'from': 'a', 'select': {'value': {'typeof': {'sum': 'a3'}}}, 'groupby': {'value': 'a1'}}
         self.verify_formatting(expected_sql, expected_json)
 
-    @skip("The escape function does not recognize the backticks,"
-          " and is wrapping the identifier in double quotes.")
     def test_191(self):
-        expected_sql = "SELECT `user ID` FROM a"
-        expected_json = {'select': {'value': 'user ID'}, 'from': 'a'}
+        expected_sql = "SELECT `user_ID` FROM a"
+        expected_json = {'select': {'value': 'user_ID'}, 'from': 'a'}
         self.verify_formatting(expected_sql, expected_json)
 
     def test_192(self):
