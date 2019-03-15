@@ -4,6 +4,16 @@ The test suite has over 160 tests, all passing.
 
 ## Running Tests
 
+For __Linux__:
+
+	git clone https://github.com/mozilla/moz-sql-parser.git
+	cd moz-sql-parser
+	pip install -r requirements.txt
+	set PYTHONPATH=.	
+	python -m unittest discover tests
+
+ For __Windows__:
+
 	git clone https://github.com/mozilla/moz-sql-parser.git
 	cd moz-sql-parser
 	pip install -r requirements.txt
