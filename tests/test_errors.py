@@ -37,3 +37,10 @@ class TestErrors(TestCase):
             ["Fail to detect join type", 'left intro join'],
             lambda: format(bad_json)
         )
+
+    def test_order_by_must_follow_union(self):
+        assertRaises(
+            ["(at char 27)"],
+            lambda: parse("select a from b order by a union select 2")
+        )
+

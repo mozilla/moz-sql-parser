@@ -1,6 +1,7 @@
 
 # PyParsing Student Project (GSOC 2019)
 
+<div style="width:100%;background:red;color:white;text-align:center;font-weight:bold;">See Student Questions below</div>
 
 ## Background
 
@@ -66,3 +67,52 @@ The pyparsing project recently include a list of [performance tips](https://gith
 
 ## Improvements to pyparsing
 The pyparsing library could benefit from optimizations.  This includes cleaning up the basic data structures it uses: Using less attributes, not copying whole objects, using **slots_**, etc. Additionally, some of the code could be ported to Cython or C extensions, where certain operations can be much faster in a lower-level language.
+
+## Student Questions
+
+I will be adding questions here:
+
+
+February 14th 2019
+
+
+**Any tasks you want me to complete?**
+
+The first step in that project is to refactor the `pyparsing.py` code. By refactoring you will get a sense of the codebase. Your first couple of attempts may fail as you learn what the code is about. In those cases, go back to master branch and start a new branch.
+
+* A simple refactoring is splitting the single file into many, and ensuring it still works; this helps with understanding what parts depend on what other parts, and may reveal where the complicated logic is. Some things will move to new files easily; those are not usually not the core of the program. As you split into files you will notice a certain number of methods are tangled up with each other: that is where the real logic of the program is
+* Another refactoring is cleaning up the token attributes: right now they are dynamically assigned (because Python is awesome) but standardizing them and turning them into __slots__ will make the program a bit faster 
+* There are a number of "examples"; they should be converted to tests so they are easy to run. Plus, the tests will help ensure your refactorings are good.
+
+
+**What will the selection be based on?** 
+
+Beyond the GSOC requirements, the student will be accepted if they can convince me they can make the parser faster. I expect you to show knowledge of *the theory of computation*, and demonstrate you can handle complicated code. If your plan points out details that I did not think of, then you will have proven you understand the domain.
+
+
+**Is there anything I can do now so as to improve my chances**
+
+Refactoring is probably best; it will give you a head start in the `pyparsing` itself, and may reveal the details of implementation you can put in your proposal to impress me.
+
+
+**What are the very first steps?** 
+
+1. fork the `pyparsing` repo, 
+2. clone it locally, 
+3. make a branch, and 
+4. start a refactoring
+5. make a pull request **on your own repo**, and ask me for a "review"
+ 
+The Github Pull Request will allow us to discuss code easier.
+
+
+**What if I get the project done early?**
+
+GSOC demands you work all summer. So, no matter how far you get, you still must put in summer hours. **if** you get accepted to GSOC, and **if** you are successful, then I will just give you more work.
+
+
+**Can you guide me, even before the application process?**
+
+Yes, I am happy to provide feedback on any effort you put towards this project, or any others. So, even if you do not get admitted to GSOC, I can provide you with code reviews, suggestions, and evaluations. 
+
+

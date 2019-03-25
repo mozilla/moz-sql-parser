@@ -11,6 +11,7 @@ from __future__ import absolute_import, division, unicode_literals
 
 from collections import Mapping
 import json
+from threading import Lock
 
 from mo_future import binary_type, items, number_types, text_type
 from pyparsing import ParseException, ParseResults
@@ -30,20 +31,26 @@ def __deploy__():
     source_file.write("\n".join(lines))
 
 
+parseLocker = Lock()  # ENSURE ONLY ONE PARSING AT A TIME
+
+
 def parse(sql):
-    try:
-        parse_result = SQLParser.parseString(sql, parseAll=True)
-    except Exception as e:
-        if isinstance(e, ParseException) and e.msg == "Expected end of text":
-            problems = all_exceptions.get(e.loc, [])
-            expecting = [
-                f
-                for f in (set(p.msg.lstrip("Expected").strip() for p in problems)-{"Found unwanted token"})
-                if not f.startswith("{")
-            ]
-            raise ParseException(sql, e.loc, "Expecting one of (" + (", ".join(expecting)) + ")")
-        raise
-    return _scrub(parse_result)
+    with parseLocker:
+        try:
+            all_exceptions.clear()
+            sql = sql.rstrip().rstrip(";")
+            parse_result = SQLParser.parseString(sql, parseAll=True)
+            return _scrub(parse_result)
+        except Exception as e:
+            if isinstance(e, ParseException) and e.msg == "Expected end of text":
+                problems = all_exceptions.get(e.loc, [])
+                expecting = [
+                    f
+                    for f in (set(p.msg.lstrip("Expected").strip() for p in problems)-{"Found unwanted token"})
+                    if not f.startswith("{")
+                ]
+                raise ParseException(sql, e.loc, "Expecting one of (" + (", ".join(expecting)) + ")")
+            raise
 
 
 def format(json, **kwargs):
