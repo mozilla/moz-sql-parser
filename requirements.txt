@@ -1,2 +1,0 @@
-mo-future>=2.20
-pyparsing
