@@ -58,6 +58,7 @@ keywords = {
     "asc",
     "between",
     "case",
+    "create table",
     "collate nocase",
     "desc",
     "else",
@@ -243,6 +244,13 @@ def unquote(instring, tokensStart, retTokens):
     un = ast.literal_eval(val)
     return un
 
+def to_create_table_call(instring, tokensStart, retTokens):
+    tok = retTokens[0].asDict()
+
+    if tok.get('name')[0][0] == '':
+        return tok.name
+    else:
+        return tok
 
 def to_string(instring, tokensStart, retTokens):
     val = retTokens[0]
@@ -261,7 +269,7 @@ ident = Combine(~RESERVED + (delimitedList(Literal("*") | Word(alphas + "_", alp
 
 # EXPRESSIONS
 expr = Forward()
-
+createStmt = Forward()
 # CASE
 case = (
     CASE +
@@ -315,6 +323,11 @@ selectColumn = Group(
     Group(expr).setName("expression1")("value").setDebugActions(*debug) + Optional(Optional(AS) + ident.copy().setName("column_name1")("name").setDebugActions(*debug)) |
     Literal('*')("value").setDebugActions(*debug)
 ).setName("column").addParseAction(to_select_call)
+
+# SQL STATEMENT
+createTable = Group(
+    Group(expr).setName("expression1")("name").setDebugActions(*debug)
+).setName("column").addParseAction(to_create_table_call)
 
 table_source = (
     (
@@ -371,9 +384,25 @@ selectStmt << Group(
 ).addParseAction(to_union_call)
 
 
-SQLParser = selectStmt
+# define create table statement
+createStmt << Group(
+    Group(Group(
+        delimitedList(
+            Group(
+                CREATETABLE.suppress().setDebugActions(*debug) + delimitedList(createTable)("create table")
+            ),
+            delim=(UNION | UNIONALL)
+        )
+    )("union"))("from") +
+    Optional(ORDERBY.suppress().setDebugActions(*debug)
+        )
+).addParseAction(to_union_call)
+
+
+SQLParser = selectStmt | createStmt
 
 # IGNORE SOME COMMENTS
 oracleSqlComment = Literal("--") + restOfLine
 mySqlComment = Literal("#") + restOfLine
 SQLParser.ignore(oracleSqlComment | mySqlComment)
+
