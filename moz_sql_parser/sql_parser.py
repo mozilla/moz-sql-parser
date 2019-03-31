@@ -41,13 +41,6 @@ if DEBUG:
 else:
     debug = (nothing, nothing, record_exception)
 
-data_types = {
-    "int",
-    "varchar",
-    "varchar2",
-    "float"
-}
-
 join_keywords = {
     "join",
     "full join",
@@ -64,8 +57,8 @@ keywords = {
     "as",
     "asc",
     "between",
-    "create table",
     "case",
+    "create table",
     "collate nocase",
     "desc",
     "else",
@@ -85,7 +78,6 @@ keywords = {
     "or",
     "order by",
     "select",
-    "table",
     "then",
     "union",
     "union all",
@@ -180,16 +172,6 @@ def to_json_call(instring, tokensStart, retTokens):
         params = params[0]
     return {op: params}
 
-def to_column_call(instring, tokensStart, retTokens):
-    # ARRANGE INTO {op: params} FORMAT
-    tok = retTokens
-    op = tok.op.lower()
-
-    if op in data_types:
-        return {tok : op}
-    else:
-        return {tok : op}
-
 
 def to_case_call(instring, tokensStart, retTokens):
     tok = retTokens
@@ -230,15 +212,6 @@ def to_select_call(instring, tokensStart, retTokens):
         return tok
 
 
-def to_create_table_call(instring, tokensStart, retTokens):
-    tok = retTokens[0].asDict()
-
-    if tok.get('name')[0][0] == tok.name:
-        return tok.name
-    else:
-        return tok
-
-
 def to_union_call(instring, tokensStart, retTokens):
     tok = retTokens[0].asDict()
     unions = tok['from']['union']
@@ -271,6 +244,13 @@ def unquote(instring, tokensStart, retTokens):
     un = ast.literal_eval(val)
     return un
 
+def to_create_table_call(instring, tokensStart, retTokens):
+    tok = retTokens[0].asDict()
+
+    if tok.get('name')[0][0] == '':
+        return tok.name
+    else:
+        return tok
 
 def to_string(instring, tokensStart, retTokens):
     val = retTokens[0]
@@ -289,7 +269,7 @@ ident = Combine(~RESERVED + (delimitedList(Literal("*") | Word(alphas + "_", alp
 
 # EXPRESSIONS
 expr = Forward()
-
+createStmt = Forward()
 # CASE
 case = (
     CASE +
@@ -299,7 +279,6 @@ case = (
 ).addParseAction(to_case_call)
 
 selectStmt = Forward()
-createStmt = Forward()
 compound = (
     (Keyword("not", caseless=True)("op").setDebugActions(*debug) + expr("params")).addParseAction(to_json_call) |
     (Keyword("distinct", caseless=True)("op").setDebugActions(*debug) + expr("params")).addParseAction(to_json_call) |
@@ -315,14 +294,28 @@ compound = (
         Word(alphas)("op").setName("function name").setDebugActions(*debug) +
         Literal("(").setName("func_param").setDebugActions(*debug) +
         Optional(selectStmt | Group(delimitedList(expr)))("params") +
-        Optional(createStmt | Group(delimitedList(expr)))("params") +
         ")"
     ).addParseAction(to_json_call).setDebugActions(*debug) |
     ident.copy().setName("variable").setDebugActions(*debug)
 )
 expr << Group(infixNotation(
-    compound, [(o, 3 if isinstance (o, tuple) else 2, opAssoc.LEFT, to_json_operator) for o in KNOWN_OPS] +
-    [(COLLATENOCASE, 1, opAssoc.LEFT, to_json_operator)]
+    compound,
+    [
+        (
+            o,
+            3 if isinstance(o, tuple) else 2,
+            opAssoc.LEFT,
+            to_json_operator
+        )
+        for o in KNOWN_OPS
+    ]+[
+        (
+            COLLATENOCASE,
+            1,
+            opAssoc.LEFT,
+            to_json_operator
+        )
+    ]
 ).setName("expression").setDebugActions(*debug))
 
 # SQL STATEMENT
@@ -331,9 +324,9 @@ selectColumn = Group(
     Literal('*')("value").setDebugActions(*debug)
 ).setName("column").addParseAction(to_select_call)
 
-#Create Statement
-createColumn = Group(
-    Group(expr).setName("expression2")("name").setDebugActions(*debug)
+# SQL STATEMENT
+createTable = Group(
+    Group(expr).setName("expression1")("name").setDebugActions(*debug)
 ).setName("column").addParseAction(to_create_table_call)
 
 table_source = (
@@ -391,23 +384,25 @@ selectStmt << Group(
 ).addParseAction(to_union_call)
 
 
-createStmt <<  Group(
+# define create table statement
+createStmt << Group(
     Group(Group(
         delimitedList(
             Group(
-                CREATETABLE.suppress().setDebugActions(*debug) + delimitedList(createColumn)("create table") +
-                TABLE.suppress().setDebugActions(*debug) + delimitedList(createColumn)("name")
-                )
-            )
+                CREATETABLE.suppress().setDebugActions(*debug) + delimitedList(createTable)("create table")
+            ),
+            delim=(UNION | UNIONALL)
         )
-    )
-)
+    )("union"))("from") +
+    Optional(ORDERBY.suppress().setDebugActions(*debug)
+        )
+).addParseAction(to_union_call)
 
 
-SQLParser = createStmt |  selectStmt
-
+SQLParser = selectStmt | createStmt
 
 # IGNORE SOME COMMENTS
 oracleSqlComment = Literal("--") + restOfLine
 mySqlComment = Literal("#") + restOfLine
 SQLParser.ignore(oracleSqlComment | mySqlComment)
+
