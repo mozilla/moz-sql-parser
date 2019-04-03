@@ -492,7 +492,6 @@ class TestSimple(TestCase):
         }
         self.assertEqual(result, expected)
 
-    @skip("crashes python")
     def test_issue68(self):
         result = parse("select deflate(sum(int(mobile_price.price))) from mobile")
         expected = {
