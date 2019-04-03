@@ -26,7 +26,7 @@ The primary objective of this library is to convert some subset of [SQL-92](http
 
 ## Project Status
 
-There are [over 160 tests, all passing](https://github.com/mozilla/moz-sql-parser/tree/dev/tests). This parser is good enough for basic usage, including inner queries.
+There are [over 400 tests](https://github.com/mozilla/moz-sql-parser/tree/dev/tests). This parser is good enough for basic usage, including inner queries.
 
 You can see the parser in action at [https://sql.telemetry.mozilla.org/](https://sql.telemetry.mozilla.org/) while using the ActiveData datasource
 
