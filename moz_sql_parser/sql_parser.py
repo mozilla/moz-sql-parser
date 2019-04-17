@@ -228,6 +228,7 @@ def to_union_call(instring, tokensStart, retTokens):
         output["limit"] = tok.get('limit')
     return output
 
+
 def unquote(instring, tokensStart, retTokens):
     val = retTokens[0]
     if val.startswith("'") and val.endswith("'"):
@@ -237,7 +238,7 @@ def unquote(instring, tokensStart, retTokens):
         val = '"'+val[1:-1].replace('""', '\\"')+'"'
         # val = val.replace(".", "\\.")
     elif val.startswith('`') and val.endswith('`'):
-          val = "'" + val[1:-1].replace("``","`") + "'"
+        val = "'" + val[1:-1].replace("``","`") + "'"
     elif val.startswith("+"):
         val = val[1:]
     un = ast.literal_eval(val)
