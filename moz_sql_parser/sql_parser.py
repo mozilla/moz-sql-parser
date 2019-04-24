@@ -72,7 +72,6 @@ keywords = {
     "limit",
     "offset",
     "like",
-    "name",
     "not between",
     "not like",
     "on",
