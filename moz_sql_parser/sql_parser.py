@@ -59,6 +59,7 @@ keywords = {
     "between",
     "case",
     "collate nocase",
+    "columns",
     "create table",
     "desc",
     "else",
@@ -379,27 +380,29 @@ def to_create_json_call(instring, tokensStart, retTokens):
     tok = retTokens
     op = tok[0][0].lower()
 
-    params = tok.params
-    if not params:
-        params = tok[0][1]
-    elif len(params) == 1:
-        params = params[0]
-    return {op: params}
+    param = tok.param
+    if not param:
+        param = tok[0][1]
+    elif len(param) == 1:
+        param = param[0]
+    return {op: param}
 
-def to_create_call(instring, tokensStart, retTokens):
-    tok = retTokens[0].asDict()
+def to_create_table_call(instring, tokensStart, retTokens):
+    tok = retTokens
 
-    if tok.get("name"):
-        return tok
-    else:
-        return tok
-
+    return {"create table" : tok.asList()}
 
 def to_table_name_call(instring, tokensStart, retTokens):
     tok = retTokens
 
     if tok.name:
         return {"name" : tok.name}
+
+
+def to_columns_call(instring, tokensStart, retTokens):
+    tok = retTokens
+
+    return {"columns" : tok.asList()}
 
 
 # SQL STATEMENT
@@ -419,14 +422,15 @@ column_options = Optional("NULL")   # this can be improved
 column_definition = Group(column_name("name") + column_type("type") + column_options("options")).addParseAction(to_create_json_call)
 
 createStmt << Group(
-    CREATETABLE.setDebugActions(*debug) + Group(delimitedList(
+    CREATETABLE.suppress().setDebugActions(*debug) +
+    Group(delimitedList(
     ident.copy().setName("table_name")("name").setDebugActions(*debug)).addParseAction(to_table_name_call) +
     Group(
         Literal("(").setDebugActions(*debug).suppress() +
-        delimitedList(column_definition) +
+        delimitedList(column_definition).addParseAction(to_columns_call) +
         Literal(")").setDebugActions(*debug).suppress()
     )("columns")
-)
+    ).addParseAction(to_create_table_call)
 )
 
 
@@ -436,3 +440,4 @@ SQLParser = selectStmt | createStmt
 oracleSqlComment = Literal("--") + restOfLine
 mySqlComment = Literal("#") + restOfLine
 SQLParser.ignore(oracleSqlComment | mySqlComment)
+
