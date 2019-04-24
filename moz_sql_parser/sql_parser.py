@@ -58,8 +58,8 @@ keywords = {
     "asc",
     "between",
     "case",
-    "create table",
     "collate nocase",
+    "create table",
     "desc",
     "else",
     "end",
@@ -72,12 +72,14 @@ keywords = {
     "limit",
     "offset",
     "like",
+    "name",
     "not between",
     "not like",
     "on",
     "or",
     "order by",
     "select",
+    "table",
     "then",
     "union",
     "union all",
@@ -229,6 +231,7 @@ def to_union_call(instring, tokensStart, retTokens):
         output["limit"] = tok.get('limit')
     return output
 
+
 def unquote(instring, tokensStart, retTokens):
     val = retTokens[0]
     if val.startswith("'") and val.endswith("'"):
@@ -238,19 +241,12 @@ def unquote(instring, tokensStart, retTokens):
         val = '"'+val[1:-1].replace('""', '\\"')+'"'
         # val = val.replace(".", "\\.")
     elif val.startswith('`') and val.endswith('`'):
-          val = "'" + val[1:-1].replace("``","`") + "'"
+        val = "'" + val[1:-1].replace("``","`") + "'"
     elif val.startswith("+"):
         val = val[1:]
     un = ast.literal_eval(val)
     return un
 
-def to_create_table_call(instring, tokensStart, retTokens):
-    tok = retTokens[0].asDict()
-
-    if tok.get('name')[0][0] == '':
-        return tok.name
-    else:
-        return tok
 
 def to_string(instring, tokensStart, retTokens):
     val = retTokens[0]
@@ -269,7 +265,7 @@ ident = Combine(~RESERVED + (delimitedList(Literal("*") | Word(alphas + "_", alp
 
 # EXPRESSIONS
 expr = Forward()
-createStmt = Forward()
+
 # CASE
 case = (
     CASE +
@@ -323,11 +319,6 @@ selectColumn = Group(
     Group(expr).setName("expression1")("value").setDebugActions(*debug) + Optional(Optional(AS) + ident.copy().setName("column_name1")("name").setDebugActions(*debug)) |
     Literal('*')("value").setDebugActions(*debug)
 ).setName("column").addParseAction(to_select_call)
-
-# SQL STATEMENT
-createTable = Group(
-    Group(expr).setName("expression1")("name").setDebugActions(*debug)
-).setName("column").addParseAction(to_create_table_call)
 
 table_source = (
     (
@@ -384,19 +375,60 @@ selectStmt << Group(
 ).addParseAction(to_union_call)
 
 
-# define create table statement
+def to_create_json_call(instring, tokensStart, retTokens):
+    # ARRANGE INTO {op: params} FORMAT
+    tok = retTokens
+    op = tok[0][0].lower()
+
+    params = tok.params
+    if not params:
+        params = tok[0][1]
+    elif len(params) == 1:
+        params = params[0]
+    return {op: params}
+
+def to_create_call(instring, tokensStart, retTokens):
+    tok = retTokens[0].asDict()
+
+    if tok.get("name"):
+        return tok
+    else:
+        return tok
+
+
+def to_table_name_call(instring, tokensStart, retTokens):
+    tok = retTokens
+
+    if tok.name:
+        return {"name" : tok.name}
+
+
+# SQL STATEMENT
+'''selectTable = Group(
+    Optional(ident.copy().setName("table_name")("name").setDebugActions(*debug))
+).setName("column").addParseAction(to_create_call)
+'''
+
+createStmt = Forward()
+
+column_name = ident.copy().setName("column_name").setDebugActions(*debug)
+
+column_type = ident.copy().setName("column_type").setDebugActions(*debug)
+
+column_options = Optional("NULL")   # this can be improved
+
+column_definition = Group(column_name("name") + column_type("type") + column_options("options")).addParseAction(to_create_json_call)
+
 createStmt << Group(
-    Group(Group(
-        delimitedList(
-            Group(
-                CREATETABLE.suppress().setDebugActions(*debug) + delimitedList(createTable)("create table")
-            ),
-            delim=(UNION | UNIONALL)
-        )
-    )("union"))("from") +
-    Optional(ORDERBY.suppress().setDebugActions(*debug)
-        )
-).addParseAction(to_union_call)
+    CREATETABLE.setDebugActions(*debug) + Group(delimitedList(
+    ident.copy().setName("table_name")("name").setDebugActions(*debug)).addParseAction(to_table_name_call) +
+    Group(
+        Literal("(").setDebugActions(*debug).suppress() +
+        delimitedList(column_definition) +
+        Literal(")").setDebugActions(*debug).suppress()
+    )("columns")
+)
+)
 
 
 SQLParser = selectStmt | createStmt
@@ -405,4 +437,3 @@ SQLParser = selectStmt | createStmt
 oracleSqlComment = Literal("--") + restOfLine
 mySqlComment = Literal("#") + restOfLine
 SQLParser.ignore(oracleSqlComment | mySqlComment)
-
