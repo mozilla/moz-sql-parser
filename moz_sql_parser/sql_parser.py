@@ -403,7 +403,7 @@ def to_table_name_call(instring, tokensStart, retTokens):
 def to_columns_call(instring, tokensStart, retTokens):
     tok = retTokens
 
-    return {"columns" : tok.asList()}q
+    return {"columns" : tok.asList()}
 
 
 createStmt = Forward()
@@ -442,3 +442,4 @@ SQLParser = selectStmt | createStmt
 oracleSqlComment = Literal("--") + restOfLine
 mySqlComment = Literal("#") + restOfLine
 SQLParser.ignore(oracleSqlComment | mySqlComment)
+
