@@ -14,7 +14,7 @@ from __future__ import unicode_literals
 import ast
 import sys
 
-from pyparsing import Word, delimitedList, Optional, Combine, Group, alphas, alphanums, Forward, restOfLine, Keyword, Literal, ParserElement, infixNotation, opAssoc, Regex, MatchFirst, ZeroOrMore, OneOrMore
+from pyparsing import Word, delimitedList, Optional, Combine, Group, alphas, alphanums, Forward, restOfLine, Keyword, Literal, ParserElement, infixNotation, opAssoc, Regex, MatchFirst, ZeroOrMore, OneOrMore, nums
 
 ParserElement.enablePackrat()
 
@@ -403,14 +403,20 @@ def to_table_name_call(instring, tokensStart, retTokens):
 def to_columns_call(instring, tokensStart, retTokens):
     tok = retTokens
 
-    return {"columns" : tok.asList()}
+    return {"columns" : tok.asList()}q
 
 
 createStmt = Forward()
 
 column_name = ident.copy().setName("column_name").setDebugActions(*debug)
 
-column_type = ident.copy().setName("column_type").setDebugActions(*debug)
+column_size = Group(
+                Literal('(').suppress().setDebugActions(*debug) +
+                Word(nums) +
+                Literal(')').suppress().setDebugActions(*debug)
+              )
+
+column_type = ident.copy().setName("column_type").setDebugActions(*debug) + Optional(column_size("size"))
 
 column_options = Optional("NOT NULL") | Optional("UNIQUE")
 
