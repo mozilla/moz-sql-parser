@@ -14,7 +14,7 @@ from __future__ import unicode_literals
 import ast
 import sys
 
-from pyparsing import Word, delimitedList, Optional, Combine, Group, alphas, alphanums, Forward, restOfLine, Keyword, Literal, ParserElement, infixNotation, opAssoc, Regex, MatchFirst, ZeroOrMore
+from pyparsing import Word, delimitedList, Optional, Combine, Group, alphas, alphanums, Forward, restOfLine, Keyword, Literal, ParserElement, infixNotation, opAssoc, Regex, MatchFirst, ZeroOrMore, OneOrMore
 
 ParserElement.enablePackrat()
 
@@ -378,25 +378,26 @@ selectStmt << Group(
 def to_create_json_call(instring, tokensStart, retTokens):
     # ARRANGE INTO {op: params} FORMAT
     tok = retTokens
-    op = tok[0][0].lower()
+    name = tok[0][0].lower()
 
-    param = tok.param
-    if not param:
-        param = tok[0][1]
-    elif len(param) == 1:
-        param = param[0]
-    return {op: param}
+    types = tok.types
+    if not types:
+        types = tok[0][1]
+    return {"name" : name, "type": types}
+
+
 
 def to_create_table_call(instring, tokensStart, retTokens):
     tok = retTokens
 
-    return {"create table" : tok.asList()}
+    if tok:
+        return {"create table" : tok.asList()}
 
 def to_table_name_call(instring, tokensStart, retTokens):
     tok = retTokens
 
-    if tok.name:
-        return {"name" : tok.name}
+    if tok[0]:
+        return {"name" : tok[0] }
 
 
 def to_columns_call(instring, tokensStart, retTokens):
@@ -405,31 +406,26 @@ def to_columns_call(instring, tokensStart, retTokens):
     return {"columns" : tok.asList()}
 
 
-# SQL STATEMENT
-'''selectTable = Group(
-    Optional(ident.copy().setName("table_name")("name").setDebugActions(*debug))
-).setName("column").addParseAction(to_create_call)
-'''
-
 createStmt = Forward()
 
 column_name = ident.copy().setName("column_name").setDebugActions(*debug)
 
 column_type = ident.copy().setName("column_type").setDebugActions(*debug)
 
-column_options = Optional("NULL")   # this can be improved
+column_options = Optional("NOT NULL") | Optional("UNIQUE")
 
-column_definition = Group(column_name("name") + column_type("type") + column_options("options")).addParseAction(to_create_json_call)
+column_definition = Group(column_name("name") + column_type("type") + Optional(Literal(',').suppress()) + Optional(column_options("options")) + Optional(Literal(',').suppress())).addParseAction(to_create_json_call)
 
-createStmt << Group(
+
+createStmt << delimitedList(
     CREATETABLE.suppress().setDebugActions(*debug) +
-    Group(delimitedList(
+    ((
     ident.copy().setName("table_name")("name").setDebugActions(*debug)).addParseAction(to_table_name_call) +
-    Group(
+    Group(delimitedList(
         Literal("(").setDebugActions(*debug).suppress() +
-        delimitedList(column_definition).addParseAction(to_columns_call) +
+        Group(OneOrMore(column_definition)).addParseAction(to_columns_call) +
         Literal(")").setDebugActions(*debug).suppress()
-    )("columns")
+    ))("columns")
     ).addParseAction(to_create_table_call)
 )
 
@@ -440,4 +436,3 @@ SQLParser = selectStmt | createStmt
 oracleSqlComment = Literal("--") + restOfLine
 mySqlComment = Literal("#") + restOfLine
 SQLParser.ignore(oracleSqlComment | mySqlComment)
-
