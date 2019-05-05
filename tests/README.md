@@ -1,6 +1,6 @@
 # Moz SQL Parser Tests
 
-The test suite has over 160 tests, all passing. 
+The test suite has over 400 tests.
 
 ## Running Tests
 
