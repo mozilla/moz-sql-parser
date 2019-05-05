@@ -419,7 +419,7 @@ column_definition = Group(column_name("name") + column_type("type") + Optional(L
 
 createStmt << delimitedList(
     CREATETABLE.suppress().setDebugActions(*debug) +
-    ((
+    Group(delimitedList(
     ident.copy().setName("table_name")("name").setDebugActions(*debug)).addParseAction(to_table_name_call) +
     Group(delimitedList(
         Literal("(").setDebugActions(*debug).suppress() +
