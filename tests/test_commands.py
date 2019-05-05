@@ -18,13 +18,26 @@ from tests.util import assertRaises
 class TestSimple(TestCase):
 
     def test_create_table_one_column(self):
-        result = parse("create table student ( name varchar2)")
+        result = parse("create table student (name varchar2)")
         expected = {'create table': [{'name': 'student'}, {'columns': {'name': 'name', 'type': 'varchar2'}}]}
         self.assertEqual(result, expected)
-    
-    @skip("Not sure why")
+
     def test_create_table_two_column(self):
-        result = parse("create table student ( name varchar)")
-        expected = {'create table': [{'name': 'student'}, {'columns': {'name': 'name', 'type': 'varchar2'} }]}
+        result = parse("create table student (name varchar2, rollno int)")
+        expected = {'create table': [{'name': 'student'}, {'columns': [{'name': 'name', 'type': 'varchar2'}, {'name': 'rollno', 'type': 'int'}]}]}
         self.assertEqual(result, expected)
 
+    def test_create_table_three_column(self):
+        result = parse("create table customers (id name, name varchar, salary decimal )")
+        expected = {'create table': [{'name': 'customers'}, {'columns': [{'name': 'id', 'type': 'name'}, {'name': 'name', 'type': 'varchar'}, {'name': 'salary', 'type': 'decimal'}]}]}
+        self.assertEqual(result, expected)
+
+    def test_create_table_four_column(self):
+        result = parse("create table customers( id int, name varchar, address char, salary decimal)")
+        expected = {'create table': [{'name': 'customers'}, {'columns': [{'name': 'id', 'type': 'int'}, {'name': 'name', 'type': 'varchar'}, {'name': 'address', 'type': 'char'}, {'name': 'salary', 'type': 'decimal'}]}]}
+        self.assertEqual(result, expected)
+
+    def test_create_table_five_column(self):
+        result = parse("create table persons ( PersonID int, LastName varchar, FirstName varchar, Address varchar, City varchar)")
+        expected = {'create table': [{'name': 'persons'}, {'columns': [{'name': 'personid', 'type': 'int'}, {'name': 'lastname', 'type': 'varchar'}, {'name': 'firstname', 'type': 'varchar'}, {'name': 'address', 'type': 'varchar'}, {'name': 'city', 'type': 'varchar'}]}]}
+        self.assertEqual(result, expected)
