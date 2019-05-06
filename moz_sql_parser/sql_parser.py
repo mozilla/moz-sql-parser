@@ -52,6 +52,8 @@ join_keywords = {
     "right outer join",
     "left outer join",
 }
+
+
 keywords = {
     "and",
     "as",
@@ -378,13 +380,38 @@ selectStmt << Group(
 def to_create_json_call(instring, tokensStart, retTokens):
     # ARRANGE INTO {op: params} FORMAT
     tok = retTokens
-    name = tok[0][0].lower()
+    name = tok[0].lower()
 
     types = tok.types
+    option = tok.option
     if not types:
-        types = tok[0][1]
-    return {"name" : name, "type": types}
+        types = tok[1]
+    if not option:
+        option = tok[2:4]
+        op = options_call(option)
+    if len(tok) == 2:
+        return {"name" : name, "type": types}
+    elif len(tok) == 3 or 4:
+        return {"name" : name, "type": types, "option" : op}
+    else:
+        return tok
 
+def options_call(option):
+    op = str(option)
+    if "not" and "null" in op:
+        return "not null"
+    elif "primary" in op:
+        return "primary key"
+    elif "foreign" in op:
+        return "foreign key"
+    elif "check" in op:
+        return "check"
+    elif "default" in op:
+        return op
+    elif "index" in op:
+        return "index"
+    else:
+        return None
 
 
 def to_create_table_call(instring, tokensStart, retTokens):
@@ -416,14 +443,23 @@ column_size = Group(
                 Literal(')').suppress().setDebugActions(*debug)
               )
 
-column_type = ident.copy().setName("column_type").setDebugActions(*debug) + Optional(column_size("size"))
+column_type = OneOrMore(
+    Group(
+        ident.copy().setName("column_type").setDebugActions(*debug) +
+        Optional(column_size("size")))
+    )
 
 column_options = Optional("NOT NULL") | Optional("UNIQUE")
 
-column_definition = Group(column_name("name") + column_type("type") + Optional(Literal(',').suppress()) + Optional(column_options("options")) + Optional(Literal(',').suppress())).addParseAction(to_create_json_call)
+column_definition = delimitedList(
+        column_name("name") +
+        column_type("type") + Optional(Literal(',').suppress()) +
+        Optional(column_options("options")) +
+        Optional(Literal(',').suppress())
+    ).addParseAction(to_create_json_call)
 
 
-createStmt << delimitedList(
+createStmt << Group(
     CREATETABLE.suppress().setDebugActions(*debug) +
     Group(delimitedList(
     ident.copy().setName("table_name")("name").setDebugActions(*debug)).addParseAction(to_table_name_call) +
@@ -435,11 +471,9 @@ createStmt << delimitedList(
     ).addParseAction(to_create_table_call)
 )
 
-
-SQLParser = selectStmt | createStmt
+SQLParser = createStmt
 
 # IGNORE SOME COMMENTS
 oracleSqlComment = Literal("--") + restOfLine
 mySqlComment = Literal("#") + restOfLine
 SQLParser.ignore(oracleSqlComment | mySqlComment)
-
