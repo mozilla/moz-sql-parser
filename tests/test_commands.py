@@ -22,22 +22,37 @@ class TestSimple(TestCase):
         expected = {'create table': [{'name': 'student'}, {'columns': {'name': 'name', 'type': 'varchar2'}}]}
         self.assertEqual(result, expected)
 
-    def test_create_table_two_column(self):
+    def test_create_table_two_columns(self):
         result = parse("create table student (name varchar2, rollno int)")
         expected = {'create table': [{'name': 'student'}, {'columns': [{'name': 'name', 'type': 'varchar2'}, {'name': 'rollno', 'type': 'int'}]}]}
         self.assertEqual(result, expected)
 
-    def test_create_table_three_column(self):
+    def test_create_table_three_columns(self):
         result = parse("create table customers (id name, name varchar, salary decimal )")
         expected = {'create table': [{'name': 'customers'}, {'columns': [{'name': 'id', 'type': 'name'}, {'name': 'name', 'type': 'varchar'}, {'name': 'salary', 'type': 'decimal'}]}]}
         self.assertEqual(result, expected)
 
-    def test_create_table_four_column(self):
+    def test_create_table_four_columns(self):
         result = parse("create table customers( id int, name varchar, address char, salary decimal)")
         expected = {'create table': [{'name': 'customers'}, {'columns': [{'name': 'id', 'type': 'int'}, {'name': 'name', 'type': 'varchar'}, {'name': 'address', 'type': 'char'}, {'name': 'salary', 'type': 'decimal'}]}]}
         self.assertEqual(result, expected)
 
-    def test_create_table_five_column(self):
+    def test_create_table_five_columns(self):
         result = parse("create table persons ( PersonID int, LastName varchar, FirstName varchar, Address varchar, City varchar)")
         expected = {'create table': [{'name': 'persons'}, {'columns': [{'name': 'personid', 'type': 'int'}, {'name': 'lastname', 'type': 'varchar'}, {'name': 'firstname', 'type': 'varchar'}, {'name': 'address', 'type': 'varchar'}, {'name': 'city', 'type': 'varchar'}]}]}
+        self.assertEqual(result, expected)
+
+    def test_create_table_two_columns_with_size(self):
+        result = parse("create table student (name varchar2(25), rollno int(2))")
+        expected = {'create table': [{'name': 'student'}, {'columns': [{'name': 'name', 'type': ['varchar2', 25]}, {'name': 'rollno', 'type': ['int', 2]}]}]}
+        self.assertEqual(result, expected)
+
+    def test_create_table_five_columns_with_size(self):
+        result = parse("create table persons ( PersonID int(2), LastName varchar(10), FirstName varchar(10), Address varchar(50), City varchar(10))")
+        expected = {'create table': [{'name': 'persons'}, {'columns': [{'name': 'personid', 'type': ['int', 2]}, {'name': 'lastname', 'type': ['varchar', 10]}, {'name': 'firstname', 'type': ['varchar', 10]}, {'name': 'address', 'type': ['varchar', 50]}, {'name': 'city', 'type': ['varchar', 10]}]}]}
+        self.assertEqual(result, expected)
+
+    def test_create_table_two_columns_with_option(self):
+        result = parse("create table student (name varchar not null, sunny int primary key)")
+        expected = {"create table": [{"name": "student"}, {"columns": [{"name": "name", "type": "varchar", "option": "not null"}, {"name": "sunny", "type": "int", "option": "primary key"}]}]}
         self.assertEqual(result, expected)
