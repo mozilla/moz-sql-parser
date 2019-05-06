@@ -52,6 +52,11 @@ class TestSimple(TestCase):
         expected = {'create table': [{'name': 'persons'}, {'columns': [{'name': 'personid', 'type': ['int', 2]}, {'name': 'lastname', 'type': ['varchar', 10]}, {'name': 'firstname', 'type': ['varchar', 10]}, {'name': 'address', 'type': ['varchar', 50]}, {'name': 'city', 'type': ['varchar', 10]}]}]}
         self.assertEqual(result, expected)
 
+    def test_create_table_one_columns_with_size(self):
+        result = parse("create table student (name varchar not null)")
+        expected = {'create table': [{'name': 'student'}, {'columns': {'name': 'name', 'type': 'varchar', 'option': 'not null'}}]}
+        self.assertEqual(result, expected)
+
     def test_create_table_two_columns_with_option(self):
         result = parse("create table student (name varchar not null, sunny int primary key)")
         expected = {"create table": [{"name": "student"}, {"columns": [{"name": "name", "type": "varchar", "option": "not null"}, {"name": "sunny", "type": "int", "option": "primary key"}]}]}
