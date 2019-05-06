@@ -53,7 +53,6 @@ join_keywords = {
     "left outer join",
 }
 
-
 keywords = {
     "and",
     "as",
@@ -61,7 +60,6 @@ keywords = {
     "between",
     "case",
     "collate nocase",
-    "columns",
     "create table",
     "desc",
     "else",
@@ -81,7 +79,6 @@ keywords = {
     "or",
     "order by",
     "select",
-    "table",
     "then",
     "union",
     "union all",
@@ -439,7 +436,7 @@ column_name = ident.copy().setName("column_name").setDebugActions(*debug)
 
 column_size = Group(
                 Literal('(').suppress().setDebugActions(*debug) +
-                Word(nums) +
+                intNum.copy().setName("size").setDebugActions(*debug) +
                 Literal(')').suppress().setDebugActions(*debug)
               )
 
@@ -463,17 +460,18 @@ createStmt << Group(
     CREATETABLE.suppress().setDebugActions(*debug) +
     Group(delimitedList(
     ident.copy().setName("table_name")("name").setDebugActions(*debug)).addParseAction(to_table_name_call) +
-    Group(delimitedList(
-        Literal("(").setDebugActions(*debug).suppress() +
-        Group(OneOrMore(column_definition)).addParseAction(to_columns_call) +
+    Literal("(").setDebugActions(*debug).suppress() +
+    Group(
+        Group(OneOrMore(column_definition)).addParseAction(to_columns_call)
+        )("columns") +
         Literal(")").setDebugActions(*debug).suppress()
-    ))("columns")
     ).addParseAction(to_create_table_call)
 )
 
-SQLParser = createStmt
+SQLParser = selectStmt | createStmt
 
 # IGNORE SOME COMMENTS
 oracleSqlComment = Literal("--") + restOfLine
 mySqlComment = Literal("#") + restOfLine
 SQLParser.ignore(oracleSqlComment | mySqlComment)
+
