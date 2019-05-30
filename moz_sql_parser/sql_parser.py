@@ -436,23 +436,22 @@ column_name = ident.copy().setName("column_name").setDebugActions(*debug)
 
 column_size = Group(
                 Literal('(').suppress().setDebugActions(*debug) +
-                intNum.copy().setName("size").setDebugActions(*debug) +
+                intNum.setName("size").setDebugActions(*debug) +
                 Literal(')').suppress().setDebugActions(*debug)
               )
 
 column_type = OneOrMore(
     Group(
-        ident.copy().setName("column_type").setDebugActions(*debug) +
+        ident.setName("column_type").setDebugActions(*debug) +
         Optional(column_size("size")))
     )
 
-column_options = Optional("NOT NULL") | Optional("UNIQUE")
+column_options = Optional("NOT NULL") + Optional("UNIQUE")
 
 column_definition = delimitedList(
         column_name("name") +
-        column_type("type") + Optional(Literal(',').suppress()) +
-        Optional(column_options("options")) +
-        Optional(Literal(',').suppress())
+        column_type("type") +
+        Optional(column_options("options"))
     ).addParseAction(to_create_json_call)
 
 
@@ -461,10 +460,8 @@ createStmt << Group(
     Group(delimitedList(
     ident.copy().setName("table_name")("name").setDebugActions(*debug)).addParseAction(to_table_name_call) +
     Literal("(").setDebugActions(*debug).suppress() +
-    Group(
-        Group(OneOrMore(column_definition)).addParseAction(to_columns_call)
-        )("columns") +
-        Literal(")").setDebugActions(*debug).suppress()
+            delimitedList(column_definition).addParseAction(to_columns_call) +
+    Literal(")").setDebugActions(*debug).suppress()
     ).addParseAction(to_create_table_call)
 )
 
@@ -474,4 +471,3 @@ SQLParser = selectStmt | createStmt
 oracleSqlComment = Literal("--") + restOfLine
 mySqlComment = Literal("#") + restOfLine
 SQLParser.ignore(oracleSqlComment | mySqlComment)
-
