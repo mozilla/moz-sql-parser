@@ -11,7 +11,7 @@ from mo_future import text_type, number_types, binary_type, items
 
 from pyparsing import ParseResults
 
-import ast
+import typed_ast.ast3 as ast
 
 #from horast import dump
 
