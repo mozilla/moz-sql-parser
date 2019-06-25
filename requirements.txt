@@ -1,2 +1,3 @@
 mo-future>=2.44.19084
 pyparsing
+typed_ast

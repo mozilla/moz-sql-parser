@@ -13,7 +13,7 @@ from pyparsing import ParseResults
 
 import typed_ast.ast3 as ast
 
-#from horast import dump
+# from horast import dump
 
 
 DEBUG = False
@@ -145,7 +145,7 @@ class ASTNode(ast.AST):
 class Query(ASTNode):
     def __init__(self, q=None):
         self.q = q
-        super().__init__() #ASTNode
+        super().__init__()  # ASTNode
 
     @classmethod
     def from_tokens(cls, tokens):
@@ -160,7 +160,7 @@ class Query(ASTNode):
 class Select(ASTNode):
     def __init__(self, columns=None):
         self.columns = columns
-        super().__init__() #ASTNode
+        super().__init__()  # ASTNode
 
     @classmethod
     def from_tokens(cls, tokens):
@@ -178,7 +178,7 @@ class Select(ASTNode):
 class From(ASTNode):
     def __init__(self, sources=None):
         self.sources = sources
-        super().__init__() #ASTNode
+        super().__init__()  # ASTNode
 
     @classmethod
     def from_tokens(cls, tokens):
@@ -196,7 +196,7 @@ class From(ASTNode):
 class Where(ASTNode):
     def __init__(self, condition=None):
         self.condition = condition
-        super().__init__() #ASTNode
+        super().__init__()  # ASTNode
 
     @classmethod
     def from_tokens(cls, tokens):
@@ -214,7 +214,7 @@ class Where(ASTNode):
 class GroupBy(ASTNode):
     def __init__(self, groupings=None):
         self.groupings = groupings
-        super().__init__() #ASTNode
+        super().__init__()  # ASTNode
 
     @classmethod
     def from_tokens(cls, tokens):
@@ -232,7 +232,7 @@ class GroupBy(ASTNode):
 class OrderBy(ASTNode):
     def __init__(self, orders=None):
         self.orders = orders
-        super().__init__() #ASTNode
+        super().__init__()  # ASTNode
 
     @classmethod
     def from_tokens(cls, tokens):
@@ -250,7 +250,7 @@ class OrderByColumn(ASTNode):
     def __init__(self, ref=None, dir=None):
         self.ref = ref
         self.dir = dir
-        super().__init__() #ASTNode
+        super().__init__()  # ASTNode
 
     @classmethod
     def from_tokens(cls, tokens):
@@ -283,7 +283,7 @@ class OrderDescending(OrderDirection): pass
 class Having(ASTNode):
     def __init__(self, condition=None):
         self.condition = condition
-        super().__init__() #ASTNode
+        super().__init__()  # ASTNode
 
     @classmethod
     def from_tokens(cls, tokens):
@@ -301,7 +301,7 @@ class Having(ASTNode):
 class Limit(ASTNode):
     def __init__(self, count=None):
         self.count = count
-        super().__init__() #ASTNode
+        super().__init__()  # ASTNode
 
     @classmethod
     def from_tokens(cls, tokens):
@@ -319,7 +319,7 @@ class Limit(ASTNode):
 class Offset(ASTNode):
     def __init__(self, count=None):
         self.count = count
-        super().__init__() #ASTNode
+        super().__init__()  # ASTNode
 
     @classmethod
     def from_tokens(cls, tokens):
@@ -337,7 +337,7 @@ class Union(ASTNode):
     def __init__(self, subqueries=None, types=None):
         self.subqueries = subqueries
         self.types = types  # UNION DISTINCT override any UNION ALL to the left of them.
-        super().__init__() #ASTNode
+        super().__init__()  # ASTNode
 
     @classmethod
     def from_tokens(cls, tokens):
@@ -368,7 +368,7 @@ class Join(ASTNode):
         self.source = source
         self.constrainttype = constrainttype
         self.constraints = constraints
-        super().__init__() #ASTNode
+        super().__init__()  # ASTNode
 
     @classmethod
     def from_tokens(cls, tokens):
@@ -431,7 +431,7 @@ class Case(ASTNode):
     def __init__(self, when=None, elsevalue=None):
         self.when = when
         self.elsevalue = elsevalue
-        super().__init__() #ASTNode
+        super().__init__()  # ASTNode
 
     @classmethod
     def from_tokens(cls, tokens):
@@ -460,7 +460,7 @@ class When(ASTNode):
     def __init__(self, condition=None, value=None):
         self.condition = condition
         self.value = value
-        super().__init__() #ASTNode
+        super().__init__()  # ASTNode
 
     @classmethod
     def from_tokens(cls, tokens):
@@ -483,7 +483,7 @@ class SelectColumn(ASTNode):
     def __init__(self, value=None, alias=None):
         self.value = value
         self.alias = alias
-        super().__init__() #ASTNode
+        super().__init__()  # ASTNode
 
     @classmethod
     def from_tokens(cls, tokens):
@@ -508,7 +508,7 @@ class FromSource(ASTNode):
     def __init__(self, value=None, alias=None):
         self.value = value
         self.alias = alias
-        super().__init__() #ASTNode
+        super().__init__()  # ASTNode
 
     @classmethod
     def from_tokens(cls, tokens):
@@ -531,24 +531,25 @@ class FromSource(ASTNode):
 
 class Wildcard(ASTNode):
     def __init__(self):
-        super().__init__() #ASTNode
+        super().__init__()  # ASTNode
 
     @classmethod
     def from_tokens(cls, tokens):
         return cls()
 
+
 class Reference(ASTNode):
-    def __init__(self, id=None, is_value_reference=None, is_valid_reference=None):
+    def __init__(self, id=None, is_valid_reference=None, is_plain_reference=None):
         self.id = id
-        self.is_value_reference = is_value_reference
         self.is_valid_reference = is_valid_reference
-        super().__init__() #ASTNode
+        self.is_plain_reference = is_plain_reference
+        super().__init__()  # ASTNode
 
 
 class ColumnReference(Reference):
-    def __init__(self, id=None, table=None, is_value_reference=None, is_valid_reference=None):
+    def __init__(self, id=None, table=None, is_valid_reference=None, is_plain_reference=None):
         self.table = table
-        super().__init__(id=id, is_valid_reference=is_valid_reference, is_value_reference=is_value_reference) #ASTNode
+        super().__init__(id=id, is_valid_reference=is_valid_reference, is_plain_reference=is_plain_reference)  # ASTNode
 
     @classmethod
     def from_tokens(cls, tokens):
@@ -570,10 +571,11 @@ class ColumnReference(Reference):
 
 class IntermediaryReference(Reference): pass
 
+
 class Alias(ASTNode):
     def __init__(self, id=None):
         self.id = id
-        super().__init__() #ASTNode
+        super().__init__()  # ASTNode
 
     @classmethod
     def from_tokens(cls, tokens):
@@ -593,7 +595,7 @@ class TableReference(ASTNode):
     def __init__(self, id=None, database=None):
         self.id = id
         self.database = database
-        super().__init__() #ASTNode
+        super().__init__()  # ASTNode
 
     @classmethod
     def from_tokens(cls, tokens):
@@ -613,7 +615,7 @@ class TableReference(ASTNode):
 class DatabaseReference(ASTNode):
     def __init__(self, id=None):
         self.id = id
-        super().__init__() #ASTNode
+        super().__init__()  # ASTNode
 
     @classmethod
     def from_tokens(cls, tokens):
@@ -631,7 +633,7 @@ class Between(ASTNode):
         self.value = value
         self.start = start
         self.end = end
-        super().__init__() #ASTNode
+        super().__init__()  # ASTNode
 
     @classmethod
     def from_tokens(cls, tokens):
@@ -652,7 +654,7 @@ class Between(ASTNode):
 class Not(ASTNode):
     def __init__(self, expr=None):
         self.expr = expr
-        super().__init__() #ASTNode
+        super().__init__()  # ASTNode
 
     @classmethod
     def from_tokens(cls, tokens):
@@ -665,7 +667,7 @@ class Not(ASTNode):
 class Distinct(ASTNode):
     def __init__(self, value=None):
         self.value = value
-        super().__init__() #ASTNode
+        super().__init__()  # ASTNode
 
     @classmethod
     def from_tokens(cls, tokens):
@@ -679,7 +681,7 @@ class FunctionCall(ASTNode):
     def __init__(self, func=None, params=None):
         self.func = func
         self.params = params
-        super().__init__() #ASTNode
+        super().__init__()  # ASTNode
 
     @classmethod
     def from_tokens(cls, tokens):
@@ -702,7 +704,7 @@ class UnOp(ASTNode):
     def __init__(self, op=None, rhs=None):
         self.op = op
         self.rhs = rhs
-        super().__init__() #ASTNode
+        super().__init__()  # ASTNode
 
     @classmethod
     def from_tokens(cls, tokens):
@@ -723,7 +725,7 @@ class BinOp(ASTNode):
         self.op = op
         self.lhs = lhs
         self.rhs = rhs
-        super().__init__() #ASTNode
+        super().__init__()  # ASTNode
 
     @classmethod
     def from_tokens(cls, tokens):
@@ -749,7 +751,7 @@ class CompOp(ASTNode):
         self.op = op
         self.lhs = lhs
         self.rhs = rhs
-        super().__init__() #ASTNode
+        super().__init__()  # ASTNode
 
     @classmethod
     def from_tokens(cls, tokens):
@@ -769,7 +771,7 @@ class CompOp(ASTNode):
 class Value(ASTNode):
     def __init__(self, value=None):
         self.value = value
-        super().__init__() #ASTNode
+        super().__init__()  # ASTNode
 
     @classmethod
     def from_tokens(cls, tokens):
@@ -792,18 +794,20 @@ class BoolValue(Value):
 class TrueValue(BoolValue):
     def __bool__(self):
         return True
+
     __nonzero__ = __bool__
 
 
 class FalseValue(BoolValue):
     def __bool__(self):
         return False
+
     __nonzero__ = __bool__
 
 
 class StringValue(Value):
     def __init__(self, value=None):
-        super().__init__(str(value)) #Value
+        super().__init__(str(value))  # Value
 
     @classmethod
     def from_tokens(cls, tokens):
@@ -814,7 +818,7 @@ class StringValue(Value):
 class IntValue(Value):
     def __init__(self, value=None):
         if value is not None:
-            super().__init__(int(value)) #Value
+            super().__init__(int(value))  # Value
         else:
             super().__init__()
 

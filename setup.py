@@ -10,7 +10,7 @@ setup(
     long_description_content_type=str(u'text/markdown'),
     include_package_data=True,
     classifiers=["Development Status :: 3 - Alpha","Topic :: Software Development :: Libraries","Topic :: Software Development :: Libraries :: Python Modules","Programming Language :: SQL","Programming Language :: Python :: 2.7","Programming Language :: Python :: 3.6","License :: OSI Approved :: Mozilla Public License 2.0 (MPL 2.0)"],
-    install_requires=["mo-future>=2.44.19084","pyparsing"],
+    install_requires=["mo-future>=2.44.19084","pyparsing","typed_ast"],
     version=str(u'2.44.19084'),
     url=str(u'https://github.com/mozilla/moz-sql-parser'),
     zip_safe=True,

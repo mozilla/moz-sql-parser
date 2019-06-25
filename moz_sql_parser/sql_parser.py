@@ -299,7 +299,7 @@ selectCore = Group(
                 SELECT.suppress().setDebugActions(*debug) + delimitedList(selectColumn)("select").addParseAction(an.Select.from_tokens) +
                 Optional(
                     FROM.suppress().setDebugActions(*debug) + (delimitedList(Group(table_source)) + ZeroOrMore(join))("from").addParseAction(an.From.from_tokens) +
-                    Optional(WHERE.suppress().setDebugActions(*debug) + expr.setName("where"))("where").addParseAction(an.Where.from_tokens) +
+                    Optional((WHERE.suppress().setDebugActions(*debug) + expr.setName("where"))("where").addParseAction(an.Where.from_tokens)) +
                     Optional(GROUPBY.suppress().setDebugActions(*debug) + delimitedList(Group(selectColumn))("groupby").setName("groupby").addParseAction(an.GroupBy.from_tokens)) +
                     Optional(HAVING.suppress().setDebugActions(*debug) + expr("having").setName("having").addParseAction(an.Having.from_tokens)) +
                     Optional(LIMIT.suppress().setDebugActions(*debug) + expr("limit").addParseAction(an.Limit.from_tokens)) +
