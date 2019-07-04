@@ -25,25 +25,18 @@ def debug(*args):
     else:
         pass
 
-
-def render(item):
-    if isinstance(item, str):
-        return item.replace("\"", "\\\"")
-    elif isinstance(item, ASTNode):
-        return item
-    elif isinstance(item, ast.AST):
-        return dump(item)
-    else:
-        return item
-
-
 class ASTNode(ast.AST):
-    def __init__(self):
-        super().__init__()
+    def __init__(self, metadata = None):
+        super().__init__(metadata=metadata)
         self.set_fields()
+        self.metadata = metadata
 
     def set_fields(self):
-        self._fields = tuple(self.__dict__.keys())
+        keys = list(self.__dict__.keys())
+        if 'metadata' in keys:
+            keys.remove('metadata')
+
+        self._fields = tuple(keys)
 
     @classmethod
     def from_tokens(cls, tokens):
@@ -54,9 +47,19 @@ class ASTNode(ast.AST):
         return self.__class__.__name__ + '(' + (self.dict_as_parameters(self.__dict__) if self.__dict__ else '') + ')'
 
     def dict_as_parameters(self, dict):
+        def render(item):
+            if isinstance(item, str):
+                return item.replace("\"", "\\\"")
+            elif isinstance(item, ASTNode):
+                return item
+            elif isinstance(item, ast.AST):
+                return ast.dump(item)
+            else:
+                return item
+
         dict = {k: v for k, v in dict.items() if v is not None and k != '_fields'}
 
-        if len(dict) == 1:
+        if len(dict) == 1 and next(iter(dict)) != 'metadata':
             v = dict[next(iter(dict))]
             return "{1}{0}{1}".format(render(v), '"' if isinstance(v, str) else "")
         else:
@@ -143,9 +146,9 @@ class ASTNode(ast.AST):
 
 
 class Query(ASTNode):
-    def __init__(self, q=None):
+    def __init__(self, q=None, metadata=None):
         self.q = q
-        super().__init__()  # ASTNode
+        super().__init__(metadata=metadata)  # ASTNode
 
     @classmethod
     def from_tokens(cls, tokens):
@@ -154,13 +157,13 @@ class Query(ASTNode):
 
         q = tok
 
-        return cls(q)
+        return cls(q=q)
 
 
 class Select(ASTNode):
-    def __init__(self, columns=None):
+    def __init__(self, columns=None, metadata=None):
         self.columns = columns
-        super().__init__()  # ASTNode
+        super().__init__(metadata=metadata)  # ASTNode
 
     @classmethod
     def from_tokens(cls, tokens):
@@ -172,13 +175,13 @@ class Select(ASTNode):
         else:
             columns = [tok]
 
-        return cls(columns)
+        return cls(columns=columns)
 
 
 class From(ASTNode):
-    def __init__(self, sources=None):
+    def __init__(self, sources=None, metadata=None):
         self.sources = sources
-        super().__init__()  # ASTNode
+        super().__init__(metadata=metadata)  # ASTNode
 
     @classmethod
     def from_tokens(cls, tokens):
@@ -190,13 +193,13 @@ class From(ASTNode):
         else:
             sources = [tok]
 
-        return cls(sources)
+        return cls(sources=sources)
 
 
 class Where(ASTNode):
-    def __init__(self, condition=None):
+    def __init__(self, condition=None, metadata=None):
         self.condition = condition
-        super().__init__()  # ASTNode
+        super().__init__(metadata=metadata)  # ASTNode
 
     @classmethod
     def from_tokens(cls, tokens):
@@ -208,13 +211,13 @@ class Where(ASTNode):
         else:
             raise ValueError("Where is malformed.")
 
-        return cls(condition)
+        return cls(condition=condition)
 
 
 class GroupBy(ASTNode):
-    def __init__(self, groupings=None):
+    def __init__(self, groupings=None, metadata=None):
         self.groupings = groupings
-        super().__init__()  # ASTNode
+        super().__init__(metadata=metadata)  # ASTNode
 
     @classmethod
     def from_tokens(cls, tokens):
@@ -226,13 +229,13 @@ class GroupBy(ASTNode):
         else:
             groupings = [tok]
 
-        return cls(groupings)
+        return cls(groupings=groupings)
 
 
 class OrderBy(ASTNode):
-    def __init__(self, orders=None):
+    def __init__(self, orders=None, metadata=None):
         self.orders = orders
-        super().__init__()  # ASTNode
+        super().__init__(metadata=metadata)  # ASTNode
 
     @classmethod
     def from_tokens(cls, tokens):
@@ -243,14 +246,14 @@ class OrderBy(ASTNode):
         else:
             orders = [tok]
 
-        return cls(orders)
+        return cls(orders=orders)
 
 
 class OrderByColumn(ASTNode):
-    def __init__(self, ref=None, dir=None):
+    def __init__(self, ref=None, dir=None, metadata=None):
         self.ref = ref
         self.dir = dir
-        super().__init__()  # ASTNode
+        super().__init__(metadata=metadata)  # ASTNode
 
     @classmethod
     def from_tokens(cls, tokens):
@@ -268,7 +271,7 @@ class OrderByColumn(ASTNode):
         else:
             raise ValueError("OrderByColumn is malformed.")
 
-        return cls(ref, dir)
+        return cls(ref=ref, dir=dir)
 
 
 class OrderDirection(ASTNode): pass
@@ -281,9 +284,9 @@ class OrderDescending(OrderDirection): pass
 
 
 class Having(ASTNode):
-    def __init__(self, condition=None):
+    def __init__(self, condition=None, metadata=None):
         self.condition = condition
-        super().__init__()  # ASTNode
+        super().__init__(metadata=metadata)  # ASTNode
 
     @classmethod
     def from_tokens(cls, tokens):
@@ -295,13 +298,13 @@ class Having(ASTNode):
         else:
             raise ValueError("Having is malformed.")
 
-        return cls(condition)
+        return cls(condition=condition)
 
 
 class Limit(ASTNode):
-    def __init__(self, count=None):
+    def __init__(self, count=None, metadata=None):
         self.count = count
-        super().__init__()  # ASTNode
+        super().__init__(metadata=metadata)  # ASTNode
 
     @classmethod
     def from_tokens(cls, tokens):
@@ -313,13 +316,13 @@ class Limit(ASTNode):
         else:
             raise ValueError("Limit is malformed.")
 
-        return cls(count)
+        return cls(count=count)
 
 
 class Offset(ASTNode):
-    def __init__(self, count=None):
+    def __init__(self, count=None, metadata=None):
         self.count = count
-        super().__init__()  # ASTNode
+        super().__init__(metadata=metadata)  # ASTNode
 
     @classmethod
     def from_tokens(cls, tokens):
@@ -330,14 +333,14 @@ class Offset(ASTNode):
         else:
             raise ValueError("Offset is malformed.")
 
-        return cls(count)
+        return cls(count=count)
 
 
 class Union(ASTNode):
-    def __init__(self, subqueries=None, types=None):
+    def __init__(self, subqueries=None, types=None, metadata=None):
         self.subqueries = subqueries
         self.types = types  # UNION DISTINCT override any UNION ALL to the left of them.
-        super().__init__()  # ASTNode
+        super().__init__(metadata=metadata)  # ASTNode
 
     @classmethod
     def from_tokens(cls, tokens):
@@ -350,7 +353,7 @@ class Union(ASTNode):
         else:
             raise ValueError("Union clause has missing items.")
 
-        return cls(types, subqueries)
+        return cls(types=types, subqueries=subqueries)
 
 
 class UnionType(ASTNode): pass
@@ -363,12 +366,12 @@ class UnionDistinct(UnionType): pass
 
 
 class Join(ASTNode):
-    def __init__(self, type=None, source=None, constrainttype=None, constraints=None):
+    def __init__(self, type=None, source=None, constrainttype=None, constraints=None, metadata=None):
         self.type = type
         self.source = source
         self.constrainttype = constrainttype
         self.constraints = constraints
-        super().__init__()  # ASTNode
+        super().__init__(metadata=metadata)  # ASTNode
 
     @classmethod
     def from_tokens(cls, tokens):
@@ -385,7 +388,7 @@ class Join(ASTNode):
         else:
             raise ValueError("Join clause has missing items.")
 
-        return cls(type, source, constrainttype, constraints)
+        return cls(type=type, source=source, constrainttype=constrainttype, constraints=constraints)
 
 
 class JoinType(ASTNode): pass
@@ -428,10 +431,10 @@ class JoinConstraintTypeUsing(JoinConstraintType): pass
 
 
 class Case(ASTNode):
-    def __init__(self, when=None, elsevalue=None):
+    def __init__(self, when=None, elsevalue=None, metadata=None):
         self.when = when
         self.elsevalue = elsevalue
-        super().__init__()  # ASTNode
+        super().__init__(metadata=metadata)  # ASTNode
 
     @classmethod
     def from_tokens(cls, tokens):
@@ -453,14 +456,14 @@ class Case(ASTNode):
         else:
             raise ValueError("Case clause has missing items.")
 
-        return cls(when, elsevalue)
+        return cls(when=when, elsevalue=elsevalue)
 
 
 class When(ASTNode):
-    def __init__(self, condition=None, value=None):
+    def __init__(self, condition=None, value=None, metadata=None):
         self.condition = condition
         self.value = value
-        super().__init__()  # ASTNode
+        super().__init__(metadata=metadata)  # ASTNode
 
     @classmethod
     def from_tokens(cls, tokens):
@@ -476,14 +479,14 @@ class When(ASTNode):
         else:
             raise ValueError("When clause has missing items.")
 
-        return cls(condition, value)
+        return cls(condition=condition, value=value)
 
 
 class SelectColumn(ASTNode):
-    def __init__(self, value=None, alias=None):
+    def __init__(self, value=None, alias=None, metadata=None):
         self.value = value
         self.alias = alias
-        super().__init__()  # ASTNode
+        super().__init__(metadata=metadata)  # ASTNode
 
     @classmethod
     def from_tokens(cls, tokens):
@@ -501,14 +504,14 @@ class SelectColumn(ASTNode):
         else:
             raise ValueError("Select Column was malformed")
 
-        return cls(value, alias)
+        return cls(value=value, alias=alias)
 
 
 class FromSource(ASTNode):
-    def __init__(self, value=None, alias=None):
+    def __init__(self, value=None, alias=None, metadata=None):
         self.value = value
         self.alias = alias
-        super().__init__()  # ASTNode
+        super().__init__(metadata=metadata)  # ASTNode
 
     @classmethod
     def from_tokens(cls, tokens):
@@ -526,12 +529,12 @@ class FromSource(ASTNode):
             value = tok[:-2]
         else:
             raise ValueError("From Source was malformed")
-        return cls(value, alias)
+        return cls(value=value, alias=alias)
 
 
 class Wildcard(ASTNode):
-    def __init__(self):
-        super().__init__()  # ASTNode
+    def __init__(self, metadata=None):
+        super().__init__(metadata=metadata)  # ASTNode
 
     @classmethod
     def from_tokens(cls, tokens):
@@ -539,17 +542,15 @@ class Wildcard(ASTNode):
 
 
 class Reference(ASTNode):
-    def __init__(self, id=None, is_valid_reference=None, is_plain_reference=None):
+    def __init__(self, id=None, metadata=None):
         self.id = id
-        self.is_valid_reference = is_valid_reference
-        self.is_plain_reference = is_plain_reference
-        super().__init__()  # ASTNode
+        super().__init__(metadata=metadata)  # ASTNode
 
 
 class ColumnReference(Reference):
-    def __init__(self, id=None, table=None, is_valid_reference=None, is_plain_reference=None):
+    def __init__(self, id=None, table=None, metadata=None):
         self.table = table
-        super().__init__(id=id, is_valid_reference=is_valid_reference, is_plain_reference=is_plain_reference)  # ASTNode
+        super().__init__(metadata=metadata, id=id)  # ASTNode
 
     @classmethod
     def from_tokens(cls, tokens):
@@ -566,16 +567,16 @@ class ColumnReference(Reference):
             id = ASTNode.unquote(ids[-1], tokens)
             table = TableReference.from_tokens(ids[:-1])
 
-        return cls(id, table)
+        return cls(id=id, table=table)
 
 
 class IntermediaryReference(Reference): pass
 
 
 class Alias(ASTNode):
-    def __init__(self, id=None):
+    def __init__(self, id=None, metadata=None):
         self.id = id
-        super().__init__()  # ASTNode
+        super().__init__(metadata=metadata)  # ASTNode
 
     @classmethod
     def from_tokens(cls, tokens):
@@ -588,14 +589,14 @@ class Alias(ASTNode):
         else:
             raise ValueError("Alias is malformed.")
 
-        return cls(id)
+        return cls(id=id)
 
 
 class TableReference(ASTNode):
-    def __init__(self, id=None, database=None):
+    def __init__(self, id=None, database=None, metadata=None):
         self.id = id
         self.database = database
-        super().__init__()  # ASTNode
+        super().__init__(metadata=metadata)  # ASTNode
 
     @classmethod
     def from_tokens(cls, tokens):
@@ -609,13 +610,13 @@ class TableReference(ASTNode):
             id = ASTNode.unquote(ids[-1], tokens)
             database = DatabaseReference.from_tokens(ids[:-1])
 
-        return cls(id, database)
+        return cls(id=id, database=database)
 
 
 class DatabaseReference(ASTNode):
-    def __init__(self, id=None):
+    def __init__(self, id=None, metadata=None):
         self.id = id
-        super().__init__()  # ASTNode
+        super().__init__(metadata=metadata)  # ASTNode
 
     @classmethod
     def from_tokens(cls, tokens):
@@ -625,15 +626,15 @@ class DatabaseReference(ASTNode):
         if isinstance(ids, str):
             id = ASTNode.unquote(ids, tokens)
 
-        return cls(id)
+        return cls(id=id)
 
 
 class Between(ASTNode):
-    def __init__(self, value=None, start=None, end=None):
+    def __init__(self, value=None, start=None, end=None, metadata=None):
         self.value = value
         self.start = start
         self.end = end
-        super().__init__()  # ASTNode
+        super().__init__(metadata=metadata)  # ASTNode
 
     @classmethod
     def from_tokens(cls, tokens):
@@ -648,40 +649,40 @@ class Between(ASTNode):
         else:
             raise ValueError("Between clause did not contain between or and keyword")
 
-        return cls(value, start, end)
+        return cls(value=value, start=start, end=end)
 
 
 class Not(ASTNode):
-    def __init__(self, expr=None):
+    def __init__(self, expr=None, metadata=None):
         self.expr = expr
-        super().__init__()  # ASTNode
+        super().__init__(metadata=metadata)  # ASTNode
 
     @classmethod
     def from_tokens(cls, tokens):
         debug("Not", tokens)
         rhs = tokens[1][0]
 
-        return cls(rhs)
+        return cls(rhs=rhs)
 
 
 class Distinct(ASTNode):
-    def __init__(self, value=None):
+    def __init__(self, value=None, metadata=None):
         self.value = value
-        super().__init__()  # ASTNode
+        super().__init__(metadata=metadata)  # ASTNode
 
     @classmethod
     def from_tokens(cls, tokens):
         tok = ASTNode.scrub(tokens)
         debug("Distict", tok)
 
-        return cls(tok)
+        return cls(tok=tok)
 
 
 class FunctionCall(ASTNode):
-    def __init__(self, func=None, params=None):
+    def __init__(self, func=None, params=None, metadata=None):
         self.func = func
         self.params = params
-        super().__init__()  # ASTNode
+        super().__init__(metadata=metadata)  # ASTNode
 
     @classmethod
     def from_tokens(cls, tokens):
@@ -697,14 +698,14 @@ class FunctionCall(ASTNode):
         else:
             params = None
 
-        return cls(func, params)
+        return cls(func=func, params=params)
 
 
 class UnOp(ASTNode):
-    def __init__(self, op=None, rhs=None):
+    def __init__(self, op=None, rhs=None, metadata=None):
         self.op = op
         self.rhs = rhs
-        super().__init__()  # ASTNode
+        super().__init__(metadata=metadata)  # ASTNode
 
     @classmethod
     def from_tokens(cls, tokens):
@@ -717,15 +718,15 @@ class UnOp(ASTNode):
         else:
             raise ValueError("UnOp should have and can only have one parameter.")
 
-        return cls(op, rhs)
+        return cls(op=op, rhs=rhs)
 
 
 class BinOp(ASTNode):
-    def __init__(self, op=None, lhs=None, rhs=None):
+    def __init__(self, op=None, lhs=None, rhs=None, metadata=None):
         self.op = op
         self.lhs = lhs
         self.rhs = rhs
-        super().__init__()  # ASTNode
+        super().__init__(metadata=metadata)  # ASTNode
 
     @classmethod
     def from_tokens(cls, tokens):
@@ -743,15 +744,15 @@ class BinOp(ASTNode):
         else:
             raise ValueError("BinOp can only have two parameters.")
 
-        return cls(op, lhs, rhs)
+        return cls(op=op, lhs=lhs, rhs=rhs)
 
 
 class CompOp(ASTNode):
-    def __init__(self, op=None, lhs=None, rhs=None):
+    def __init__(self, op=None, lhs=None, rhs=None, metadata=None):
         self.op = op
         self.lhs = lhs
         self.rhs = rhs
-        super().__init__()  # ASTNode
+        super().__init__(metadata=metadata)  # ASTNode
 
     @classmethod
     def from_tokens(cls, tokens):
@@ -765,18 +766,18 @@ class CompOp(ASTNode):
         else:
             raise ValueError("CompOp can only have two parameters.")
 
-        return cls(op, lhs, rhs)
+        return cls(op=op, lhs=lhs, rhs=rhs)
 
 
 class Value(ASTNode):
-    def __init__(self, value=None):
+    def __init__(self, value=None, metadata=None):
         self.value = value
-        super().__init__()  # ASTNode
+        super().__init__(metadata=metadata)  # ASTNode
 
     @classmethod
     def from_tokens(cls, tokens):
         value = ASTNode.scrub(tokens)
-        return cls(value)
+        return cls(value=value)
 
 
 class NullValue(Value):
@@ -806,39 +807,39 @@ class FalseValue(BoolValue):
 
 
 class StringValue(Value):
-    def __init__(self, value=None):
-        super().__init__(str(value))  # Value
+    def __init__(self, value=None, metadata=None):
+        super().__init__(metadata=metadata, value=str(value))  # Value
 
     @classmethod
     def from_tokens(cls, tokens):
         value = ASTNode.unquote(ASTNode.scrub(tokens), tokens)
-        return cls(value)
+        return cls(value=value)
 
 
 class IntValue(Value):
-    def __init__(self, value=None):
+    def __init__(self, value=None, metadata=None):
         if value is not None:
-            super().__init__(int(value))  # Value
+            super().__init__(metadata=metadata, value=int(value))  # Value
         else:
-            super().__init__()
+            super().__init__(metadata=metadata)
 
     @classmethod
     def from_tokens(cls, tokens):
         value = ASTNode.unquote(ASTNode.scrub(tokens))
-        return cls(value)
+        return cls(value=value)
 
 
 class DoubleValue(Value):
-    def __init__(self, value=None):
+    def __init__(self, value=None, metadata=None):
         if value is not None:
-            super().__init__(float(value))  # Value
+            super().__init__(metadata=metadata, value=float(value))  # Value
         else:
-            super().__init__()
+            super().__init__(metadata=metadata)
 
     @classmethod
     def from_tokens(cls, tokens):
         value = ASTNode.unquote(ASTNode.scrub(tokens))
-        return cls(value)
+        return cls(value=value)
 
 
 class CompareOperator(ASTNode): pass
