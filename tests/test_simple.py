@@ -342,7 +342,6 @@ class TestSimple(TestCase):
         }
         self.assertEqual(result, expected)
 
-    @skip("hits stackdepth limit while parsing; too many KNOWN_OPS")
     def test_not_equal(self):
         #               0         1         2         3         4         5         6        7          8
         #               012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789
@@ -353,7 +352,7 @@ class TestSimple(TestCase):
             'from': "task",
             "where": {"and": [
                 {"exists": "build.product"},
-                {"neq": {"build.product": "firefox"}}
+                {"neq": ["build.product", {"literal": "firefox"}]}
             ]}
         }
         self.assertEqual(result, expected)
