@@ -13,6 +13,7 @@ from collections import Mapping
 import json
 from threading import Lock
 
+from mo_dots import is_data
 from mo_future import binary_type, items, number_types, text_type
 from pyparsing import ParseException, ParseResults
 
@@ -81,8 +82,10 @@ def _scrub(result):
                 if rr != None
             ]
             # IF ALL MEMBERS OF A LIST ARE LITERALS, THEN MAKE THE LIST LITERAL
-            if all(isinstance(r, Mapping) and "literal" in r.keys() for r in output):
-                output = {"literal": [r['literal'] for r in output]}
+            if all(isinstance(r, number_types) for r in output):
+                pass
+            elif all(isinstance(r, number_types) or (is_data(r) and "literal" in r.keys()) for r in output):
+                output = {"literal": [r['literal'] if is_data(r) else r for r in output]}
             return output
     elif not items(result):
         return {}
