@@ -523,7 +523,7 @@ class TestSimple(TestCase):
         }
         self.assertEqual(result, expected)
 
-    def test_issue_68(self):
+    def test_issue_68a(self):
         sql = """
         SELECT * 
         FROM aka_name AS an, cast_info AS ci, info_type AS it, link_type AS lt, movie_link AS ml, name AS n, person_info AS pi, title AS t 
@@ -590,6 +590,25 @@ class TestSimple(TestCase):
                 {'eq': ['pi.person_id', 'ci.person_id']},
                 {'eq': ['an.person_id', 'ci.person_id']},
                 {'eq': ['ci.movie_id', 'ml.linked_movie_id']}
+            ]}
+        }
+        self.assertEqual(result, expected)
+
+    def test_issue_68b(self):
+        #      0         1         2         3         4         5         6         7         8         9
+        #      012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789
+        sql = "SELECT COUNT(*) AS CNT FROM test.tb WHERE (id IN (unhex('1'),unhex('2'))) AND  status=1;"
+        result = parse(sql)
+        expected = {
+            "select": {"value": {"count": "*"}, "name": "CNT"},
+            "from": "test.tb",
+            "where": {"and": [
+                {"in": ["id", [
+                    {"unhex": {"literal": "1"}},
+                    {"unhex": {"literal": "2"}}
+                ]]},
+                {"eq": ["status", 1]}
+
             ]}
         }
         self.assertEqual(result, expected)
