@@ -522,3 +522,74 @@ class TestSimple(TestCase):
             ]}
         }
         self.assertEqual(result, expected)
+
+    def test_issue_68(self):
+        sql = """
+        SELECT * 
+        FROM aka_name AS an, cast_info AS ci, info_type AS it, link_type AS lt, movie_link AS ml, name AS n, person_info AS pi, title AS t 
+        WHERE
+            an.name  is not NULL
+            and (an.name LIKE '%a%' or an.name LIKE 'A%')
+            AND it.info ='mini biography'
+            AND lt.link  in ('references', 'referenced in', 'features', 'featured in')
+            AND n.name_pcode_cf BETWEEN 'A' AND 'F'
+            AND (n.gender = 'm' OR (n.gender = 'f' AND n.name LIKE 'A%'))
+            AND pi.note  is not NULL
+            AND t.production_year BETWEEN 1980 AND 2010
+            AND n.id = an.person_id 
+            AND n.id = pi.person_id 
+            AND ci.person_id = n.id 
+            AND t.id = ci.movie_id 
+            AND ml.linked_movie_id = t.id 
+            AND lt.id = ml.link_type_id 
+            AND it.id = pi.info_type_id 
+            AND pi.person_id = an.person_id 
+            AND pi.person_id = ci.person_id 
+            AND an.person_id = ci.person_id 
+            AND ci.movie_id = ml.linked_movie_id
+        """
+        result = parse(sql)
+        expected = {
+            'from': [
+                {'name': 'an', 'value': 'aka_name'},
+                {'name': 'ci', 'value': 'cast_info'},
+                {'name': 'it', 'value': 'info_type'},
+                {'name': 'lt', 'value': 'link_type'},
+                {'name': 'ml', 'value': 'movie_link'},
+                {'name': 'n', 'value': 'name'},
+                {'name': 'pi', 'value': 'person_info'},
+                {'name': 't', 'value': 'title'}
+            ],
+            'select': '*',
+            'where': {'and': [
+                {'exists': 'an.name'},
+                {'or': [{'like': ['an.name', {'literal': '%a%'}]},
+                        {'like': ['an.name', {'literal': 'A%'}]}]},
+                {'eq': ['it.info', {'literal': 'mini biography'}]},
+                {'in': ['lt.link',
+                        {'literal': ['references',
+                                     'referenced in',
+                                     'features',
+                                     'featured in']}]},
+                {'between': ['n.name_pcode_cf',
+                             {'literal': 'A'},
+                             {'literal': 'F'}]},
+                {'or': [{'eq': ['n.gender', {'literal': 'm'}]},
+                        {'and': [{'eq': ['n.gender', {'literal': 'f'}]},
+                                 {'like': ['n.name', {'literal': 'A%'}]}]}]},
+                {'exists': 'pi.note'},
+                {'between': ['t.production_year', 1980, 2010]},
+                {'eq': ['n.id', 'an.person_id']},
+                {'eq': ['n.id', 'pi.person_id']},
+                {'eq': ['ci.person_id', 'n.id']},
+                {'eq': ['t.id', 'ci.movie_id']},
+                {'eq': ['ml.linked_movie_id', 't.id']},
+                {'eq': ['lt.id', 'ml.link_type_id']},
+                {'eq': ['it.id', 'pi.info_type_id']},
+                {'eq': ['pi.person_id', 'an.person_id']},
+                {'eq': ['pi.person_id', 'ci.person_id']},
+                {'eq': ['an.person_id', 'ci.person_id']},
+                {'eq': ['ci.movie_id', 'ml.linked_movie_id']}
+            ]}
+        }
+        self.assertEqual(result, expected)
