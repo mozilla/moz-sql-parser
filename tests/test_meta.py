@@ -14,6 +14,7 @@ import os
 import sys
 from unittest import TestCase
 from moz_sql_parser import sql_parser
+from moz_sql_parser.debugs import DEBUG
 
 _ensure_imported = sql_parser
 
@@ -29,5 +30,5 @@ class TestSimple(TestCase):
             self.assertEqual(limit, 1500)
 
     def test_debug_is_off(self):
-        self.assertFalse(sql_parser.DEBUG, "Turn off debugging")
+        self.assertFalse(DEBUG, "Turn off debugging")
 
