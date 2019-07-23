@@ -499,3 +499,27 @@ class TestSimple(TestCase):
             'from': "mobile"
         }
         self.assertEqual(result, expected)
+
+    def test_issue_90(self):
+        result = parse("""SELECT MIN(cn.name) AS from_company
+        FROM company_name AS cn, company_type AS ct, keyword AS k, movie_link AS ml, title AS t
+        WHERE cn.country_code !='[pl]' AND ct.kind IS NOT NULL AND t.production_year > 1950 AND ml.movie_id = t.id
+        """)
+
+        expected = {
+            'select': {'value': {"min": "cn.name"}, "name": "from_company"},
+            'from': [
+                {"value": "company_name", "name": "cn"},
+                {"value": "company_type", "name": "ct"},
+                {"value": "keyword", "name": "k"},
+                {"value": "movie_link", "name": "ml"},
+                {"value": "title", "name": "t"}
+            ],
+            "where": {"and": [
+                {"neq": ["cn.country_code", {"literal": "[pl]"}]},
+                {"exists": "ct.kind"},
+                {"gt": ["t.production_year", 1950]},
+                {"eq": ["ml.movie_id", "t.id"]}
+            ]}
+        }
+        self.assertEqual(result, expected)
