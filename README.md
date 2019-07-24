@@ -26,7 +26,7 @@ The primary objective of this library is to convert some subset of [SQL-92](http
 
 ## Project Status
 
-There are [over 160 tests, all passing](https://github.com/mozilla/moz-sql-parser/tree/dev/tests). This parser is good enough for basic usage, including inner queries.
+There are [over 400 tests](https://github.com/mozilla/moz-sql-parser/tree/dev/tests). This parser is good enough for basic usage, including inner queries.
 
 You can see the parser in action at [https://sql.telemetry.mozilla.org/](https://sql.telemetry.mozilla.org/) while using the ActiveData datasource
 
@@ -39,12 +39,12 @@ You can see the parser in action at [https://sql.telemetry.mozilla.org/](https:/
     >>> from moz_sql_parser import parse
     >>> import json
     >>> json.dumps(parse("select count(1) from jobs"))
-    '{"from": "jobs", "select": {"value": {"count": {"literal": 1}}}}'
+    '{"select": {"value": {"count": 1}}, "from": "jobs"}'
     
 Each SQL query is parsed to an object: Each clause is assigned to an object property of the same name. 
 
     >>> json.dumps(parse("select a as hello, b as world from jobs"))
-    '{"from": "jobs", "select": [{"name": "hello", "value": "a"}, {"name": "world", "value": "b"}]}'
+    '{"select": [{"value": "a", "name": "hello"}, {"value": "b", "name": "world"}], "from": "jobs"}'
 
 The `SELECT` clause is an array of objects containing `name` and `value` properties. 
 
@@ -59,10 +59,10 @@ SQL queries are translated to JSON objects: Each clause is assigned to an object
     
     # SELECT * FROM dual WHERE a>b ORDER BY a+b
     {
-        "select": "*",
-        "from": "dual"
-        "where": {"gt": ["a","b"]},
-        "orderby": {"add": ["a", "b"]}
+        "select": "*", 
+        "from": "dual", 
+        "where": {"gt": ["a", "b"]}, 
+        "orderby": {"value": {"add": ["a", "b"]}}
     }
         
 Expressions are also objects, but with only one property: The name of the operation, and the value holding (an array of) parameters for that operation. 

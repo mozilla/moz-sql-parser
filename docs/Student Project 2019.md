@@ -33,11 +33,13 @@ I *think* this is the most pragmatic solution, but it may just defer the inevita
 
 ### Backtrack parsers have inherent O(2^n) issues
 
+**This might be invalid. The `infixNotation()` already prevents backtracking at the expense of consuming stackspace, maybe** 
+
 Fundamentally, the problem is caused by backtracking parsers, which run the risk of O(2^n) parsing times.  `infixNotation()` generates a number of left-recursion parsing rules, which cause the O(2^n) parsing times. We could attempt to solve this: The known solution is to [remove the left recursion](https://en.wikipedia.org/wiki/Left_recursion#Removing_left_recursion). This will result in a significantly faster parser with much less stack usage.
 
 But, this solution is complicated. Removing left recursion changes the parser significantly; which results in a different parse tree. It is not clear how easy it is to implement "suitable bookkeeping" (see wikipedia link) to fix that problem. This is made more complicated by the pyparsing code, which may have design that directly conflicts with this strategy: It may be easier to write a new parser generator.
 
-Going with this solution requires a student with exceptional skills. 
+Going with this solution requires a student with exceptional skills.
 
 
 ## GSOC 
@@ -73,7 +75,35 @@ The pyparsing library could benefit from optimizations.  This includes cleaning 
 I will be adding questions here:
 
 
-February 14th 2019
+**April 3rd, 2019**
+
+**How can I make the parsing more efficient?**
+
+Look at `infixNotation()`, notice how it handles a single operator, we will focus on just `opAssoc.LEFT`, and `arity==2` because the rest have a similar problem:
+
+https://github.com/pyparsing/pyparsing/blob/0d88a303a7f7e574bfc0c06ad6f84ca8c9d4d248/pyparsing.py#L5661
+
+    matchExpr = _FB(lastExpr + opExpr + lastExpr) + Group( lastExpr + OneOrMore( opExpr + lastExpr ) )
+
+I am not sure what the first term `_FB(lastExpr + opExpr + lastExpr) ` is doing, I am assuming it optimizes. the second term does the parsing. Here, I have simplified it:
+
+    matchExpr = Group( lastExpr + OneOrMore( opExpr + lastExpr ) )
+
+Notice that the `lastExpr` is from the last iteration of the loop: 
+
+    thisExpr <<= ( matchExpr.setName(termName) | lastExpr )
+    lastExpr = thisExpr
+
+which means `lastExpr` is recursive, and as deep as there are operators (moz-sql-parser has ?19? operators)  Let me simplify the expression more, and put it in terms of `N` (`N` is the the number of operators available in SQL expressions).
+
+    lastExpr[N] = lastExpr[N-1] + OneOrMore( opExpr + lastExpr[N-1] )
+
+For any operator, this parser will explore the possible 2^19 branches**. If you also consider that each step consumes some amount of stack space to parse the base expressions, then you can imagine why the parser runs out of stack space easily.
+
+** Until now, I had thought the parser tried all 2^19 branches, but that may not be the case; The parser is depth-first, so logarithmic with respect to the search space. Therefore, the runtime may be a respectable `O(N*E)`  where `N` is the number of possible operators, and `E` is the number of observed operators. The main problem is still the heavy use of stack space to parse the possible expressions.
+
+
+**February 14th, 2019**
 
 
 **Any tasks you want me to complete?**

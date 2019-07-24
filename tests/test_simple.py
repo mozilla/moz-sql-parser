@@ -342,7 +342,6 @@ class TestSimple(TestCase):
         }
         self.assertEqual(result, expected)
 
-    @skip("hits stackdepth limit while parsing; too many KNOWN_OPS")
     def test_not_equal(self):
         #               0         1         2         3         4         5         6        7          8
         #               012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789
@@ -353,7 +352,7 @@ class TestSimple(TestCase):
             'from': "task",
             "where": {"and": [
                 {"exists": "build.product"},
-                {"neq": {"build.product": "firefox"}}
+                {"neq": ["build.product", {"literal": "firefox"}]}
             ]}
         }
         self.assertEqual(result, expected)
@@ -492,11 +491,124 @@ class TestSimple(TestCase):
         }
         self.assertEqual(result, expected)
 
-    @skip("crashes python")
     def test_issue68(self):
         result = parse("select deflate(sum(int(mobile_price.price))) from mobile")
         expected = {
             'select': {'value': {"deflate": {"sum": {"int": "mobile_price.price"}}}},
             'from': "mobile"
+        }
+        self.assertEqual(result, expected)
+
+    def test_issue_90(self):
+        result = parse("""SELECT MIN(cn.name) AS from_company
+        FROM company_name AS cn, company_type AS ct, keyword AS k, movie_link AS ml, title AS t
+        WHERE cn.country_code !='[pl]' AND ct.kind IS NOT NULL AND t.production_year > 1950 AND ml.movie_id = t.id
+        """)
+
+        expected = {
+            'select': {'value': {"min": "cn.name"}, "name": "from_company"},
+            'from': [
+                {"value": "company_name", "name": "cn"},
+                {"value": "company_type", "name": "ct"},
+                {"value": "keyword", "name": "k"},
+                {"value": "movie_link", "name": "ml"},
+                {"value": "title", "name": "t"}
+            ],
+            "where": {"and": [
+                {"neq": ["cn.country_code", {"literal": "[pl]"}]},
+                {"exists": "ct.kind"},
+                {"gt": ["t.production_year", 1950]},
+                {"eq": ["ml.movie_id", "t.id"]}
+            ]}
+        }
+        self.assertEqual(result, expected)
+
+    def test_issue_68a(self):
+        sql = """
+        SELECT * 
+        FROM aka_name AS an, cast_info AS ci, info_type AS it, link_type AS lt, movie_link AS ml, name AS n, person_info AS pi, title AS t 
+        WHERE
+            an.name  is not NULL
+            and (an.name LIKE '%a%' or an.name LIKE 'A%')
+            AND it.info ='mini biography'
+            AND lt.link  in ('references', 'referenced in', 'features', 'featured in')
+            AND n.name_pcode_cf BETWEEN 'A' AND 'F'
+            AND (n.gender = 'm' OR (n.gender = 'f' AND n.name LIKE 'A%'))
+            AND pi.note  is not NULL
+            AND t.production_year BETWEEN 1980 AND 2010
+            AND n.id = an.person_id 
+            AND n.id = pi.person_id 
+            AND ci.person_id = n.id 
+            AND t.id = ci.movie_id 
+            AND ml.linked_movie_id = t.id 
+            AND lt.id = ml.link_type_id 
+            AND it.id = pi.info_type_id 
+            AND pi.person_id = an.person_id 
+            AND pi.person_id = ci.person_id 
+            AND an.person_id = ci.person_id 
+            AND ci.movie_id = ml.linked_movie_id
+        """
+        result = parse(sql)
+        expected = {
+            'from': [
+                {'name': 'an', 'value': 'aka_name'},
+                {'name': 'ci', 'value': 'cast_info'},
+                {'name': 'it', 'value': 'info_type'},
+                {'name': 'lt', 'value': 'link_type'},
+                {'name': 'ml', 'value': 'movie_link'},
+                {'name': 'n', 'value': 'name'},
+                {'name': 'pi', 'value': 'person_info'},
+                {'name': 't', 'value': 'title'}
+            ],
+            'select': '*',
+            'where': {'and': [
+                {'exists': 'an.name'},
+                {'or': [{'like': ['an.name', {'literal': '%a%'}]},
+                        {'like': ['an.name', {'literal': 'A%'}]}]},
+                {'eq': ['it.info', {'literal': 'mini biography'}]},
+                {'in': ['lt.link',
+                        {'literal': ['references',
+                                     'referenced in',
+                                     'features',
+                                     'featured in']}]},
+                {'between': ['n.name_pcode_cf',
+                             {'literal': 'A'},
+                             {'literal': 'F'}]},
+                {'or': [{'eq': ['n.gender', {'literal': 'm'}]},
+                        {'and': [{'eq': ['n.gender', {'literal': 'f'}]},
+                                 {'like': ['n.name', {'literal': 'A%'}]}]}]},
+                {'exists': 'pi.note'},
+                {'between': ['t.production_year', 1980, 2010]},
+                {'eq': ['n.id', 'an.person_id']},
+                {'eq': ['n.id', 'pi.person_id']},
+                {'eq': ['ci.person_id', 'n.id']},
+                {'eq': ['t.id', 'ci.movie_id']},
+                {'eq': ['ml.linked_movie_id', 't.id']},
+                {'eq': ['lt.id', 'ml.link_type_id']},
+                {'eq': ['it.id', 'pi.info_type_id']},
+                {'eq': ['pi.person_id', 'an.person_id']},
+                {'eq': ['pi.person_id', 'ci.person_id']},
+                {'eq': ['an.person_id', 'ci.person_id']},
+                {'eq': ['ci.movie_id', 'ml.linked_movie_id']}
+            ]}
+        }
+        self.assertEqual(result, expected)
+
+    def test_issue_68b(self):
+        #      0         1         2         3         4         5         6         7         8         9
+        #      012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789
+        sql = "SELECT COUNT(*) AS CNT FROM test.tb WHERE (id IN (unhex('1'),unhex('2'))) AND  status=1;"
+        result = parse(sql)
+        expected = {
+            "select": {"value": {"count": "*"}, "name": "CNT"},
+            "from": "test.tb",
+            "where": {"and": [
+                {"in": ["id", [
+                    {"unhex": {"literal": "1"}},
+                    {"unhex": {"literal": "2"}}
+                ]]},
+                {"eq": ["status", 1]}
+
+            ]}
         }
         self.assertEqual(result, expected)

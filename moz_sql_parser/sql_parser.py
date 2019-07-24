@@ -7,95 +7,25 @@
 # Author: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import unicode_literals
+from __future__ import absolute_import, division, unicode_literals
 
 import ast
 import sys
 
-from pyparsing import Word, delimitedList, Optional, Combine, Group, alphas, alphanums, Forward, restOfLine, Keyword, Literal, ParserElement, infixNotation, opAssoc, Regex, MatchFirst, ZeroOrMore
+from pyparsing import Combine, Forward, Group, Keyword, Literal, Optional, ParserElement, Regex, Word, ZeroOrMore, alphanums, alphas, delimitedList, infixNotation, opAssoc, restOfLine
+
+from moz_sql_parser.debugs import debug
+from moz_sql_parser.keywords import AND, AS, ASC, BETWEEN, CASE, COLLATE_NOCASE, CROSS_JOIN, DESC, ELSE, END, FROM, FULL_JOIN, FULL_OUTER_JOIN, GROUP_BY, HAVING, IN, INNER_JOIN, IS, IS_NOT, JOIN, LEFT_JOIN, LEFT_OUTER_JOIN, LIKE, LIMIT, NOT_BETWEEN, NOT_IN, NOT_LIKE, OFFSET, ON, OR, ORDER_BY, RESERVED, RIGHT_JOIN, RIGHT_OUTER_JOIN, SELECT, THEN, UNION, UNION_ALL, USING, WHEN, WHERE
 
 ParserElement.enablePackrat()
 
-# THE PARSING DEPTH IS NASTY
+# PYPARSING USES A LOT OF STACK SPACE
 sys.setrecursionlimit(1500)
 
 
-DEBUG = False
-END = None
-
-all_exceptions = {}
-def record_exception(instring, loc, expr, exc):
-    # if DEBUG:
-    #     print ("Exception raised:" + _ustr(exc))
-    es = all_exceptions.setdefault(loc, [])
-    es.append(exc)
-
-
-def nothing(*args):
-    pass
-
-if DEBUG:
-    debug = (None, None, None)
-else:
-    debug = (nothing, nothing, record_exception)
-
-join_keywords = {
-    "join",
-    "full join",
-    "cross join",
-    "inner join",
-    "left join",
-    "right join",
-    "full outer join",
-    "right outer join",
-    "left outer join",
-}
-keywords = {
-    "and",
-    "as",
-    "asc",
-    "between",
-    "case",
-    "collate nocase",
-    "desc",
-    "else",
-    "end",
-    "from",
-    "group by",
-    "having",
-    "in",
-    "not in",
-    "is",
-    "limit",
-    "offset",
-    "like",
-    "not between",
-    "not like",
-    "on",
-    "or",
-    "order by",
-    "select",
-    "then",
-    "union",
-    "union all",
-    "using",
-    "when",
-    "where",
-    "with"
-} | join_keywords
-locs = locals()
-reserved = []
-for k in keywords:
-    name = k.upper().replace(" ", "")
-    locs[name] = value = Keyword(k, caseless=True).setName(k.lower()).setDebugActions(*debug)
-    reserved.append(value)
-RESERVED = MatchFirst(reserved)
-
 KNOWN_OPS = [
     (BETWEEN, AND),
-    (NOTBETWEEN, AND),
+    (NOT_BETWEEN, AND),
     Literal("||").setName("concat").setDebugActions(*debug),
     Literal("*").setName("mul").setDebugActions(*debug),
     Literal("/").setName("div").setDebugActions(*debug),
@@ -110,10 +40,11 @@ KNOWN_OPS = [
     Literal("==").setName("eq").setDebugActions(*debug),
     Literal("!=").setName("neq").setDebugActions(*debug),
     IN.setName("in").setDebugActions(*debug),
-    NOTIN.setName("nin").setDebugActions(*debug),
+    NOT_IN.setName("nin").setDebugActions(*debug),
+    IS_NOT.setName("neq").setDebugActions(*debug),
     IS.setName("is").setDebugActions(*debug),
     LIKE.setName("like").setDebugActions(*debug),
-    NOTLIKE.setName("nlike").setDebugActions(*debug),
+    NOT_LIKE.setName("nlike").setDebugActions(*debug),
     OR.setName("or").setDebugActions(*debug),
     AND.setName("and").setDebugActions(*debug)
 ]
@@ -131,11 +62,11 @@ def to_json_operator(instring, tokensStart, retTokens):
             op = o.name
             break
     else:
-        if tok[1] == COLLATENOCASE.match:
-            op = COLLATENOCASE.name
+        if tok[1] == COLLATE_NOCASE.match:
+            op = COLLATE_NOCASE.name
             return {op: tok[0]}
         else:
-            raise "not found"
+            raise Exception("not found")
 
     if op == "eq":
         if tok[2] == "null":
@@ -228,6 +159,7 @@ def to_union_call(instring, tokensStart, retTokens):
         output["limit"] = tok.get('limit')
     return output
 
+
 def unquote(instring, tokensStart, retTokens):
     val = retTokens[0]
     if val.startswith("'") and val.endswith("'"):
@@ -237,7 +169,7 @@ def unquote(instring, tokensStart, retTokens):
         val = '"'+val[1:-1].replace('""', '\\"')+'"'
         # val = val.replace(".", "\\.")
     elif val.startswith('`') and val.endswith('`'):
-          val = "'" + val[1:-1].replace("``","`") + "'"
+        val = "'" + val[1:-1].replace("``","`") + "'"
     elif val.startswith("+"):
         val = val[1:]
     un = ast.literal_eval(val)
@@ -302,7 +234,7 @@ expr << Group(infixNotation(
         for o in KNOWN_OPS
     ]+[
         (
-            COLLATENOCASE,
+            COLLATE_NOCASE,
             1,
             opAssoc.LEFT,
             to_json_operator
@@ -339,7 +271,7 @@ table_source = (
 )
 
 join = (
-    (CROSSJOIN | FULLJOIN | FULLOUTERJOIN | INNERJOIN | JOIN | LEFTJOIN | LEFTOUTERJOIN | RIGHTJOIN | RIGHTOUTERJOIN)("op") +
+    (CROSS_JOIN | FULL_JOIN | FULL_OUTER_JOIN | INNER_JOIN | JOIN | LEFT_JOIN | LEFT_OUTER_JOIN | RIGHT_JOIN | RIGHT_OUTER_JOIN)("op") +
     Group(table_source)("join") +
     Optional((ON + expr("on")) | (USING + expr("using")))
 ).addParseAction(to_join_call)
@@ -356,16 +288,16 @@ selectStmt << Group(
                 Optional(
                     (FROM.suppress().setDebugActions(*debug) + delimitedList(Group(table_source)) + ZeroOrMore(join))("from") +
                     Optional(WHERE.suppress().setDebugActions(*debug) + expr.setName("where"))("where") +
-                    Optional(GROUPBY.suppress().setDebugActions(*debug) + delimitedList(Group(selectColumn))("groupby").setName("groupby")) +
+                    Optional(GROUP_BY.suppress().setDebugActions(*debug) + delimitedList(Group(selectColumn))("groupby").setName("groupby")) +
                     Optional(HAVING.suppress().setDebugActions(*debug) + expr("having").setName("having")) +
                     Optional(LIMIT.suppress().setDebugActions(*debug) + expr("limit")) +
                     Optional(OFFSET.suppress().setDebugActions(*debug) + expr("offset"))
                 )
             ),
-            delim=(UNION | UNIONALL)
+            delim=(UNION | UNION_ALL)
         )
     )("union"))("from") +
-    Optional(ORDERBY.suppress().setDebugActions(*debug) + delimitedList(Group(sortColumn))("orderby").setName("orderby")) +
+    Optional(ORDER_BY.suppress().setDebugActions(*debug) + delimitedList(Group(sortColumn))("orderby").setName("orderby")) +
     Optional(LIMIT.suppress().setDebugActions(*debug) + expr("limit")) +
     Optional(OFFSET.suppress().setDebugActions(*debug) + expr("offset"))
 ).addParseAction(to_union_call)

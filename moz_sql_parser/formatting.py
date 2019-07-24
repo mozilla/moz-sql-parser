@@ -15,7 +15,7 @@ import re
 
 from mo_future import string_types, text_type
 
-from moz_sql_parser.sql_parser import RESERVED, join_keywords
+from moz_sql_parser.keywords import RESERVED, join_keywords
 
 VALID = re.compile(r'[a-zA-Z_]\w*')
 
@@ -28,7 +28,7 @@ def should_quote(identifier):
 
       - is a reserved word
       - contain spaces
-      - does not match the regex `[a-zA-Z_]\w*`
+      - does not match the regex `[a-zA-Z_]\\w*`
 
     """
     return (
