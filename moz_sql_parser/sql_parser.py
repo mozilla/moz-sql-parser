@@ -20,7 +20,7 @@ from moz_sql_parser.keywords import AND, AS, ASC, BETWEEN, CASE, COLLATE_NOCASE,
 ParserElement.enablePackrat()
 
 # PYPARSING USES A LOT OF STACK SPACE
-sys.setrecursionlimit(2000)
+sys.setrecursionlimit(1500)
 
 
 KNOWN_OPS = [
