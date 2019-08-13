@@ -60,6 +60,11 @@ class TestFormatAndParse(TestCase):
         expected_json = {'select': '*', 'from': 'SYS.XYZZY'}
         self.verify_formatting(expected_sql, expected_json)
 
+    def test_backtick_table_name(self):
+        expected_sql = "SELECT * from `dual`"
+        expected_json = {'select': '*', 'from': '`dual`'}
+        self.verify_formatting(expected_sql, expected_json)
+
     @skip("Not sure why")
     def select_one_column(self):
         expected_sql = "Select A from dual"

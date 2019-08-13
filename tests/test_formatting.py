@@ -40,6 +40,14 @@ class TestSimple(TestCase):
         expected = "SELECT A FROM dual"
         self.assertEqual(result, expected)
 
+    def test_backticks(self):
+        result = format({
+            "select": "*",
+            "from": "`dual`"
+        })
+        expected = "SELECT * FROM `dual`"
+        self.assertEqual(result, expected)
+
     def test_select_quote(self):
         result = format({
             "select": {"value": {"literal": "'"}},
