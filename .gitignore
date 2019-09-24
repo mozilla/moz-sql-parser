@@ -3,6 +3,7 @@
 *.tab
 out
 .idea
+.svn
 *.iml
 /moz_sql_parser.egg-info
 /build
