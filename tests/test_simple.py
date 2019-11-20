@@ -12,7 +12,7 @@ from __future__ import absolute_import, division, unicode_literals
 from unittest import TestCase, skip
 
 from moz_sql_parser import parse, sql_parser
-from tests.util import assertRaises
+from .util import assertRaises
 
 
 class TestSimple(TestCase):

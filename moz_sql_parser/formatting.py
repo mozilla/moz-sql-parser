@@ -13,7 +13,7 @@ from __future__ import unicode_literals
 
 import re
 
-from mo_future import string_types, text_type
+from mo_future import string_types, text
 
 from moz_sql_parser.keywords import RESERVED, join_keywords
 
@@ -118,7 +118,7 @@ class Formatter:
         if isinstance(json, string_types):
             return escape(json, self.ansi_quotes, self.should_quote)
 
-        return text_type(json)
+        return text(json)
 
     def delimited_list(self, json):
         return ', '.join(self.dispatch(element) for element in json)
