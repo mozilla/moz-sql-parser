@@ -104,6 +104,6 @@
     "name": "moz-sql-parser",
     "packages": ["moz_sql_parser"],
     "url": "https://github.com/mozilla/moz-sql-parser",
-    "version": "3.17.19324",
+    "version": "3.18.19324",
     "zip_safe": true
 }
