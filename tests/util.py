@@ -7,7 +7,7 @@
 
 from __future__ import absolute_import, division, unicode_literals
 
-from mo_future import text_type
+from mo_future import text
 
 
 def assertRaises(expected_text_in_error, method):
@@ -15,7 +15,7 @@ def assertRaises(expected_text_in_error, method):
         method()
         raise Exception("expecting an exception")
     except Exception as e:
-        text_error = text_type(e)
+        text_error = text(e)
         if not isinstance(expected_text_in_error, (list, tuple, set)):
             expected_text_in_error = [expected_text_in_error]
 
