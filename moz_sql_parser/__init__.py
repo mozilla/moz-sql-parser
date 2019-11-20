@@ -13,7 +13,7 @@ from collections import Mapping
 import json
 from threading import Lock
 
-from mo_future import binary_type, items, number_types, text_type
+from mo_future import binary_type, items, number_types, text
 from pyparsing import ParseException, ParseResults
 
 from moz_sql_parser.debugs import all_exceptions
@@ -60,7 +60,7 @@ def format(json, **kwargs):
 
 
 def _scrub(result):
-    if isinstance(result, text_type):
+    if isinstance(result, text):
         return result
     elif isinstance(result, binary_type):
         return result.decode('utf8')
