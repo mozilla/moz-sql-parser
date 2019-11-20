@@ -9,10 +9,14 @@
 
 from __future__ import absolute_import, division, unicode_literals
 
-from unittest import TestCase, skip
+from unittest import TestCase
 
-from moz_sql_parser import parse, sql_parser
-from .util import assertRaises
+from moz_sql_parser import parse
+
+try:
+    from tests.util import assertRaises
+except ImportError:
+    from .util import assertRaises  # RELATIVE IMPORT SO WE CAN RUN IN pyLibrary
 
 
 class TestSimple(TestCase):
