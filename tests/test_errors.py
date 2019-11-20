@@ -12,7 +12,10 @@ from __future__ import absolute_import, division, unicode_literals
 from unittest import TestCase
 
 from moz_sql_parser import parse, format
-from .util import assertRaises  # RELATIVE IMPORT SO WE CAN RUN IN pyLibrary
+try:
+    from tests.util import assertRaises
+except ImportError:
+    from .util import assertRaises  # RELATIVE IMPORT SO WE CAN RUN IN pyLibrary
 
 
 class TestErrors(TestCase):
