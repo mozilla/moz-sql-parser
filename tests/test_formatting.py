@@ -334,3 +334,14 @@ class TestSimple(TestCase):
         result = format({'select': {'value': {'now': {}}}})
         expected = "SELECT NOW()"
         self.assertEqual(result, expected)
+
+    def test_between(self):
+        result = format({
+            "select": [
+                {"value": "a"}
+            ],
+            "from": ["t1"],
+            "where": {"between": ["t1.a", 10, {'literal': 'ABC'}]},
+        })
+        expected = "SELECT a FROM t1 WHERE t1.a BETWEEN 10 AND 'ABC'"
+        self.assertEqual(result, expected)

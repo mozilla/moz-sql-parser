@@ -468,7 +468,7 @@ class TestSimple(TestCase):
         expected = {
             "select": {"value": "a"},
             "from": "dual",
-            "where": {"not between": ["a", 1, 2]}
+            "where": {"not_between": ["a", 1, 2]}
         }
         self.assertEqual(result, expected)
 
