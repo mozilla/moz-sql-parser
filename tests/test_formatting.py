@@ -345,3 +345,31 @@ class TestSimple(TestCase):
         })
         expected = "SELECT a FROM t1 WHERE t1.a BETWEEN 10 AND 'ABC'"
         self.assertEqual(result, expected)
+
+    def test_binary_and(self):
+        expected = "SELECT * FROM t WHERE  c & 4;"
+        result = format({
+            "select": "*",
+            "from": "t",
+            "where": {"binary_and": {"c": 4}}
+        })
+        self.assertEqual(result, expected)
+
+    def test_binary_or(self):
+        expected = "SELECT * FROM t WHERE  c | 4;"
+        result = format({
+            "select": "*",
+            "from": "t",
+            "where": {"binary_or": {"c": 4}}
+        })
+        self.assertEqual(result, expected)
+
+    def test_binary_not(self):
+        sql = "SELECT * FROM t WHERE  !c;"
+        result = format({
+            "select": "*",
+            "from": "t",
+            "where": {"binary_not": "c"}
+        })
+        self.assertEqual(result, expected)
+
