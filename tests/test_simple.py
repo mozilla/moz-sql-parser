@@ -716,13 +716,8 @@ class TestSimple(TestCase):
 
     def test_union_all2(self):
         result = parse("SELECT b UNION ALL SELECT c")
-        expected = {
-            "from": {'union_all': [
-                {'select': {'value': 'b'}},
-                {'select': {'value': 'c'}},
-            ]}
-        }
+        expected = {'union_all': [
+            {'select': {'value': 'b'}},
+            {'select': {'value': 'c'}},
+        ]}
         self.assertEqual(result, expected)
-
-
-

@@ -12,11 +12,14 @@ from __future__ import absolute_import, division, unicode_literals
 import ast
 import sys
 
-from mo_future import first
-from pyparsing import Combine, Forward, Group, Keyword, Literal, Optional, ParserElement, Regex, Word, ZeroOrMore, alphanums, alphas, delimitedList, infixNotation, opAssoc, restOfLine
+from pyparsing import Combine, Forward, Group, Keyword, Literal, Optional, ParserElement, Regex, Word, ZeroOrMore, \
+    alphanums, alphas, delimitedList, infixNotation, opAssoc, restOfLine
 
 from moz_sql_parser.debugs import debug
-from moz_sql_parser.keywords import AND, AS, ASC, BETWEEN, CASE, COLLATE_NOCASE, CROSS_JOIN, DESC, ELSE, END, FROM, FULL_JOIN, FULL_OUTER_JOIN, GROUP_BY, HAVING, IN, INNER_JOIN, IS, IS_NOT, JOIN, LEFT_JOIN, LEFT_OUTER_JOIN, LIKE, LIMIT, NOT_BETWEEN, NOT_IN, NOT_LIKE, OFFSET, ON, OR, ORDER_BY, RESERVED, RIGHT_JOIN, RIGHT_OUTER_JOIN, SELECT, THEN, UNION, UNION_ALL, USING, WHEN, WHERE
+from moz_sql_parser.keywords import AND, AS, ASC, BETWEEN, CASE, COLLATE_NOCASE, CROSS_JOIN, DESC, ELSE, END, FROM, \
+    FULL_JOIN, FULL_OUTER_JOIN, GROUP_BY, HAVING, IN, INNER_JOIN, IS, IS_NOT, JOIN, LEFT_JOIN, LEFT_OUTER_JOIN, LIKE, \
+    LIMIT, NOT_BETWEEN, NOT_IN, NOT_LIKE, OFFSET, ON, OR, ORDER_BY, RESERVED, RIGHT_JOIN, RIGHT_OUTER_JOIN, SELECT, \
+    THEN, UNION, UNION_ALL, USING, WHEN, WHERE
 
 ParserElement.enablePackrat()
 
@@ -57,6 +60,12 @@ KNOWN_OPS = [
     AND.setName("and").setDebugActions(*debug),
     OR.setName("or").setDebugActions(*debug)
 ]
+
+unary_ops = {
+    "-": "neg",
+    "~": "binary_not"
+}
+
 
 
 def to_json_operator(instring, tokensStart, retTokens):
@@ -102,9 +111,7 @@ def to_json_call(instring, tokensStart, retTokens):
     # ARRANGE INTO {op: params} FORMAT
     tok = retTokens
     op = tok.op.lower()
-
-    if op == "-":
-        op = "neg"
+    op = unary_ops.get(op, op)
 
     params = tok.params
     if not params:
@@ -155,15 +162,23 @@ def to_select_call(instring, tokensStart, retTokens):
 
 def to_union_call(instring, tokensStart, retTokens):
     tok = retTokens[0].asDict()
-    operator = first(tok['from'].keys())
     unions = tok['from']['union']
     if len(unions) == 1:
         output = unions[0]
     else:
+        sources = [unions[i] for i in range(0, len(unions), 2)]
+        operators = [unions[i] for i in range(1, len(unions), 2)]
+        op = operators[0].lower().replace(" ", "_")
+        if any(o.lower().replace(" ", "_") != op for o in operators[1:]):
+            raise Exception("Expecting all \"union all\" or all \"union\", not some combination")
+
         if not tok.get('orderby') and not tok.get('limit'):
-            return tok['from']
+            return {op: sources}
         else:
-            output = {"from": {operator: unions}}
+            output = {"from": {op: sources}}
+
+
+
 
     if tok.get('orderby'):
         output["orderby"] = tok.get('orderby')
@@ -224,7 +239,7 @@ compound = (
     (Literal("(").setDebugActions(*debug).suppress() + Group(delimitedList(expr)) + Literal(")").suppress()) |
     realNum.setName("float").setDebugActions(*debug) |
     intNum.setName("int").setDebugActions(*debug) |
-    (Keyword("~")("op").setDebugActions(*debug) + expr("params")).addParseAction(to_json_call) |
+    (Literal("~")("op").setDebugActions(*debug) + expr("params")).addParseAction(to_json_call) |
     (Literal("-")("op").setDebugActions(*debug) + expr("params")).addParseAction(to_json_call) |
     sqlString.setName("string").setDebugActions(*debug) |
     (
@@ -292,23 +307,25 @@ join = (
 sortColumn = expr("value").setName("sort1").setDebugActions(*debug) + Optional(DESC("sort") | ASC("sort")) | \
              expr("value").setName("sort2").setDebugActions(*debug)
 
+unordered_sql = Group(
+    SELECT.suppress().setDebugActions(*debug) + delimitedList(selectColumn)("select") +
+    Optional(
+        (FROM.suppress().setDebugActions(*debug) + delimitedList(Group(table_source)) + ZeroOrMore(join))("from") +
+        Optional(WHERE.suppress().setDebugActions(*debug) + expr.setName("where"))("where") +
+        Optional(GROUP_BY.suppress().setDebugActions(*debug) + delimitedList(Group(selectColumn))("groupby").setName(
+            "groupby")) +
+        Optional(HAVING.suppress().setDebugActions(*debug) + expr("having").setName("having")) +
+        Optional(LIMIT.suppress().setDebugActions(*debug) + expr("limit")) +
+        Optional(OFFSET.suppress().setDebugActions(*debug) + expr("offset"))
+    )
+)
+
+
 # define SQL tokens
 selectStmt << Group(
     Group(Group(
-        delimitedList(
-            Group(
-                SELECT.suppress().setDebugActions(*debug) + delimitedList(selectColumn)("select") +
-                Optional(
-                    (FROM.suppress().setDebugActions(*debug) + delimitedList(Group(table_source)) + ZeroOrMore(join))("from") +
-                    Optional(WHERE.suppress().setDebugActions(*debug) + expr.setName("where"))("where") +
-                    Optional(GROUP_BY.suppress().setDebugActions(*debug) + delimitedList(Group(selectColumn))("groupby").setName("groupby")) +
-                    Optional(HAVING.suppress().setDebugActions(*debug) + expr("having").setName("having")) +
-                    Optional(LIMIT.suppress().setDebugActions(*debug) + expr("limit")) +
-                    Optional(OFFSET.suppress().setDebugActions(*debug) + expr("offset"))
-                )
-            ),
-            delim=UNION_ALL | UNION
-        )
+        unordered_sql +
+        ZeroOrMore((UNION_ALL | UNION) + unordered_sql)
     )("union"))("from") +
     Optional(ORDER_BY.suppress().setDebugActions(*debug) + delimitedList(Group(sortColumn))("orderby").setName("orderby")) +
     Optional(LIMIT.suppress().setDebugActions(*debug) + expr("limit")) +
