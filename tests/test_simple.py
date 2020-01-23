@@ -744,3 +744,17 @@ class TestSimple(TestCase):
             ]}
         }
         self.assertEqual(result, expected)
+
+    def test_issue97_function_names(self):
+        sql = "SELECT ST_AsText(ST_MakePoint(174, -36));"
+        result = parse(sql)
+        expected = {
+            'select': {
+                'value': {
+                    'st_astext': {
+                        'st_makepoint': [174, -36]
+                    }
+                }
+            }
+        }
+        self.assertEqual(result, expected)
