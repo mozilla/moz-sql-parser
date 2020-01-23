@@ -203,6 +203,12 @@ class Formatter:
         else:
             return str(json)
 
+    def _between(self, json):
+        return '{0} BETWEEN {1} AND {2}'.format(self.dispatch(json[0]), self.dispatch(json[1]), self.dispatch(json[2]))
+
+    def _not_between(self, json):
+        return '{0} NOT BETWEEN {1} AND {2}'.format(self.dispatch(json[0]), self.dispatch(json[1]), self.dispatch(json[2]))
+
     def _on(self, json):
         detected_join = join_keywords & set(json.keys())
         if len(detected_join) == 0:

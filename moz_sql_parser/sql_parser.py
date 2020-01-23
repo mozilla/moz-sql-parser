@@ -24,8 +24,6 @@ sys.setrecursionlimit(2000)
 
 
 KNOWN_OPS = [
-    (BETWEEN, AND),
-    (NOT_BETWEEN, AND),
     Literal("||").setName("concat").setDebugActions(*debug),
     Literal("*").setName("mul").setDebugActions(*debug),
     Literal("/").setName("div").setDebugActions(*debug),
@@ -39,6 +37,8 @@ KNOWN_OPS = [
     Literal("=").setName("eq").setDebugActions(*debug),
     Literal("==").setName("eq").setDebugActions(*debug),
     Literal("!=").setName("neq").setDebugActions(*debug),
+    (BETWEEN.setName("between").setDebugActions(*debug), AND),
+    (NOT_BETWEEN.setName("not_between").setDebugActions(*debug), AND),
     IN.setName("in").setDebugActions(*debug),
     NOT_IN.setName("nin").setDebugActions(*debug),
     IS_NOT.setName("neq").setDebugActions(*debug),
