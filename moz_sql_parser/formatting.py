@@ -96,6 +96,8 @@ class Formatter:
     def format(self, json):
         if 'union' in json:
             return self.union(json['union'])
+        elif 'union_all' in json:
+            return self.union_all(json['union_all'])
         else:
             return self.query(json)
 
@@ -227,6 +229,9 @@ class Formatter:
 
     def union(self, json):
         return ' UNION '.join(self.query(query) for query in json)
+
+    def union_all(self, json):
+        return ' UNION ALL '.join(self.query(query) for query in json)
 
     def query(self, json):
         return ' '.join(

@@ -22,21 +22,29 @@ ParserElement.enablePackrat()
 # PYPARSING USES A LOT OF STACK SPACE
 sys.setrecursionlimit(2000)
 
+IDENT_FIRST_CHAR = alphas + "_"
+IDENT_REST_CHAR = alphanums + "_$"
 
 KNOWN_OPS = [
+    # https://www.sqlite.org/lang_expr.html
     Literal("||").setName("concat").setDebugActions(*debug),
     Literal("*").setName("mul").setDebugActions(*debug),
     Literal("/").setName("div").setDebugActions(*debug),
+    Literal("%").setName("mod").setDebugActions(*debug),
     Literal("+").setName("add").setDebugActions(*debug),
     Literal("-").setName("sub").setDebugActions(*debug),
-    Literal("<>").setName("neq").setDebugActions(*debug),
-    Literal(">").setName("gt").setDebugActions(*debug),
+
+    Literal("&").setName("binary_and").setDebugActions(*debug),
+    Literal("|").setName("binary_or").setDebugActions(*debug),
+
     Literal("<").setName("lt").setDebugActions(*debug),
-    Literal(">=").setName("gte").setDebugActions(*debug),
     Literal("<=").setName("lte").setDebugActions(*debug),
+    Literal(">").setName("gt").setDebugActions(*debug),
+    Literal(">=").setName("gte").setDebugActions(*debug),
     Literal("=").setName("eq").setDebugActions(*debug),
     Literal("==").setName("eq").setDebugActions(*debug),
     Literal("!=").setName("neq").setDebugActions(*debug),
+    Literal("<>").setName("neq").setDebugActions(*debug),
     (BETWEEN.setName("between").setDebugActions(*debug), AND),
     (NOT_BETWEEN.setName("not_between").setDebugActions(*debug), AND),
     IN.setName("in").setDebugActions(*debug),
@@ -45,8 +53,8 @@ KNOWN_OPS = [
     IS.setName("is").setDebugActions(*debug),
     LIKE.setName("like").setDebugActions(*debug),
     NOT_LIKE.setName("nlike").setDebugActions(*debug),
-    OR.setName("or").setDebugActions(*debug),
-    AND.setName("and").setDebugActions(*debug)
+    AND.setName("and").setDebugActions(*debug),
+    OR.setName("or").setDebugActions(*debug)
 ]
 
 
@@ -142,21 +150,24 @@ def to_select_call(instring, tokensStart, retTokens):
         return tok
 
 
-def to_union_call(instring, tokensStart, retTokens):
-    tok = retTokens[0].asDict()
-    unions = tok['from']['union']
-    if len(unions) == 1:
-        output = unions[0]
-    else:
-        if not tok.get('orderby') and not tok.get('limit'):
-            return tok['from']
-        else:
-            output = {"from": {"union": unions}}
 
-    if tok.get('orderby'):
-        output["orderby"] = tok.get('orderby')
-    if tok.get('limit'):
-        output["limit"] = tok.get('limit')
+def to_union_call(operator):
+    def output(instring, tokensStart, retTokens):
+        tok = retTokens[0].asDict()
+        unions = tok['from'][operator]
+        if len(unions) == 1:
+            output = unions[0]
+        else:
+            if not tok.get('orderby') and not tok.get('limit'):
+                return tok['from']
+            else:
+                output = {"from": {operator: unions}}
+
+        if tok.get('orderby'):
+            output["orderby"] = tok.get('orderby')
+        if tok.get('limit'):
+            output["limit"] = tok.get('limit')
+        return output
     return output
 
 
@@ -189,7 +200,7 @@ intNum = Regex(r"[+-]?\d+([eE]\+?\d+)?").addParseAction(unquote)
 sqlString = Regex(r"\'(\'\'|\\.|[^'])*\'").addParseAction(to_string)
 identString = Regex(r'\"(\"\"|\\.|[^"])*\"').addParseAction(unquote)
 mysqlidentString = Regex(r'\`(\`\`|\\.|[^`])*\`').addParseAction(unquote)
-ident = Combine(~RESERVED + (delimitedList(Literal("*") | Word(alphas + "_", alphanums + "_$") | identString | mysqlidentString, delim=".", combine=True))).setName("identifier")
+ident = Combine(~RESERVED + (delimitedList(Literal("*") | Word(IDENT_FIRST_CHAR, IDENT_REST_CHAR) | identString | mysqlidentString, delim=".", combine=True))).setName("identifier")
 
 # EXPRESSIONS
 expr = Forward()
@@ -204,6 +215,8 @@ case = (
 
 selectStmt = Forward()
 compound = (
+    (Keyword("!")("op").setDebugActions(*debug) + expr("params")).addParseAction(to_json_call) |
+    (Literal("-")("op").setDebugActions(*debug) + expr("params")).addParseAction(to_json_call) |
     (Keyword("not", caseless=True)("op").setDebugActions(*debug) + expr("params")).addParseAction(to_json_call) |
     (Keyword("distinct", caseless=True)("op").setDebugActions(*debug) + expr("params")).addParseAction(to_json_call) |
     Keyword("null", caseless=True).setName("null").setDebugActions(*debug) |
@@ -212,10 +225,9 @@ compound = (
     (Literal("(").setDebugActions(*debug).suppress() + Group(delimitedList(expr)) + Literal(")").suppress()) |
     realNum.setName("float").setDebugActions(*debug) |
     intNum.setName("int").setDebugActions(*debug) |
-    (Literal("-")("op").setDebugActions(*debug) + expr("params")).addParseAction(to_json_call) |
     sqlString.setName("string").setDebugActions(*debug) |
     (
-        Word(alphas + "_")("op").setName("function name").setDebugActions(*debug) +
+        Word(IDENT_FIRST_CHAR, IDENT_REST_CHAR)("op").setName("function name").setDebugActions(*debug) +
         Literal("(").setName("func_param").setDebugActions(*debug) +
         Optional(selectStmt | Group(delimitedList(expr)))("params") +
         ")"
