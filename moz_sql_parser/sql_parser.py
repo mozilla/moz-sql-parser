@@ -12,6 +12,7 @@ from __future__ import absolute_import, division, unicode_literals
 import ast
 import sys
 
+from mo_future import first
 from pyparsing import Combine, Forward, Group, Keyword, Literal, Optional, ParserElement, Regex, Word, ZeroOrMore, alphanums, alphas, delimitedList, infixNotation, opAssoc, restOfLine
 
 from moz_sql_parser.debugs import debug
@@ -66,6 +67,8 @@ def to_json_operator(instring, tokensStart, retTokens):
             if o[0].match == tok[1]:
                 op = o[0].name
                 break
+        elif (o.match == tok[1]) != (o.matches(tok[1])):
+            raise Exception("not expected")
         elif o.match == tok[1]:
             op = o.name
             break
@@ -150,24 +153,22 @@ def to_select_call(instring, tokensStart, retTokens):
         return tok
 
 
-
-def to_union_call(operator):
-    def output(instring, tokensStart, retTokens):
-        tok = retTokens[0].asDict()
-        unions = tok['from'][operator]
-        if len(unions) == 1:
-            output = unions[0]
+def to_union_call(instring, tokensStart, retTokens):
+    tok = retTokens[0].asDict()
+    operator = first(tok['from'].keys())
+    unions = tok['from']['union']
+    if len(unions) == 1:
+        output = unions[0]
+    else:
+        if not tok.get('orderby') and not tok.get('limit'):
+            return tok['from']
         else:
-            if not tok.get('orderby') and not tok.get('limit'):
-                return tok['from']
-            else:
-                output = {"from": {operator: unions}}
+            output = {"from": {operator: unions}}
 
-        if tok.get('orderby'):
-            output["orderby"] = tok.get('orderby')
-        if tok.get('limit'):
-            output["limit"] = tok.get('limit')
-        return output
+    if tok.get('orderby'):
+        output["orderby"] = tok.get('orderby')
+    if tok.get('limit'):
+        output["limit"] = tok.get('limit')
     return output
 
 
@@ -215,8 +216,6 @@ case = (
 
 selectStmt = Forward()
 compound = (
-    (Keyword("!")("op").setDebugActions(*debug) + expr("params")).addParseAction(to_json_call) |
-    (Literal("-")("op").setDebugActions(*debug) + expr("params")).addParseAction(to_json_call) |
     (Keyword("not", caseless=True)("op").setDebugActions(*debug) + expr("params")).addParseAction(to_json_call) |
     (Keyword("distinct", caseless=True)("op").setDebugActions(*debug) + expr("params")).addParseAction(to_json_call) |
     Keyword("null", caseless=True).setName("null").setDebugActions(*debug) |
@@ -225,6 +224,8 @@ compound = (
     (Literal("(").setDebugActions(*debug).suppress() + Group(delimitedList(expr)) + Literal(")").suppress()) |
     realNum.setName("float").setDebugActions(*debug) |
     intNum.setName("int").setDebugActions(*debug) |
+    (Keyword("~")("op").setDebugActions(*debug) + expr("params")).addParseAction(to_json_call) |
+    (Literal("-")("op").setDebugActions(*debug) + expr("params")).addParseAction(to_json_call) |
     sqlString.setName("string").setDebugActions(*debug) |
     (
         Word(IDENT_FIRST_CHAR, IDENT_REST_CHAR)("op").setName("function name").setDebugActions(*debug) +
@@ -306,7 +307,7 @@ selectStmt << Group(
                     Optional(OFFSET.suppress().setDebugActions(*debug) + expr("offset"))
                 )
             ),
-            delim=(UNION | UNION_ALL)
+            delim=UNION_ALL | UNION
         )
     )("union"))("from") +
     Optional(ORDER_BY.suppress().setDebugActions(*debug) + delimitedList(Group(sortColumn))("orderby").setName("orderby")) +

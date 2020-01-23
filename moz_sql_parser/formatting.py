@@ -88,6 +88,8 @@ class Formatter:
     _eq = Operator('=')
     _or = Operator('OR')
     _and = Operator('AND')
+    _binary_and = Operator("&")
+    _binary_or = Operator("|")
 
     def __init__(self, ansi_quotes=True, should_quote=should_quote):
         self.ansi_quotes = ansi_quotes
@@ -152,6 +154,9 @@ class Formatter:
             return key.upper() + "()"  # NOT SURE IF AN EMPTY dict SHOULD BE DELT WITH HERE, OR IN self.dispatch()
         else:
             return '{0}({1})'.format(key.upper(), self.dispatch(value))
+
+    def _binary_not(self, value):
+        return '~{0}'.format(self.dispatch(value))
 
     def _exists(self, value):
         return '{0} IS NOT NULL'.format(self.dispatch(value))

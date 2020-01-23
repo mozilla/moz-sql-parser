@@ -347,25 +347,25 @@ class TestSimple(TestCase):
         self.assertEqual(result, expected)
 
     def test_binary_and(self):
-        expected = "SELECT * FROM t WHERE  c & 4;"
+        expected = "SELECT * FROM t WHERE c & 4"
         result = format({
             "select": "*",
             "from": "t",
-            "where": {"binary_and": {"c": 4}}
+            "where": {"binary_and": ["c", 4]}
         })
         self.assertEqual(result, expected)
 
     def test_binary_or(self):
-        expected = "SELECT * FROM t WHERE  c | 4;"
+        expected = "SELECT * FROM t WHERE c | 4"
         result = format({
             "select": "*",
             "from": "t",
-            "where": {"binary_or": {"c": 4}}
+            "where": {"binary_or": ["c", 4]}
         })
         self.assertEqual(result, expected)
 
     def test_binary_not(self):
-        sql = "SELECT * FROM t WHERE  !c;"
+        expected = "SELECT * FROM t WHERE ~c"
         result = format({
             "select": "*",
             "from": "t",

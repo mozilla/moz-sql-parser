@@ -633,22 +633,22 @@ class TestSimple(TestCase):
         expected = {
             "select": "*",
             "from": "t",
-            "where": {"binary_and": {"c": 4}}
+            "where": {"binary_and": ["c", 4]}
         }
         self.assertEqual(result, expected)
 
     def test_binary_or(self):
-        sql = "SELECT * FROM t WHERE  c | 4;"
+        sql = "SELECT * FROM t WHERE c | 4;"
         result = parse(sql)
         expected = {
             "select": "*",
             "from": "t",
-            "where": {"binary_or": {"c": 4}}
+            "where": {"binary_or": ["c", 4]}
         }
         self.assertEqual(result, expected)
 
     def test_binary_not(self):
-        sql = "SELECT * FROM t WHERE  !c;"
+        sql = "SELECT * FROM t WHERE ~c;"
         result = parse(sql)
         expected = {
             "select": "*",
@@ -689,7 +689,7 @@ class TestSimple(TestCase):
         sql = "SELECT _a(a$b)"
         result = parse(sql)
         expected = {
-            "select": {"value": {"_a": ["a$b"]}},
+            "select": {"value": {"_a": "a$b"}},
         }
         self.assertEqual(result, expected)
 
@@ -702,6 +702,8 @@ class TestSimple(TestCase):
         self.assertEqual(result, expected)
 
     def test_union_all1(self):
+        #               0         1         2         3         4         5         6         7         8         9
+        #               012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789
         result = parse("SELECT b FROM t6 UNION ALL SELECT '3' AS x ORDER BY x")
         expected = {
             "from": {'union_all': [
