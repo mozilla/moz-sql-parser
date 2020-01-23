@@ -721,3 +721,26 @@ class TestSimple(TestCase):
             {'select': {'value': 'c'}},
         ]}
         self.assertEqual(result, expected)
+
+    def test_issue106(self):
+        result = parse("""
+            SELECT *
+            FROM MyTable
+            GROUP BY Col
+            HAVING AVG(X) >= 2
+            AND AVG(X) <= 4
+            OR AVG(X) = 5;
+        """)
+        expected = {
+            'select': '*',
+            'from': 'MyTable',
+            'groupby': {'value': 'Col'},
+            'having': {'or': [
+                {'and': [
+                    {'gte': [{'avg': 'X'}, 2]},
+                    {'lte': [{'avg': 'X'}, 4]}
+                ]},
+                {'eq': [{'avg': 'X'}, 5]}
+            ]}
+        }
+        self.assertEqual(result, expected)
