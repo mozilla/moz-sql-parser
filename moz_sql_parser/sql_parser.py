@@ -215,7 +215,7 @@ compound = (
     (Literal("-")("op").setDebugActions(*debug) + expr("params")).addParseAction(to_json_call) |
     sqlString.setName("string").setDebugActions(*debug) |
     (
-        Word(alphas)("op").setName("function name").setDebugActions(*debug) +
+        Word(alphas + "_")("op").setName("function name").setDebugActions(*debug) +
         Literal("(").setName("func_param").setDebugActions(*debug) +
         Optional(selectStmt | Group(delimitedList(expr)))("params") +
         ")"
