@@ -11,6 +11,8 @@ from __future__ import absolute_import, division, unicode_literals
 
 from unittest import TestCase
 
+from mo_json import value2json
+
 from moz_sql_parser import parse
 
 try:
@@ -775,4 +777,83 @@ class TestSimple(TestCase):
         sql = "SELECT * FROM `movies`"
         result = parse(sql)
         expected = {"select": "*", "from": "movies"}
+        self.assertEqual(result, expected)
+
+    def test_with_clause(self):
+        sql = (
+            " WITH dept_count AS ("
+            "     SELECT deptno, COUNT(*) AS dept_count"
+            "     FROM emp"
+            "     GROUP BY deptno"
+            ")"
+            " SELECT "
+            "     e.ename AS employee_name,"
+            "     dc1.dept_count AS emp_dept_count,"
+            "     m.ename AS manager_name,"
+            "     dc2.dept_count AS mgr_dept_count"
+            " FROM "
+            "     emp e,"
+            "     dept_count dc1,"
+            "     emp m,"
+            "     dept_count dc2"
+            " WHERE "
+            "     e.deptno = dc1.deptno"
+            "     AND e.mgr = m.empno"
+            "     AND m.deptno = dc2.deptno;"
+        )
+        result = parse(sql)
+        expected = {'with': [
+            {
+                'name': 'dept_count',
+                'value': {
+                    'from': 'emp',
+                    'groupby': {'value': 'deptno'},
+                    'select': [
+                        {'value': 'deptno'},
+                        {'name': 'dept_count', 'value': {'count': '*'}}
+                    ]
+                }
+            },
+            {
+                'from': [
+                    {'name': 'e', 'value': 'emp'},
+                    {'name': 'dc1', 'value': 'dept_count'},
+                    {'name': 'm', 'value': 'emp'},
+                    {'name': 'dc2', 'value': 'dept_count'}
+                ]
+                ,
+                'select': [
+                    {'name': 'employee_name', 'value': 'e.ename'},
+                    {'name': 'emp_dept_count', 'value': 'dc1.dept_count'},
+                    {'name': 'manager_name', 'value': 'm.ename'},
+                    {'name': 'mgr_dept_count', 'value': 'dc2.dept_count'}
+                ],
+                'where': {'and': [
+                    {'eq': ['e.deptno', 'dc1.deptno']},
+                    {'eq': ['e.mgr', 'm.empno']},
+                    {'eq': ['m.deptno', 'dc2.deptno']}
+                ]}
+            }
+        ]}
+
+        self.assertEqual(result, expected)
+
+    value2json
+
+    def test_2with_clause(self):
+        #    0         1         2         3         4         5         6         7         8         9
+        #    012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789
+        sql = (
+            " WITH a AS (SELECT 1), b AS (SELECT 2)"
+            " SELECT * FROM a UNION ALL SELECT * FROM b"
+        )
+        result = parse(sql)
+        expected = {"with": [
+            {"name": "a", "value": {"select": {"value": 1}}},
+            {"name": "b", "value": {"select": {"value": 2}}},
+            {"union_all": [
+                {"select": "*", "from": "a"},
+                {"select": "*", "from": "b"},
+            ]}
+        ]}
         self.assertEqual(result, expected)

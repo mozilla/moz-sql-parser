@@ -19,7 +19,7 @@ from moz_sql_parser.debugs import debug
 from moz_sql_parser.keywords import AND, AS, ASC, BETWEEN, CASE, COLLATE_NOCASE, CROSS_JOIN, DESC, ELSE, END, FROM, \
     FULL_JOIN, FULL_OUTER_JOIN, GROUP_BY, HAVING, IN, INNER_JOIN, IS, IS_NOT, JOIN, LEFT_JOIN, LEFT_OUTER_JOIN, LIKE, \
     LIMIT, NOT_BETWEEN, NOT_IN, NOT_LIKE, OFFSET, ON, OR, ORDER_BY, RESERVED, RIGHT_JOIN, RIGHT_OUTER_JOIN, SELECT, \
-    THEN, UNION, UNION_ALL, USING, WHEN, WHERE, binary_ops, unary_ops
+    THEN, UNION, UNION_ALL, USING, WHEN, WHERE, binary_ops, unary_ops, WITH
 
 ParserElement.enablePackrat()
 
@@ -194,14 +194,24 @@ def to_union_call(instring, tokensStart, retTokens):
         else:
             output = {"from": {op: sources}}
 
-
-
-
     if tok.get('orderby'):
         output["orderby"] = tok.get('orderby')
     if tok.get('limit'):
         output["limit"] = tok.get('limit')
     return output
+
+
+def to_with_clause(instring, tokensStart, retTokens):
+    tok = retTokens[0]
+    query = tok['query']
+    if not tok['with']:
+        return tok['query'][0]
+
+    assignments = [
+        {"name": w.name, "value": w.value[0]}
+        for w in tok['with']
+    ]
+    return {"with": assignments + [query]}
 
 
 def unquote(instring, tokensStart, retTokens):
@@ -246,26 +256,26 @@ case = (
     END
 ).addParseAction(to_case_call)
 
-selectStmt = Forward()
+ordered_sql = Forward()
 compound = (
-    (Keyword("not", caseless=True)("op").setDebugActions(*debug) + expr("params")).addParseAction(to_json_call) |
-    (Keyword("distinct", caseless=True)("op").setDebugActions(*debug) + expr("params")).addParseAction(to_json_call) |
-    Keyword("null", caseless=True).setName("null").setDebugActions(*debug) |
-    case |
-    (Literal("(").setDebugActions(*debug).suppress() + selectStmt + Literal(")").suppress()) |
-    (Literal("(").setDebugActions(*debug).suppress() + Group(delimitedList(expr)) + Literal(")").suppress()) |
-    realNum.setName("float").setDebugActions(*debug) |
-    intNum.setName("int").setDebugActions(*debug) |
-    (Literal("~")("op").setDebugActions(*debug) + expr("params")).addParseAction(to_json_call) |
-    (Literal("-")("op").setDebugActions(*debug) + expr("params")).addParseAction(to_json_call) |
-    sqlString.setName("string").setDebugActions(*debug) |
-    (
-        Word(IDENT_FIRST_CHAR, IDENT_REST_CHAR)("op").setName("function name").setDebugActions(*debug) +
-        Literal("(").setName("func_param").setDebugActions(*debug) +
-        Optional(selectStmt | Group(delimitedList(expr)))("params") +
+        (Keyword("not", caseless=True)("op").setDebugActions(*debug) + expr("params")).addParseAction(to_json_call) |
+        (Keyword("distinct", caseless=True)("op").setDebugActions(*debug) + expr("params")).addParseAction(to_json_call) |
+        Keyword("null", caseless=True).setName("null").setDebugActions(*debug) |
+        case |
+        (Literal("(").setDebugActions(*debug).suppress() + ordered_sql + Literal(")").suppress()) |
+        (Literal("(").setDebugActions(*debug).suppress() + Group(delimitedList(expr)) + Literal(")").suppress()) |
+        realNum.setName("float").setDebugActions(*debug) |
+        intNum.setName("int").setDebugActions(*debug) |
+        (Literal("~")("op").setDebugActions(*debug) + expr("params")).addParseAction(to_json_call) |
+        (Literal("-")("op").setDebugActions(*debug) + expr("params")).addParseAction(to_json_call) |
+        sqlString.setName("string").setDebugActions(*debug) |
+        (
+                Word(IDENT_FIRST_CHAR, IDENT_REST_CHAR)("op").setName("function name").setDebugActions(*debug) +
+                Literal("(").setName("func_param").setDebugActions(*debug) +
+                Optional(ordered_sql | Group(delimitedList(expr)))("params") +
         ")"
     ).addParseAction(to_json_call).setDebugActions(*debug) |
-    ident.copy().setName("variable").setDebugActions(*debug)
+        ident.copy().setName("variable").setDebugActions(*debug)
 )
 expr << Group(infixNotation(
     compound,
@@ -296,9 +306,9 @@ selectColumn = Group(
 table_source = (
     (
         (
-            Literal("(").setDebugActions(*debug).suppress() +
-            selectStmt +
-            Literal(")").setDebugActions(*debug).suppress()
+                Literal("(").setDebugActions(*debug).suppress() +
+                ordered_sql +
+                Literal(")").setDebugActions(*debug).suppress()
         ).setName("table source").setDebugActions(*debug)
     )("value") +
     Optional(
@@ -337,9 +347,7 @@ unordered_sql = Group(
     )
 )
 
-
-# define SQL tokens
-selectStmt << Group(
+ordered_sql << Group(
     Group(Group(
         unordered_sql +
         ZeroOrMore((UNION_ALL | UNION) + unordered_sql)
@@ -349,8 +357,20 @@ selectStmt << Group(
     Optional(OFFSET.suppress().setDebugActions(*debug) + expr("offset"))
 ).addParseAction(to_union_call)
 
+statement = Group(Group(Optional(
+    WITH.suppress().setDebugActions(*debug) +
+    delimitedList(
+        Group(
+            ident("name").setDebugActions(*debug) +
+            AS.suppress().setDebugActions(*debug) +
+            Literal("(").suppress().setDebugActions(*debug) +
+            ordered_sql("value").setDebugActions(*debug) +
+            Literal(")").suppress().setDebugActions(*debug)
+        )
+    )
+))("with") + ordered_sql("query")).addParseAction(to_with_clause)
 
-SQLParser = selectStmt
+SQLParser = statement
 
 # IGNORE SOME COMMENTS
 oracleSqlComment = Literal("--") + restOfLine
