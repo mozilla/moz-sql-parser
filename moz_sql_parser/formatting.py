@@ -13,9 +13,9 @@ from __future__ import unicode_literals
 
 import re
 
-from mo_future import string_types, text
+from mo_future import string_types, text, first, long
 
-from moz_sql_parser.keywords import RESERVED, join_keywords
+from moz_sql_parser.keywords import RESERVED, join_keywords, precedence, binary_ops
 
 VALID = re.compile(r'[a-zA-Z_]\w*')
 
@@ -51,13 +51,28 @@ def escape(identifier, ansi_quotes, should_quote):
     return '{0}{1}{2}'.format(quote, identifier, quote)
 
 
-def Operator(op, parentheses=False):
-    op = ' {0} '.format(op)
+def Operator(op):
+    prec = precedence[binary_ops[op]]
+    op = ' {0} '.format(op).upper()
+
     def func(self, json):
-        out = op.join(self.dispatch(v) for v in json)
-        if parentheses:
-            out = '({0})'.format(out)
-        return out
+        acc = []
+
+        for v in json:
+            sql = self.dispatch(v)
+            if isinstance(v, (text, int, float, long)):
+                acc.append(sql)
+                continue
+
+            p = precedence.get(first(v.keys()))
+            if p is None:
+                acc.append(sql)
+                continue
+            if p>=prec:
+                acc.append("(" + sql + ")")
+            else:
+                acc.append(sql)
+        return op.join(acc)
     return func
 
 
@@ -77,17 +92,18 @@ class Formatter:
     # simple operators
     _concat = Operator('||')
     _mul = Operator('*')
-    _div = Operator('/', parentheses=True)
+    _div = Operator('/')
+    _mod = Operator('%')
     _add = Operator('+')
-    _sub = Operator('-', parentheses=True)
+    _sub = Operator('-')
     _neq = Operator('<>')
     _gt = Operator('>')
     _lt = Operator('<')
     _gte = Operator('>=')
     _lte = Operator('<=')
     _eq = Operator('=')
-    _or = Operator('OR')
-    _and = Operator('AND')
+    _or = Operator('or')
+    _and = Operator('and')
     _binary_and = Operator("&")
     _binary_or = Operator("|")
 

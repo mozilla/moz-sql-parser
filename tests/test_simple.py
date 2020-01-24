@@ -758,3 +758,15 @@ class TestSimple(TestCase):
             }
         }
         self.assertEqual(result, expected)
+
+    def test_issue91_order_of_operations1(self):
+        sql = "select 5-4+2"
+        result = parse(sql)
+        expected = {"select": {"value": {"add": [{"sub": [5, 4]}, 2]}}}
+        self.assertEqual(result, expected)
+
+    def test_issue91_order_of_operations2(self):
+        sql = "select 5/4*2"
+        result = parse(sql)
+        expected = {"select": {"value": {"mul": [{"div": [5, 4]}, 2]}}}
+        self.assertEqual(result, expected)

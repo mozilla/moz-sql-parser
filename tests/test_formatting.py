@@ -69,7 +69,7 @@ class TestSimple(TestCase):
             ]}},
             "from": "dual",
         })
-        expected = "SELECT a + (b / 2) + 45 * c + (2 / d) FROM dual"
+        expected = "SELECT a + b / 2 + 45 * c + 2 / d FROM dual"
         self.assertEqual(result, expected)
 
     def test_select_underscore_name(self):

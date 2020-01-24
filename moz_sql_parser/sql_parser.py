@@ -19,7 +19,7 @@ from moz_sql_parser.debugs import debug
 from moz_sql_parser.keywords import AND, AS, ASC, BETWEEN, CASE, COLLATE_NOCASE, CROSS_JOIN, DESC, ELSE, END, FROM, \
     FULL_JOIN, FULL_OUTER_JOIN, GROUP_BY, HAVING, IN, INNER_JOIN, IS, IS_NOT, JOIN, LEFT_JOIN, LEFT_OUTER_JOIN, LIKE, \
     LIMIT, NOT_BETWEEN, NOT_IN, NOT_LIKE, OFFSET, ON, OR, ORDER_BY, RESERVED, RIGHT_JOIN, RIGHT_OUTER_JOIN, SELECT, \
-    THEN, UNION, UNION_ALL, USING, WHEN, WHERE
+    THEN, UNION, UNION_ALL, USING, WHEN, WHERE, binary_ops, unary_ops
 
 ParserElement.enablePackrat()
 
@@ -32,23 +32,30 @@ IDENT_REST_CHAR = alphanums + "_$"
 KNOWN_OPS = [
     # https://www.sqlite.org/lang_expr.html
     Literal("||").setName("concat").setDebugActions(*debug),
-    Literal("*").setName("mul").setDebugActions(*debug),
-    Literal("/").setName("div").setDebugActions(*debug),
-    Literal("%").setName("mod").setDebugActions(*debug),
-    Literal("+").setName("add").setDebugActions(*debug),
-    Literal("-").setName("sub").setDebugActions(*debug),
-
+    (
+        Literal("*").setName("mul") |
+        Literal("/").setName("div") |
+        Literal("%").setName("mod")
+    ).setDebugActions(*debug),
+    (
+        Literal("+").setName("add") |
+        Literal("-").setName("sub")
+    ).setDebugActions(*debug),
     Literal("&").setName("binary_and").setDebugActions(*debug),
     Literal("|").setName("binary_or").setDebugActions(*debug),
+    (
+        Literal(">=").setName("gte") |
+        Literal("<=").setName("lte") |
+        Literal("<").setName("lt") |
+        Literal(">").setName("gt")
+    ).setDebugActions(*debug),
+    (
+        Literal("==").setName("eq") |
+        Literal("!=").setName("neq") |
+        Literal("<>").setName("neq") |
+        Literal("=").setName("eq")
+    ).setDebugActions(*debug),
 
-    Literal("<").setName("lt").setDebugActions(*debug),
-    Literal("<=").setName("lte").setDebugActions(*debug),
-    Literal(">").setName("gt").setDebugActions(*debug),
-    Literal(">=").setName("gte").setDebugActions(*debug),
-    Literal("=").setName("eq").setDebugActions(*debug),
-    Literal("==").setName("eq").setDebugActions(*debug),
-    Literal("!=").setName("neq").setDebugActions(*debug),
-    Literal("<>").setName("neq").setDebugActions(*debug),
     (BETWEEN.setName("between").setDebugActions(*debug), AND),
     (NOT_BETWEEN.setName("not_between").setDebugActions(*debug), AND),
     IN.setName("in").setDebugActions(*debug),
@@ -61,50 +68,60 @@ KNOWN_OPS = [
     OR.setName("or").setDebugActions(*debug)
 ]
 
-unary_ops = {
-    "-": "neg",
-    "~": "binary_not"
-}
-
-
-
 def to_json_operator(instring, tokensStart, retTokens):
     # ARRANGE INTO {op: params} FORMAT
     tok = retTokens[0]
+    op = tok[1]
+    clean_op = op.lower()
+    clean_op = binary_ops.get(clean_op, clean_op)
+
     for o in KNOWN_OPS:
         if isinstance(o, tuple):
-            if o[0].match == tok[1]:
-                op = o[0].name
-                break
-        elif (o.match == tok[1]) != (o.matches(tok[1])):
-            raise Exception("not expected")
-        elif o.match == tok[1]:
-            op = o.name
+            # TRINARY OPS
+            if o[0].matches(op):
+                return {clean_op: [tok[0], tok[2], tok[4]]}
+        elif o.matches(op):
             break
     else:
-        if tok[1] == COLLATE_NOCASE.match:
+        if op == COLLATE_NOCASE.match:
             op = COLLATE_NOCASE.name
             return {op: tok[0]}
         else:
             raise Exception("not found")
 
-    if op == "eq":
+    if clean_op == "eq":
         if tok[2] == "null":
             return {"missing": tok[0]}
         elif tok[0] == "null":
             return {"missing": tok[2]}
-    elif op == "neq":
+    elif clean_op == "neq":
         if tok[2] == "null":
             return {"exists": tok[0]}
         elif tok[0] == "null":
             return {"exists": tok[2]}
-    elif op == "is":
+    elif clean_op == "is":
         if tok[2] == 'null':
             return {"missing": tok[0]}
         else:
             return {"exists": tok[0]}
 
-    return {op: [tok[i * 2] for i in range(int((len(tok) + 1) / 2))]}
+
+    operands = [tok[0], tok[2]]
+    simple = {clean_op: operands}
+    if len(tok) <= 3:
+        return simple
+
+    if clean_op in {"add", "mul", "and", "or"}:
+        # ACCUMULATE SUBSEQUENT, IDENTICAL OPS
+        for i in range(3, len(tok), 2):
+            if tok[i] != op:
+                return to_json_operator(None, None, [[simple] + tok[i:]])
+            else:
+                operands.append(tok[i+1])
+        return simple
+    else:
+        # SIMPLE BINARY
+        return to_json_operator(None, None, [[simple] + tok[3:]])
 
 
 def to_json_call(instring, tokensStart, retTokens):
