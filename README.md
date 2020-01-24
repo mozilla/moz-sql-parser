@@ -52,6 +52,10 @@ The `SELECT` clause is an array of objects containing `name` and `value` propert
 
 You may also generate SQL from the a given JSON document. This is done by the formatter, which is still incomplete (Jan2020).
 
+    >>> from moz_sql_parser import format
+    >>> format({"from":"test", "select":["a.b", "c"]})
+    'SELECT a.b, c FROM test'
+
 
 ## Contributing
 
