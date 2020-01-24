@@ -12,88 +12,123 @@ from __future__ import absolute_import, division, unicode_literals
 import ast
 import sys
 
-from pyparsing import Combine, Forward, Group, Keyword, Literal, Optional, ParserElement, Regex, Word, ZeroOrMore, alphanums, alphas, delimitedList, infixNotation, opAssoc, restOfLine
+from pyparsing import Combine, Forward, Group, Keyword, Literal, Optional, ParserElement, Regex, Word, ZeroOrMore, \
+    alphanums, alphas, delimitedList, infixNotation, opAssoc, restOfLine
 
 from moz_sql_parser.debugs import debug
-from moz_sql_parser.keywords import AND, AS, ASC, BETWEEN, CASE, COLLATE_NOCASE, CROSS_JOIN, DESC, ELSE, END, FROM, FULL_JOIN, FULL_OUTER_JOIN, GROUP_BY, HAVING, IN, INNER_JOIN, IS, IS_NOT, JOIN, LEFT_JOIN, LEFT_OUTER_JOIN, LIKE, LIMIT, NOT_BETWEEN, NOT_IN, NOT_LIKE, OFFSET, ON, OR, ORDER_BY, RESERVED, RIGHT_JOIN, RIGHT_OUTER_JOIN, SELECT, THEN, UNION, UNION_ALL, USING, WHEN, WHERE
+from moz_sql_parser.keywords import AND, AS, ASC, BETWEEN, CASE, COLLATE_NOCASE, CROSS_JOIN, DESC, ELSE, END, FROM, \
+    FULL_JOIN, FULL_OUTER_JOIN, GROUP_BY, HAVING, IN, INNER_JOIN, IS, IS_NOT, JOIN, LEFT_JOIN, LEFT_OUTER_JOIN, LIKE, \
+    LIMIT, NOT_BETWEEN, NOT_IN, NOT_LIKE, OFFSET, ON, OR, ORDER_BY, RESERVED, RIGHT_JOIN, RIGHT_OUTER_JOIN, SELECT, \
+    THEN, UNION, UNION_ALL, USING, WHEN, WHERE, binary_ops, unary_ops
 
 ParserElement.enablePackrat()
 
 # PYPARSING USES A LOT OF STACK SPACE
-sys.setrecursionlimit(2000)
+sys.setrecursionlimit(1500)
 
+IDENT_FIRST_CHAR = alphas + "_"
+IDENT_REST_CHAR = alphanums + "_$"
 
 KNOWN_OPS = [
-    (BETWEEN, AND),
-    (NOT_BETWEEN, AND),
+    # https://www.sqlite.org/lang_expr.html
     Literal("||").setName("concat").setDebugActions(*debug),
-    Literal("*").setName("mul").setDebugActions(*debug),
-    Literal("/").setName("div").setDebugActions(*debug),
-    Literal("+").setName("add").setDebugActions(*debug),
-    Literal("-").setName("sub").setDebugActions(*debug),
-    Literal("<>").setName("neq").setDebugActions(*debug),
-    Literal(">").setName("gt").setDebugActions(*debug),
-    Literal("<").setName("lt").setDebugActions(*debug),
-    Literal(">=").setName("gte").setDebugActions(*debug),
-    Literal("<=").setName("lte").setDebugActions(*debug),
-    Literal("=").setName("eq").setDebugActions(*debug),
-    Literal("==").setName("eq").setDebugActions(*debug),
-    Literal("!=").setName("neq").setDebugActions(*debug),
+    (
+        Literal("*").setName("mul") |
+        Literal("/").setName("div") |
+        Literal("%").setName("mod")
+    ).setDebugActions(*debug),
+    (
+        Literal("+").setName("add") |
+        Literal("-").setName("sub")
+    ).setDebugActions(*debug),
+    Literal("&").setName("binary_and").setDebugActions(*debug),
+    Literal("|").setName("binary_or").setDebugActions(*debug),
+    (
+        Literal(">=").setName("gte") |
+        Literal("<=").setName("lte") |
+        Literal("<").setName("lt") |
+        Literal(">").setName("gt")
+    ).setDebugActions(*debug),
+    (
+        Literal("==").setName("eq") |
+        Literal("!=").setName("neq") |
+        Literal("<>").setName("neq") |
+        Literal("=").setName("eq")
+    ).setDebugActions(*debug),
+
+    (BETWEEN.setName("between").setDebugActions(*debug), AND),
+    (NOT_BETWEEN.setName("not_between").setDebugActions(*debug), AND),
     IN.setName("in").setDebugActions(*debug),
     NOT_IN.setName("nin").setDebugActions(*debug),
     IS_NOT.setName("neq").setDebugActions(*debug),
     IS.setName("is").setDebugActions(*debug),
     LIKE.setName("like").setDebugActions(*debug),
     NOT_LIKE.setName("nlike").setDebugActions(*debug),
-    OR.setName("or").setDebugActions(*debug),
-    AND.setName("and").setDebugActions(*debug)
+    AND.setName("and").setDebugActions(*debug),
+    OR.setName("or").setDebugActions(*debug)
 ]
-
 
 def to_json_operator(instring, tokensStart, retTokens):
     # ARRANGE INTO {op: params} FORMAT
     tok = retTokens[0]
+    op = tok[1]
+    clean_op = op.lower()
+    clean_op = binary_ops.get(clean_op, clean_op)
+
     for o in KNOWN_OPS:
         if isinstance(o, tuple):
-            if o[0].match == tok[1]:
-                op = o[0].name
-                break
-        elif o.match == tok[1]:
-            op = o.name
+            # TRINARY OPS
+            if o[0].matches(op):
+                return {clean_op: [tok[0], tok[2], tok[4]]}
+        elif o.matches(op):
             break
     else:
-        if tok[1] == COLLATE_NOCASE.match:
+        if op == COLLATE_NOCASE.match:
             op = COLLATE_NOCASE.name
             return {op: tok[0]}
         else:
             raise Exception("not found")
 
-    if op == "eq":
+    if clean_op == "eq":
         if tok[2] == "null":
             return {"missing": tok[0]}
         elif tok[0] == "null":
             return {"missing": tok[2]}
-    elif op == "neq":
+    elif clean_op == "neq":
         if tok[2] == "null":
             return {"exists": tok[0]}
         elif tok[0] == "null":
             return {"exists": tok[2]}
-    elif op == "is":
+    elif clean_op == "is":
         if tok[2] == 'null':
             return {"missing": tok[0]}
         else:
             return {"exists": tok[0]}
 
-    return {op: [tok[i * 2] for i in range(int((len(tok) + 1) / 2))]}
+
+    operands = [tok[0], tok[2]]
+    simple = {clean_op: operands}
+    if len(tok) <= 3:
+        return simple
+
+    if clean_op in {"add", "mul", "and", "or"}:
+        # ACCUMULATE SUBSEQUENT, IDENTICAL OPS
+        for i in range(3, len(tok), 2):
+            if tok[i] != op:
+                return to_json_operator(None, None, [[simple] + tok[i:]])
+            else:
+                operands.append(tok[i+1])
+        return simple
+    else:
+        # SIMPLE BINARY
+        return to_json_operator(None, None, [[simple] + tok[3:]])
 
 
 def to_json_call(instring, tokensStart, retTokens):
     # ARRANGE INTO {op: params} FORMAT
     tok = retTokens
     op = tok.op.lower()
-
-    if op == "-":
-        op = "neg"
+    op = unary_ops.get(op, op)
 
     params = tok.params
     if not params:
@@ -148,10 +183,19 @@ def to_union_call(instring, tokensStart, retTokens):
     if len(unions) == 1:
         output = unions[0]
     else:
+        sources = [unions[i] for i in range(0, len(unions), 2)]
+        operators = [unions[i] for i in range(1, len(unions), 2)]
+        op = operators[0].lower().replace(" ", "_")
+        if any(o.lower().replace(" ", "_") != op for o in operators[1:]):
+            raise Exception("Expecting all \"union all\" or all \"union\", not some combination")
+
         if not tok.get('orderby') and not tok.get('limit'):
-            return tok['from']
+            return {op: sources}
         else:
-            output = {"from": {"union": unions}}
+            output = {"from": {op: sources}}
+
+
+
 
     if tok.get('orderby'):
         output["orderby"] = tok.get('orderby')
@@ -169,7 +213,7 @@ def unquote(instring, tokensStart, retTokens):
         val = '"'+val[1:-1].replace('""', '\\"')+'"'
         # val = val.replace(".", "\\.")
     elif val.startswith('`') and val.endswith('`'):
-        val = "'" + val[1:-1].replace("``","`") + "'"
+        val = '"' + val[1:-1].replace("``","`") + '"'
     elif val.startswith("+"):
         val = val[1:]
     un = ast.literal_eval(val)
@@ -189,7 +233,7 @@ intNum = Regex(r"[+-]?\d+([eE]\+?\d+)?").addParseAction(unquote)
 sqlString = Regex(r"\'(\'\'|\\.|[^'])*\'").addParseAction(to_string)
 identString = Regex(r'\"(\"\"|\\.|[^"])*\"').addParseAction(unquote)
 mysqlidentString = Regex(r'\`(\`\`|\\.|[^`])*\`').addParseAction(unquote)
-ident = Combine(~RESERVED + (delimitedList(Literal("*") | Word(alphas + "_", alphanums + "_$") | identString | mysqlidentString, delim=".", combine=True))).setName("identifier")
+ident = Combine(~RESERVED + (delimitedList(Literal("*") | identString | mysqlidentString | Word(IDENT_FIRST_CHAR, IDENT_REST_CHAR), delim=".", combine=True))).setName("identifier")
 
 # EXPRESSIONS
 expr = Forward()
@@ -212,10 +256,11 @@ compound = (
     (Literal("(").setDebugActions(*debug).suppress() + Group(delimitedList(expr)) + Literal(")").suppress()) |
     realNum.setName("float").setDebugActions(*debug) |
     intNum.setName("int").setDebugActions(*debug) |
+    (Literal("~")("op").setDebugActions(*debug) + expr("params")).addParseAction(to_json_call) |
     (Literal("-")("op").setDebugActions(*debug) + expr("params")).addParseAction(to_json_call) |
     sqlString.setName("string").setDebugActions(*debug) |
     (
-        Word(alphas)("op").setName("function name").setDebugActions(*debug) +
+        Word(IDENT_FIRST_CHAR, IDENT_REST_CHAR)("op").setName("function name").setDebugActions(*debug) +
         Literal("(").setName("func_param").setDebugActions(*debug) +
         Optional(selectStmt | Group(delimitedList(expr)))("params") +
         ")"
@@ -279,23 +324,25 @@ join = (
 sortColumn = expr("value").setName("sort1").setDebugActions(*debug) + Optional(DESC("sort") | ASC("sort")) | \
              expr("value").setName("sort2").setDebugActions(*debug)
 
+unordered_sql = Group(
+    SELECT.suppress().setDebugActions(*debug) + delimitedList(selectColumn)("select") +
+    Optional(
+        (FROM.suppress().setDebugActions(*debug) + delimitedList(Group(table_source)) + ZeroOrMore(join))("from") +
+        Optional(WHERE.suppress().setDebugActions(*debug) + expr.setName("where"))("where") +
+        Optional(GROUP_BY.suppress().setDebugActions(*debug) + delimitedList(Group(selectColumn))("groupby").setName(
+            "groupby")) +
+        Optional(HAVING.suppress().setDebugActions(*debug) + expr("having").setName("having")) +
+        Optional(LIMIT.suppress().setDebugActions(*debug) + expr("limit")) +
+        Optional(OFFSET.suppress().setDebugActions(*debug) + expr("offset"))
+    )
+)
+
+
 # define SQL tokens
 selectStmt << Group(
     Group(Group(
-        delimitedList(
-            Group(
-                SELECT.suppress().setDebugActions(*debug) + delimitedList(selectColumn)("select") +
-                Optional(
-                    (FROM.suppress().setDebugActions(*debug) + delimitedList(Group(table_source)) + ZeroOrMore(join))("from") +
-                    Optional(WHERE.suppress().setDebugActions(*debug) + expr.setName("where"))("where") +
-                    Optional(GROUP_BY.suppress().setDebugActions(*debug) + delimitedList(Group(selectColumn))("groupby").setName("groupby")) +
-                    Optional(HAVING.suppress().setDebugActions(*debug) + expr("having").setName("having")) +
-                    Optional(LIMIT.suppress().setDebugActions(*debug) + expr("limit")) +
-                    Optional(OFFSET.suppress().setDebugActions(*debug) + expr("offset"))
-                )
-            ),
-            delim=(UNION | UNION_ALL)
-        )
+        unordered_sql +
+        ZeroOrMore((UNION_ALL | UNION) + unordered_sql)
     )("union"))("from") +
     Optional(ORDER_BY.suppress().setDebugActions(*debug) + delimitedList(Group(sortColumn))("orderby").setName("orderby")) +
     Optional(LIMIT.suppress().setDebugActions(*debug) + expr("limit")) +

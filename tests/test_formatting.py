@@ -69,7 +69,7 @@ class TestSimple(TestCase):
             ]}},
             "from": "dual",
         })
-        expected = "SELECT a + (b / 2) + 45 * c + (2 / d) FROM dual"
+        expected = "SELECT a + b / 2 + 45 * c + 2 / d FROM dual"
         self.assertEqual(result, expected)
 
     def test_select_underscore_name(self):
@@ -333,4 +333,72 @@ class TestSimple(TestCase):
     def test_no_arguments(self):
         result = format({'select': {'value': {'now': {}}}})
         expected = "SELECT NOW()"
+        self.assertEqual(result, expected)
+
+    def test_between(self):
+        result = format({
+            "select": [
+                {"value": "a"}
+            ],
+            "from": ["t1"],
+            "where": {"between": ["t1.a", 10, {'literal': 'ABC'}]},
+        })
+        expected = "SELECT a FROM t1 WHERE t1.a BETWEEN 10 AND 'ABC'"
+        self.assertEqual(result, expected)
+
+    def test_binary_and(self):
+        expected = "SELECT * FROM t WHERE c & 4"
+        result = format({
+            "select": "*",
+            "from": "t",
+            "where": {"binary_and": ["c", 4]}
+        })
+        self.assertEqual(result, expected)
+
+    def test_binary_or(self):
+        expected = "SELECT * FROM t WHERE c | 4"
+        result = format({
+            "select": "*",
+            "from": "t",
+            "where": {"binary_or": ["c", 4]}
+        })
+        self.assertEqual(result, expected)
+
+    def test_binary_not(self):
+        expected = "SELECT * FROM t WHERE ~c"
+        result = format({
+            "select": "*",
+            "from": "t",
+            "where": {"binary_not": "c"}
+        })
+        self.assertEqual(result, expected)
+
+    def test_issue_104(self):
+        expected = (
+            "SELECT NomPropriete AS Categorie, ROUND(AVG(NotePonderee), 2) AS \"Moyenne des notes\", ROUND(AVG(Complexite), 2) AS \"Complexite moyenne\""
+            " FROM Propriete, Categorie, Jeu"
+            " WHERE IdPropriete = IdCategorie"
+            " AND Categorie.IdJeu = Jeu.IdJeu"
+            " AND NotePonderee > 0"
+            " GROUP BY IdPropriete, NomPropriete"
+            " ORDER BY \"Moyenne des notes\" DESC,\"Complexite moyenne\" DESC"
+        )
+        result = format({
+            'select': [
+                {'value': 'NomPropriete', 'name': 'Categorie'},
+                {'value': {'round': [{'avg': 'NotePonderee'}, 2]}, 'name': 'Moyenne des notes'},
+                {'value': {'round': [{'avg': 'Complexite'}, 2]}, 'name': 'Complexite moyenne'}],
+            'from': ['Propriete', 'Categorie', 'Jeu'],
+            'where': {'and': [
+                {'eq': ['IdPropriete', 'IdCategorie']}, {'eq': ['Categorie.IdJeu', 'Jeu.IdJeu']},
+                {'gt': ['NotePonderee', 0]}
+            ]},
+            'groupby': [
+                {'value': 'IdPropriete'}, {'value': 'NomPropriete'}
+            ],
+            'orderby': [
+                {'value': 'Moyenne des notes', 'sort': 'desc'},
+                {'value': 'Complexite moyenne', 'sort': 'desc'}
+            ]
+        })
         self.assertEqual(result, expected)

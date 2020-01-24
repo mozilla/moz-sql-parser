@@ -626,9 +626,16 @@ from benn.college_football_players
         self.verify_formatting(expected_sql, expected_json)
 
     def test_096(self):
-        expected_sql = "SELECT f1 FROM test1 WHERE ('x' || f1) BETWEEN 'x10' AND 'x20' ORDER BY f1"
+        expected_sql = "SELECT f1 FROM test1 WHERE 'x' || f1 BETWEEN 'x10' AND 'x20' ORDER BY f1"
         expected_json = {'from': 'test1', 'select': {'value': 'f1'}, 'where': {
             'between': [{'concat': [{'literal': 'x'}, 'f1']}, {'literal': 'x10'}, {'literal': 'x20'}]},
+                         'orderby': {'value': 'f1'}}
+        self.verify_formatting(expected_sql, expected_json)
+
+    def test_096_not(self):
+        expected_sql = "SELECT f1 FROM test1 WHERE 'x' || f1 NOT BETWEEN 'x10' AND 'x20' ORDER BY f1"
+        expected_json = {'from': 'test1', 'select': {'value': 'f1'}, 'where': {
+            'not_between': [{'concat': [{'literal': 'x'}, 'f1']}, {'literal': 'x10'}, {'literal': 'x20'}]},
                          'orderby': {'value': 'f1'}}
         self.verify_formatting(expected_sql, expected_json)
 

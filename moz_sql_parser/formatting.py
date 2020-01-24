@@ -13,11 +13,11 @@ from __future__ import unicode_literals
 
 import re
 
-from mo_future import string_types, text
+from mo_future import string_types, text, first, long, is_text
 
-from moz_sql_parser.keywords import RESERVED, join_keywords
+from moz_sql_parser.keywords import RESERVED, join_keywords, precedence, binary_ops
 
-VALID = re.compile(r'[a-zA-Z_]\w*')
+VALID = re.compile(r'^[a-zA-Z_]\w*$')
 
 
 def should_quote(identifier):
@@ -36,28 +36,76 @@ def should_quote(identifier):
             not VALID.match(identifier) or identifier in RESERVED))
 
 
-def escape(identifier, ansi_quotes, should_quote):
+def split_field(field):
+    """
+    RETURN field AS ARRAY OF DOT-SEPARATED FIELDS
+    """
+    if field == "." or field==None:
+        return []
+    elif is_text(field) and "." in field:
+        if field.startswith(".."):
+            remainder = field.lstrip(".")
+            back = len(field) - len(remainder) - 1
+            return [-1]*back + [k.replace("\a", ".") for k in remainder.replace("\\.", "\a").split(".")]
+        else:
+            return [k.replace("\a", ".") for k in field.replace("\\.", "\a").split(".")]
+    else:
+        return [field]
+
+
+def join_field(path):
+    """
+    RETURN field SEQUENCE AS STRING
+    """
+    output = ".".join([f.replace(".", "\\.") for f in path if f != None])
+    return output if output else "."
+
+    # potent = [f for f in path if f != "."]
+    # if not potent:
+    #     return "."
+    # return ".".join([f.replace(".", "\\.") for f in potent])
+
+
+
+def escape(ident, ansi_quotes, should_quote):
     """
     Escape identifiers.
 
     ANSI uses single quotes, but many databases use back quotes.
 
     """
-    if not should_quote(identifier):
-        return identifier
+    def esc(identifier):
+        if not should_quote(identifier):
+            return identifier
 
-    quote = '"' if ansi_quotes else '`'
-    identifier = identifier.replace(quote, 2*quote)
-    return '{0}{1}{2}'.format(quote, identifier, quote)
+        quote = '"' if ansi_quotes else '`'
+        identifier = identifier.replace(quote, 2*quote)
+        return '{0}{1}{2}'.format(quote, identifier, quote)
+    return join_field(esc(f) for f in split_field(ident))
 
 
-def Operator(op, parentheses=False):
-    op = ' {0} '.format(op)
+def Operator(op):
+    prec = precedence[binary_ops[op]]
+    op = ' {0} '.format(op).upper()
+
     def func(self, json):
-        out = op.join(self.dispatch(v) for v in json)
-        if parentheses:
-            out = '({0})'.format(out)
-        return out
+        acc = []
+
+        for v in json:
+            sql = self.dispatch(v)
+            if isinstance(v, (text, int, float, long)):
+                acc.append(sql)
+                continue
+
+            p = precedence.get(first(v.keys()))
+            if p is None:
+                acc.append(sql)
+                continue
+            if p>=prec:
+                acc.append("(" + sql + ")")
+            else:
+                acc.append(sql)
+        return op.join(acc)
     return func
 
 
@@ -77,17 +125,20 @@ class Formatter:
     # simple operators
     _concat = Operator('||')
     _mul = Operator('*')
-    _div = Operator('/', parentheses=True)
+    _div = Operator('/')
+    _mod = Operator('%')
     _add = Operator('+')
-    _sub = Operator('-', parentheses=True)
+    _sub = Operator('-')
     _neq = Operator('<>')
     _gt = Operator('>')
     _lt = Operator('<')
     _gte = Operator('>=')
     _lte = Operator('<=')
     _eq = Operator('=')
-    _or = Operator('OR')
-    _and = Operator('AND')
+    _or = Operator('or')
+    _and = Operator('and')
+    _binary_and = Operator("&")
+    _binary_or = Operator("|")
 
     def __init__(self, ansi_quotes=True, should_quote=should_quote):
         self.ansi_quotes = ansi_quotes
@@ -96,6 +147,8 @@ class Formatter:
     def format(self, json):
         if 'union' in json:
             return self.union(json['union'])
+        elif 'union_all' in json:
+            return self.union_all(json['union_all'])
         else:
             return self.query(json)
 
@@ -151,6 +204,9 @@ class Formatter:
         else:
             return '{0}({1})'.format(key.upper(), self.dispatch(value))
 
+    def _binary_not(self, value):
+        return '~{0}'.format(self.dispatch(value))
+
     def _exists(self, value):
         return '{0} IS NOT NULL'.format(self.dispatch(value))
 
@@ -203,6 +259,12 @@ class Formatter:
         else:
             return str(json)
 
+    def _between(self, json):
+        return '{0} BETWEEN {1} AND {2}'.format(self.dispatch(json[0]), self.dispatch(json[1]), self.dispatch(json[2]))
+
+    def _not_between(self, json):
+        return '{0} NOT BETWEEN {1} AND {2}'.format(self.dispatch(json[0]), self.dispatch(json[1]), self.dispatch(json[2]))
+
     def _on(self, json):
         detected_join = join_keywords & set(json.keys())
         if len(detected_join) == 0:
@@ -221,6 +283,9 @@ class Formatter:
 
     def union(self, json):
         return ' UNION '.join(self.query(query) for query in json)
+
+    def union_all(self, json):
+        return ' UNION ALL '.join(self.query(query) for query in json)
 
     def query(self, json):
         return ' '.join(

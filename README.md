@@ -34,7 +34,7 @@ You can see the parser in action at [https://sql.telemetry.mozilla.org/](https:/
 
     pip install moz-sql-parser
 
-## Usage
+## Parsing SQL
 
     >>> from moz_sql_parser import parse
     >>> import json
@@ -47,6 +47,20 @@ Each SQL query is parsed to an object: Each clause is assigned to an object prop
     '{"select": [{"value": "a", "name": "hello"}, {"value": "b", "name": "world"}], "from": "jobs"}'
 
 The `SELECT` clause is an array of objects containing `name` and `value` properties. 
+
+## Generating SQL
+
+You may also generate SQL from the a given JSON document. This is done by the formatter, which is still incomplete (Jan2020).
+
+    >>> from moz_sql_parser import format
+    >>> format({"from":"test", "select":["a.b", "c"]})
+    'SELECT a.b, c FROM test'
+
+
+## Contributing
+
+In the event that the parser is not working for you, you can help make this better but simply pasting your sql (or JSON) into a new issue. Extra points if you describe the problem. Even more points if you submit a PR with a test.  If you also submit a fix, then you also have my gratitude. 
+
 
 ## Run Tests
 
