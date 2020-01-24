@@ -13,11 +13,11 @@ from __future__ import unicode_literals
 
 import re
 
-from mo_future import string_types, text, first, long
+from mo_future import string_types, text, first, long, is_text
 
 from moz_sql_parser.keywords import RESERVED, join_keywords, precedence, binary_ops
 
-VALID = re.compile(r'[a-zA-Z_]\w*')
+VALID = re.compile(r'^[a-zA-Z_]\w*$')
 
 
 def should_quote(identifier):
@@ -36,19 +36,52 @@ def should_quote(identifier):
             not VALID.match(identifier) or identifier in RESERVED))
 
 
-def escape(identifier, ansi_quotes, should_quote):
+def split_field(field):
+    """
+    RETURN field AS ARRAY OF DOT-SEPARATED FIELDS
+    """
+    if field == "." or field==None:
+        return []
+    elif is_text(field) and "." in field:
+        if field.startswith(".."):
+            remainder = field.lstrip(".")
+            back = len(field) - len(remainder) - 1
+            return [-1]*back + [k.replace("\a", ".") for k in remainder.replace("\\.", "\a").split(".")]
+        else:
+            return [k.replace("\a", ".") for k in field.replace("\\.", "\a").split(".")]
+    else:
+        return [field]
+
+
+def join_field(path):
+    """
+    RETURN field SEQUENCE AS STRING
+    """
+    output = ".".join([f.replace(".", "\\.") for f in path if f != None])
+    return output if output else "."
+
+    # potent = [f for f in path if f != "."]
+    # if not potent:
+    #     return "."
+    # return ".".join([f.replace(".", "\\.") for f in potent])
+
+
+
+def escape(ident, ansi_quotes, should_quote):
     """
     Escape identifiers.
 
     ANSI uses single quotes, but many databases use back quotes.
 
     """
-    if not should_quote(identifier):
-        return identifier
+    def esc(identifier):
+        if not should_quote(identifier):
+            return identifier
 
-    quote = '"' if ansi_quotes else '`'
-    identifier = identifier.replace(quote, 2*quote)
-    return '{0}{1}{2}'.format(quote, identifier, quote)
+        quote = '"' if ansi_quotes else '`'
+        identifier = identifier.replace(quote, 2*quote)
+        return '{0}{1}{2}'.format(quote, identifier, quote)
+    return join_field(esc(f) for f in split_field(ident))
 
 
 def Operator(op):

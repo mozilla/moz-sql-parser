@@ -373,3 +373,32 @@ class TestSimple(TestCase):
         })
         self.assertEqual(result, expected)
 
+    def test_issue_104(self):
+        expected = (
+            "SELECT NomPropriete AS Categorie, ROUND(AVG(NotePonderee), 2) AS \"Moyenne des notes\", ROUND(AVG(Complexite), 2) AS \"Complexite moyenne\""
+            " FROM Propriete, Categorie, Jeu"
+            " WHERE IdPropriete = IdCategorie"
+            " AND Categorie.IdJeu = Jeu.IdJeu"
+            " AND NotePonderee > 0"
+            " GROUP BY IdPropriete, NomPropriete"
+            " ORDER BY \"Moyenne des notes\" DESC,\"Complexite moyenne\" DESC"
+        )
+        result = format({
+            'select': [
+                {'value': 'NomPropriete', 'name': 'Categorie'},
+                {'value': {'round': [{'avg': 'NotePonderee'}, 2]}, 'name': 'Moyenne des notes'},
+                {'value': {'round': [{'avg': 'Complexite'}, 2]}, 'name': 'Complexite moyenne'}],
+            'from': ['Propriete', 'Categorie', 'Jeu'],
+            'where': {'and': [
+                {'eq': ['IdPropriete', 'IdCategorie']}, {'eq': ['Categorie.IdJeu', 'Jeu.IdJeu']},
+                {'gt': ['NotePonderee', 0]}
+            ]},
+            'groupby': [
+                {'value': 'IdPropriete'}, {'value': 'NomPropriete'}
+            ],
+            'orderby': [
+                {'value': 'Moyenne des notes', 'sort': 'desc'},
+                {'value': 'Complexite moyenne', 'sort': 'desc'}
+            ]
+        })
+        self.assertEqual(result, expected)
