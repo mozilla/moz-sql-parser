@@ -213,7 +213,7 @@ def unquote(instring, tokensStart, retTokens):
         val = '"'+val[1:-1].replace('""', '\\"')+'"'
         # val = val.replace(".", "\\.")
     elif val.startswith('`') and val.endswith('`'):
-        val = "'" + val[1:-1].replace("``","`") + "'"
+        val = '"' + val[1:-1].replace("``","`") + '"'
     elif val.startswith("+"):
         val = val[1:]
     un = ast.literal_eval(val)
@@ -233,7 +233,7 @@ intNum = Regex(r"[+-]?\d+([eE]\+?\d+)?").addParseAction(unquote)
 sqlString = Regex(r"\'(\'\'|\\.|[^'])*\'").addParseAction(to_string)
 identString = Regex(r'\"(\"\"|\\.|[^"])*\"').addParseAction(unquote)
 mysqlidentString = Regex(r'\`(\`\`|\\.|[^`])*\`').addParseAction(unquote)
-ident = Combine(~RESERVED + (delimitedList(Literal("*") | Word(IDENT_FIRST_CHAR, IDENT_REST_CHAR) | identString | mysqlidentString, delim=".", combine=True))).setName("identifier")
+ident = Combine(~RESERVED + (delimitedList(Literal("*") | identString | mysqlidentString | Word(IDENT_FIRST_CHAR, IDENT_REST_CHAR), delim=".", combine=True))).setName("identifier")
 
 # EXPRESSIONS
 expr = Forward()

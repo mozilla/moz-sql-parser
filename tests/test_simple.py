@@ -770,3 +770,9 @@ class TestSimple(TestCase):
         result = parse(sql)
         expected = {"select": {"value": {"mul": [{"div": [5, 4]}, 2]}}}
         self.assertEqual(result, expected)
+
+    def test_issue_92(self):
+        sql = "SELECT * FROM `movies`"
+        result = parse(sql)
+        expected = {"select": "*", "from": "movies"}
+        self.assertEqual(result, expected)
