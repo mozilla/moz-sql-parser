@@ -626,3 +626,153 @@ class TestSimple(TestCase):
             ]}
         }
         self.assertEqual(result, expected)
+
+    def test_binary_and(self):
+        sql = "SELECT * FROM t WHERE  c & 4;"
+        result = parse(sql)
+        expected = {
+            "select": "*",
+            "from": "t",
+            "where": {"binary_and": ["c", 4]}
+        }
+        self.assertEqual(result, expected)
+
+    def test_binary_or(self):
+        sql = "SELECT * FROM t WHERE c | 4;"
+        result = parse(sql)
+        expected = {
+            "select": "*",
+            "from": "t",
+            "where": {"binary_or": ["c", 4]}
+        }
+        self.assertEqual(result, expected)
+
+    def test_binary_not(self):
+        sql = "SELECT * FROM t WHERE ~c;"
+        result = parse(sql)
+        expected = {
+            "select": "*",
+            "from": "t",
+            "where": {"binary_not": "c"}
+        }
+        self.assertEqual(result, expected)
+
+    def test_or_and(self):
+        sql = "SELECT * FROM dual WHERE a OR b AND c"
+        result = parse(sql)
+        expected = {
+            "select": "*",
+            "from": "dual",
+            "where": {"or": ["a", {"and": ["b", "c"]}]}
+        }
+        self.assertEqual(result, expected)
+
+    def test_and_or(self):
+        sql = "SELECT * FROM dual WHERE a AND b or c"
+        result = parse(sql)
+        expected = {
+            "select": "*",
+            "from": "dual",
+            "where": {"or": [{"and": ["a", "b"]}, "c"]}
+        }
+        self.assertEqual(result, expected)
+
+    def test_underscore_function1(self):
+        sql = "SELECT _()"
+        result = parse(sql)
+        expected = {
+            "select": {"value": {"_": {}}},
+        }
+        self.assertEqual(result, expected)
+
+    def test_underscore_function2(self):
+        sql = "SELECT _a(a$b)"
+        result = parse(sql)
+        expected = {
+            "select": {"value": {"_a": "a$b"}},
+        }
+        self.assertEqual(result, expected)
+
+    def test_underscore_function3(self):
+        sql = "SELECT _$$_(a, b$)"
+        result = parse(sql)
+        expected = {
+            "select": {"value": {"_$$_": ["a", "b$"]}},
+        }
+        self.assertEqual(result, expected)
+
+    def test_union_all1(self):
+        #               0         1         2         3         4         5         6         7         8         9
+        #               012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789
+        result = parse("SELECT b FROM t6 UNION ALL SELECT '3' AS x ORDER BY x")
+        expected = {
+            "from": {'union_all': [
+                {'from': 't6', 'select': {'value': 'b'}},
+                {'select': {'value': {'literal': '3'}, 'name': 'x'}}
+            ]},
+            'orderby': {"value": 'x'}
+        }
+        self.assertEqual(result, expected)
+
+    def test_union_all2(self):
+        result = parse("SELECT b UNION ALL SELECT c")
+        expected = {'union_all': [
+            {'select': {'value': 'b'}},
+            {'select': {'value': 'c'}},
+        ]}
+        self.assertEqual(result, expected)
+
+    def test_issue106(self):
+        result = parse("""
+            SELECT *
+            FROM MyTable
+            GROUP BY Col
+            HAVING AVG(X) >= 2
+            AND AVG(X) <= 4
+            OR AVG(X) = 5;
+        """)
+        expected = {
+            'select': '*',
+            'from': 'MyTable',
+            'groupby': {'value': 'Col'},
+            'having': {'or': [
+                {'and': [
+                    {'gte': [{'avg': 'X'}, 2]},
+                    {'lte': [{'avg': 'X'}, 4]}
+                ]},
+                {'eq': [{'avg': 'X'}, 5]}
+            ]}
+        }
+        self.assertEqual(result, expected)
+
+    def test_issue97_function_names(self):
+        sql = "SELECT ST_AsText(ST_MakePoint(174, -36));"
+        result = parse(sql)
+        expected = {
+            'select': {
+                'value': {
+                    'st_astext': {
+                        'st_makepoint': [174, -36]
+                    }
+                }
+            }
+        }
+        self.assertEqual(result, expected)
+
+    def test_issue91_order_of_operations1(self):
+        sql = "select 5-4+2"
+        result = parse(sql)
+        expected = {"select": {"value": {"add": [{"sub": [5, 4]}, 2]}}}
+        self.assertEqual(result, expected)
+
+    def test_issue91_order_of_operations2(self):
+        sql = "select 5/4*2"
+        result = parse(sql)
+        expected = {"select": {"value": {"mul": [{"div": [5, 4]}, 2]}}}
+        self.assertEqual(result, expected)
+
+    def test_issue_92(self):
+        sql = "SELECT * FROM `movies`"
+        result = parse(sql)
+        expected = {"select": "*", "from": "movies"}
+        self.assertEqual(result, expected)
