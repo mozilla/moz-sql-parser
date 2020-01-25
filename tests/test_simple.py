@@ -776,3 +776,9 @@ class TestSimple(TestCase):
         result = parse(sql)
         expected = {"select": "*", "from": "movies"}
         self.assertEqual(result, expected)
+
+    def test_at_ident(self):
+        sql = "select @@version_comment"
+        result = parse(sql)
+        expected = {"select": {"value": "@@version_comment"}}
+        self.assertEqual(result, expected)
