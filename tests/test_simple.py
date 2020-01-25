@@ -11,8 +11,6 @@ from __future__ import absolute_import, division, unicode_literals
 
 from unittest import TestCase
 
-from mo_json import value2json
-
 from moz_sql_parser import parse
 
 try:
@@ -837,8 +835,6 @@ class TestSimple(TestCase):
         ]}
 
         self.assertEqual(result, expected)
-
-    value2json
 
     def test_2with_clause(self):
         #    0         1         2         3         4         5         6         7         8         9
