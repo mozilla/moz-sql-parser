@@ -299,7 +299,7 @@ selectColumn = Group(
 
 table_source = (
     (
-        (Literal("(") + selectStmt + Literal(")")).setDebugActions(*debug) |
+        (Literal("(").suppress() + selectStmt + Literal(")").suppress()).setDebugActions(*debug) |
         call_function
     )("value").setName("table source") +
     Optional(
