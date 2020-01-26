@@ -41,6 +41,7 @@ THEN = None
 UNION = None
 UNION_ALL = None
 USING = None
+WITH = None
 WHEN = None
 WHERE = None
 
