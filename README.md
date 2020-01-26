@@ -48,6 +48,15 @@ Each SQL query is parsed to an object: Each clause is assigned to an object prop
 
 The `SELECT` clause is an array of objects containing `name` and `value` properties. 
 
+### Recursion Limit 
+
+**WARNING!** There is a recursion limit of `1500`. This prevents parsing of complex expressions or deeply nested nested queries. You can increase the recursion limit *after* you have imported `moz_sql_parser`, and before you `parse`:
+
+    >>> from moz_sql_parser import parse
+    >>> sys.setrecursionlimit(3000)
+    >>> parse(complicated_sql)
+
+
 ## Generating SQL
 
 You may also generate SQL from the a given JSON document. This is done by the formatter, which is still incomplete (Jan2020).
