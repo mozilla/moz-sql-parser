@@ -784,3 +784,9 @@ class TestSimple(TestCase):
         result = parse(sql)
         expected = {"select": "*", "from": {"value": {"some_table.some_function": [{"literal": 'parameter'}, 1, "some_col"]}}}
         self.assertEqual(result, expected)
+
+    def test_at_ident(self):
+        sql = "select @@version_comment"
+        result = parse(sql)
+        expected = {"select": {"value": "@@version_comment"}}
+        self.assertEqual(result, expected)

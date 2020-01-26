@@ -26,8 +26,7 @@ ParserElement.enablePackrat()
 # PYPARSING USES A LOT OF STACK SPACE
 sys.setrecursionlimit(1500)
 
-IDENT_FIRST_CHAR = alphas + "_"
-IDENT_REST_CHAR = alphanums + "_$"
+IDENT_CHAR = alphanums + "@_$"
 
 KNOWN_OPS = [
     # https://www.sqlite.org/lang_expr.html
@@ -194,9 +193,6 @@ def to_union_call(instring, tokensStart, retTokens):
         else:
             output = {"from": {op: sources}}
 
-
-
-
     if tok.get('orderby'):
         output["orderby"] = tok.get('orderby')
     if tok.get('limit'):
@@ -233,7 +229,7 @@ intNum = Regex(r"[+-]?\d+([eE]\+?\d+)?").addParseAction(unquote)
 sqlString = Regex(r"\'(\'\'|\\.|[^'])*\'").addParseAction(to_string)
 identString = Regex(r'\"(\"\"|\\.|[^"])*\"').addParseAction(unquote)
 mysqlidentString = Regex(r'\`(\`\`|\\.|[^`])*\`').addParseAction(unquote)
-ident = Combine(~RESERVED + (delimitedList(Literal("*") | identString | mysqlidentString | Word(IDENT_FIRST_CHAR, IDENT_REST_CHAR), delim=".", combine=True))).setName("identifier")
+ident = Combine(~RESERVED + (delimitedList(Literal("*") | identString | mysqlidentString | Word(IDENT_CHAR), delim=".", combine=True))).setName("identifier")
 
 # EXPRESSIONS
 expr = Forward()
