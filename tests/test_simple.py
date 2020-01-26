@@ -786,3 +786,72 @@ class TestSimple(TestCase):
         result = parse(sql)
         expected = {}
         self.assertEqual(result, expected)
+        
+    def test_issue_38a(self):
+        sql = "SELECT a IN ('abc',3,'def')"
+        result = parse(sql)
+        expected = {"select": {"value": {"in": ["a", {"literal": ['abc', 3, 'def']}]}}}
+        self.assertEqual(result, expected)
+
+    def test_issue_38b(self):
+        sql = "SELECT a IN (abc,3,'def')"
+        result = parse(sql)
+        expected = {"select": {"value": {"in": ["a", ["abc", 3, {"literal": 'def'}]]}}}
+        self.assertEqual(result, expected)
+
+    @skipIf(IS_MASTER, "stack too deep")
+    def test_issue_107_recursion(self):
+        sql = (
+            " SELECT city_name"
+            " FROM city"
+            " WHERE population = ("
+            "     SELECT MAX(population)"
+            "     FROM city"
+            "     WHERE state_name IN ("
+            "         SELECT state_name"
+            "         FROM state"
+            "         WHERE area = (SELECT MIN(area) FROM state)"
+            "     )"
+            " )"
+        )
+        result = parse(sql)
+        expected = {
+            'from': 'city',
+            'select': {'value': 'city_name'},
+            'where': {'eq': [
+                'population',
+                {
+                    'from': 'city',
+                    'select': {'value': {'max': 'population'}},
+                    'where': {'in': [
+                        'state_name',
+                        {
+                            'from': 'state',
+                            'select': {'value': 'state_name'},
+                            'where': {'eq': [
+                                'area',
+                                {
+                                    'from': 'state',
+                                    'select': {'value': {'min': 'area'}}
+                                }
+                            ]}
+                        }
+                    ]}
+                }
+            ]}
+        }
+        self.assertEqual(result, expected)
+
+    def test_issue_95(self):
+        #      0         1         2         3         4         5         6         7         8         9
+        #      012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789
+        sql = "select * from some_table.some_function('parameter', 1, some_col)"
+        result = parse(sql)
+        expected = {"select": "*", "from": {"value": {"some_table.some_function": [{"literal": 'parameter'}, 1, "some_col"]}}}
+        self.assertEqual(result, expected)
+
+    def test_at_ident(self):
+        sql = "select @@version_comment"
+        result = parse(sql)
+        expected = {"select": {"value": "@@version_comment"}}
+        self.assertEqual(result, expected)
