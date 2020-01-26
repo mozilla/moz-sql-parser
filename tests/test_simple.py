@@ -802,8 +802,8 @@ class TestSimple(TestCase):
             "     AND m.deptno = dc2.deptno;"
         )
         result = parse(sql)
-        expected = {'with': [
-            {
+        expected = {
+            'with': {
                 'name': 'dept_count',
                 'value': {
                     'from': 'emp',
@@ -814,27 +814,25 @@ class TestSimple(TestCase):
                     ]
                 }
             },
-            {
-                'from': [
-                    {'name': 'e', 'value': 'emp'},
-                    {'name': 'dc1', 'value': 'dept_count'},
-                    {'name': 'm', 'value': 'emp'},
-                    {'name': 'dc2', 'value': 'dept_count'}
-                ]
-                ,
-                'select': [
-                    {'name': 'employee_name', 'value': 'e.ename'},
-                    {'name': 'emp_dept_count', 'value': 'dc1.dept_count'},
-                    {'name': 'manager_name', 'value': 'm.ename'},
-                    {'name': 'mgr_dept_count', 'value': 'dc2.dept_count'}
-                ],
-                'where': {'and': [
-                    {'eq': ['e.deptno', 'dc1.deptno']},
-                    {'eq': ['e.mgr', 'm.empno']},
-                    {'eq': ['m.deptno', 'dc2.deptno']}
-                ]}
-            }
-        ]}
+            'from': [
+                {'name': 'e', 'value': 'emp'},
+                {'name': 'dc1', 'value': 'dept_count'},
+                {'name': 'm', 'value': 'emp'},
+                {'name': 'dc2', 'value': 'dept_count'}
+            ]
+            ,
+            'select': [
+                {'name': 'employee_name', 'value': 'e.ename'},
+                {'name': 'emp_dept_count', 'value': 'dc1.dept_count'},
+                {'name': 'manager_name', 'value': 'm.ename'},
+                {'name': 'mgr_dept_count', 'value': 'dc2.dept_count'}
+            ],
+            'where': {'and': [
+                {'eq': ['e.deptno', 'dc1.deptno']},
+                {'eq': ['e.mgr', 'm.empno']},
+                {'eq': ['m.deptno', 'dc2.deptno']}
+            ]}
+        }
 
         self.assertEqual(result, expected)
 
@@ -846,17 +844,19 @@ class TestSimple(TestCase):
             " SELECT * FROM a UNION ALL SELECT * FROM b"
         )
         result = parse(sql)
-        expected = {"with": [
-            {"name": "a", "value": {"select": {"value": 1}}},
-            {"name": "b", "value": {"select": {"value": 2}}},
-            {"union_all": [
+        expected = {
+            "with": [
+                {"name": "a", "value": {"select": {"value": 1}}},
+                {"name": "b", "value": {"select": {"value": 2}}}
+            ],
+            "union_all": [
                 {"select": "*", "from": "a"},
                 {"select": "*", "from": "b"},
-            ]}
-        ]}
+            ]
+        }
         self.assertEqual(result, expected)
 
-    @skipIf(not IS_MASTER, "Takes too long, and does not test net new features")
+    # @skipIf(not IS_MASTER, "Takes too long, and does not test net new features")
     def test_issue_103(self):
         #        0         1         2         3         4         5         6         7         8         9
         #        012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789

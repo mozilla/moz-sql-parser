@@ -202,15 +202,14 @@ def to_union_call(instring, tokensStart, retTokens):
 
 def to_with_clause(instring, tokensStart, retTokens):
     tok = retTokens[0]
-    query = tok['query']
-    if not tok['with']:
-        return tok['query'][0]
-
-    assignments = [
-        {"name": w.name, "value": w.value[0]}
-        for w in tok['with']
-    ]
-    return {"with": assignments + [query]}
+    query = tok['query'][0]
+    if tok['with']:
+        assignments = [
+            {"name": w.name, "value": w.value[0]}
+            for w in tok['with']
+        ]
+        query['with'] = assignments
+    return query
 
 
 def unquote(instring, tokensStart, retTokens):
