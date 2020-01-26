@@ -24,7 +24,7 @@ from moz_sql_parser.keywords import AND, AS, ASC, BETWEEN, CASE, COLLATE_NOCASE,
 ParserElement.enablePackrat()
 
 # PYPARSING USES A LOT OF STACK SPACE
-sys.setrecursionlimit(1500)
+sys.setrecursionlimit(3000)
 
 IDENT_CHAR = alphanums + "@_$"
 

@@ -9,9 +9,10 @@
 
 from __future__ import absolute_import, division, unicode_literals
 
-from unittest import TestCase
+from unittest import TestCase, skipIf
 
 from moz_sql_parser import parse
+from test_resources import IS_MASTER
 
 try:
     from tests.util import assertRaises
@@ -775,6 +776,49 @@ class TestSimple(TestCase):
         sql = "SELECT * FROM `movies`"
         result = parse(sql)
         expected = {"select": "*", "from": "movies"}
+        self.assertEqual(result, expected)
+
+    @skipIf(IS_MASTER, "stack too deep")
+    def test_issue_107_recursion(self):
+        sql = (
+            " SELECT city_name"
+            " FROM city"
+            " WHERE population = ("
+            "     SELECT MAX(population)"
+            "     FROM city"
+            "     WHERE state_name IN ("
+            "         SELECT state_name"
+            "         FROM state"
+            "         WHERE area = (SELECT MIN(area) FROM state)"
+            "     )"
+            " )"
+        )
+        result = parse(sql)
+        expected = {
+            'from': 'city',
+            'select': {'value': 'city_name'},
+            'where': {'eq': [
+                'population',
+                {
+                    'from': 'city',
+                    'select': {'value': {'max': 'population'}},
+                    'where': {'in': [
+                        'state_name',
+                        {
+                            'from': 'state',
+                            'select': {'value': 'state_name'},
+                            'where': {'eq': [
+                                'area',
+                                {
+                                    'from': 'state',
+                                    'select': {'value': {'min': 'area'}}
+                                }
+                            ]}
+                        }
+                    ]}
+                }
+            ]}
+        }
         self.assertEqual(result, expected)
 
     def test_issue_95(self):
