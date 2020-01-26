@@ -66,6 +66,15 @@
             "",
             "The `SELECT` clause is an array of objects containing `name` and `value` properties. ",
             "",
+            "### Recursion Limit ",
+            "",
+            "**WARNING!** There is a recursion limit of `1500`. This prevents parsing of complex expressions or deeply nested nested queries. You can increase the recursion limit *after* you have imported `moz_sql_parser`, and before you `parse`:",
+            "",
+            "    >>> from moz_sql_parser import parse",
+            "    >>> sys.setrecursionlimit(3000)",
+            "    >>> parse(complicated_sql)",
+            "",
+            "",
             "## Generating SQL",
             "",
             "You may also generate SQL from the a given JSON document. This is done by the formatter, which is still incomplete (Jan2020).",
@@ -118,6 +127,6 @@
     "name": "moz-sql-parser",
     "packages": ["moz_sql_parser"],
     "url": "https://github.com/mozilla/moz-sql-parser",
-    "version": "3.31.20024",
+    "version": "3.32.20026",
     "zip_safe": true
 }
