@@ -26,8 +26,7 @@ ParserElement.enablePackrat()
 # PYPARSING USES A LOT OF STACK SPACE
 sys.setrecursionlimit(3000)
 
-IDENT_FIRST_CHAR = alphas + "_"
-IDENT_REST_CHAR = alphanums + "_$"
+IDENT_CHAR = alphanums + "@_$"
 
 KNOWN_OPS = [
     # https://www.sqlite.org/lang_expr.html
@@ -194,9 +193,6 @@ def to_union_call(instring, tokensStart, retTokens):
         else:
             output = {"from": {op: sources}}
 
-
-
-
     if tok.get('orderby'):
         output["orderby"] = tok.get('orderby')
     if tok.get('limit'):
@@ -233,7 +229,7 @@ intNum = Regex(r"[+-]?\d+([eE]\+?\d+)?").addParseAction(unquote)
 sqlString = Regex(r"\'(\'\'|\\.|[^'])*\'").addParseAction(to_string)
 identString = Regex(r'\"(\"\"|\\.|[^"])*\"').addParseAction(unquote)
 mysqlidentString = Regex(r'\`(\`\`|\\.|[^`])*\`').addParseAction(unquote)
-ident = Combine(~RESERVED + (delimitedList(Literal("*") | identString | mysqlidentString | Word(IDENT_FIRST_CHAR, IDENT_REST_CHAR), delim=".", combine=True))).setName("identifier")
+ident = Combine(~RESERVED + (delimitedList(Literal("*") | identString | mysqlidentString | Word(IDENT_CHAR), delim=".", combine=True))).setName("identifier")
 
 # EXPRESSIONS
 expr = Forward()
@@ -246,25 +242,29 @@ case = (
     END
 ).addParseAction(to_case_call)
 
+
 selectStmt = Forward()
+
+call_function = (
+        ident.copy()("op").setName("function name").setDebugActions(*debug) +
+        Literal("(").suppress().setDebugActions(*debug) +
+        Optional(selectStmt | Group(delimitedList(expr)))("params") +
+        Literal(")").suppress()
+).addParseAction(to_json_call).setDebugActions(*debug)
+
 compound = (
     (Keyword("not", caseless=True)("op").setDebugActions(*debug) + expr("params")).addParseAction(to_json_call) |
     (Keyword("distinct", caseless=True)("op").setDebugActions(*debug) + expr("params")).addParseAction(to_json_call) |
     Keyword("null", caseless=True).setName("null").setDebugActions(*debug) |
     case |
-    (Literal("(").setDebugActions(*debug).suppress() + selectStmt + Literal(")").suppress()) |
-    (Literal("(").setDebugActions(*debug).suppress() + Group(delimitedList(expr)) + Literal(")").suppress()) |
+    (Literal("(").suppress().setDebugActions(*debug) + selectStmt + Literal(")").suppress()) |
+    (Literal("(").suppress().setDebugActions(*debug) + Group(delimitedList(expr)) + Literal(")").suppress()) |
     realNum.setName("float").setDebugActions(*debug) |
     intNum.setName("int").setDebugActions(*debug) |
     (Literal("~")("op").setDebugActions(*debug) + expr("params")).addParseAction(to_json_call) |
     (Literal("-")("op").setDebugActions(*debug) + expr("params")).addParseAction(to_json_call) |
     sqlString.setName("string").setDebugActions(*debug) |
-    (
-        Word(IDENT_FIRST_CHAR, IDENT_REST_CHAR)("op").setName("function name").setDebugActions(*debug) +
-        Literal("(").setName("func_param").setDebugActions(*debug) +
-        Optional(selectStmt | Group(delimitedList(expr)))("params") +
-        ")"
-    ).addParseAction(to_json_call).setDebugActions(*debug) |
+    call_function |
     ident.copy().setName("variable").setDebugActions(*debug)
 )
 expr << Group(infixNotation(
@@ -295,12 +295,9 @@ selectColumn = Group(
 
 table_source = (
     (
-        (
-            Literal("(").setDebugActions(*debug).suppress() +
-            selectStmt +
-            Literal(")").setDebugActions(*debug).suppress()
-        ).setName("table source").setDebugActions(*debug)
-    )("value") +
+        (Literal("(").suppress() + selectStmt + Literal(")").suppress()).setDebugActions(*debug) |
+        call_function
+    )("value").setName("table source") +
     Optional(
         Optional(AS) +
         ident("name").setName("table alias").setDebugActions(*debug)
@@ -329,8 +326,7 @@ unordered_sql = Group(
     Optional(
         (FROM.suppress().setDebugActions(*debug) + delimitedList(Group(table_source)) + ZeroOrMore(join))("from") +
         Optional(WHERE.suppress().setDebugActions(*debug) + expr.setName("where"))("where") +
-        Optional(GROUP_BY.suppress().setDebugActions(*debug) + delimitedList(Group(selectColumn))("groupby").setName(
-            "groupby")) +
+        Optional(GROUP_BY.suppress().setDebugActions(*debug) + delimitedList(Group(selectColumn))("groupby").setName("groupby")) +
         Optional(HAVING.suppress().setDebugActions(*debug) + expr("having").setName("having")) +
         Optional(LIMIT.suppress().setDebugActions(*debug) + expr("limit")) +
         Optional(OFFSET.suppress().setDebugActions(*debug) + expr("offset"))

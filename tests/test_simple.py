@@ -778,7 +778,6 @@ class TestSimple(TestCase):
         expected = {"select": "*", "from": "movies"}
         self.assertEqual(result, expected)
 
-
     @skipIf(IS_MASTER, "stack too deep")
     def test_issue_107_recursion(self):
         sql = (
@@ -820,4 +819,18 @@ class TestSimple(TestCase):
                 }
             ]}
         }
+        self.assertEqual(result, expected)
+
+    def test_issue_95(self):
+        #      0         1         2         3         4         5         6         7         8         9
+        #      012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789
+        sql = "select * from some_table.some_function('parameter', 1, some_col)"
+        result = parse(sql)
+        expected = {"select": "*", "from": {"value": {"some_table.some_function": [{"literal": 'parameter'}, 1, "some_col"]}}}
+        self.assertEqual(result, expected)
+
+    def test_at_ident(self):
+        sql = "select @@version_comment"
+        result = parse(sql)
+        expected = {"select": {"value": "@@version_comment"}}
         self.assertEqual(result, expected)
