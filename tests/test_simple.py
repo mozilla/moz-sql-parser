@@ -778,6 +778,18 @@ class TestSimple(TestCase):
         expected = {"select": "*", "from": "movies"}
         self.assertEqual(result, expected)
 
+    def test_issue_38a(self):
+        sql = "SELECT a IN ('abc',3,'def')"
+        result = parse(sql)
+        expected = {"select": {"value": {"in": ["a", {"literal": ['abc', 3, 'def']}]}}}
+        self.assertEqual(result, expected)
+
+    def test_issue_38b(self):
+        sql = "SELECT a IN (abc,3,'def')"
+        result = parse(sql)
+        expected = {"select": {"value": {"in": ["a", ["abc", 3, {"literal": 'def'}]]}}}
+        self.assertEqual(result, expected)
+
     @skipIf(IS_MASTER, "stack too deep")
     def test_issue_107_recursion(self):
         sql = (
