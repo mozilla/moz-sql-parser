@@ -242,25 +242,29 @@ case = (
     END
 ).addParseAction(to_case_call)
 
+
 selectStmt = Forward()
+
+call_function = (
+        ident.copy()("op").setName("function name").setDebugActions(*debug) +
+        Literal("(").suppress().setDebugActions(*debug) +
+        Optional(selectStmt | Group(delimitedList(expr)))("params") +
+        Literal(")").suppress()
+).addParseAction(to_json_call).setDebugActions(*debug)
+
 compound = (
     (Keyword("not", caseless=True)("op").setDebugActions(*debug) + expr("params")).addParseAction(to_json_call) |
     (Keyword("distinct", caseless=True)("op").setDebugActions(*debug) + expr("params")).addParseAction(to_json_call) |
     Keyword("null", caseless=True).setName("null").setDebugActions(*debug) |
     case |
-    (Literal("(").setDebugActions(*debug).suppress() + selectStmt + Literal(")").suppress()) |
-    (Literal("(").setDebugActions(*debug).suppress() + Group(delimitedList(expr)) + Literal(")").suppress()) |
+    (Literal("(").suppress().setDebugActions(*debug) + selectStmt + Literal(")").suppress()) |
+    (Literal("(").suppress().setDebugActions(*debug) + Group(delimitedList(expr)) + Literal(")").suppress()) |
     realNum.setName("float").setDebugActions(*debug) |
     intNum.setName("int").setDebugActions(*debug) |
     (Literal("~")("op").setDebugActions(*debug) + expr("params")).addParseAction(to_json_call) |
     (Literal("-")("op").setDebugActions(*debug) + expr("params")).addParseAction(to_json_call) |
     sqlString.setName("string").setDebugActions(*debug) |
-    (
-        Word(IDENT_CHAR)("op").setName("function name").setDebugActions(*debug) +
-        Literal("(").setName("func_param").setDebugActions(*debug) +
-        Optional(selectStmt | Group(delimitedList(expr)))("params") +
-        ")"
-    ).addParseAction(to_json_call).setDebugActions(*debug) |
+    call_function |
     ident.copy().setName("variable").setDebugActions(*debug)
 )
 expr << Group(infixNotation(
@@ -291,12 +295,9 @@ selectColumn = Group(
 
 table_source = (
     (
-        (
-            Literal("(").setDebugActions(*debug).suppress() +
-            selectStmt +
-            Literal(")").setDebugActions(*debug).suppress()
-        ).setName("table source").setDebugActions(*debug)
-    )("value") +
+        (Literal("(").suppress() + selectStmt + Literal(")").suppress()).setDebugActions(*debug) |
+        call_function
+    )("value").setName("table source") +
     Optional(
         Optional(AS) +
         ident("name").setName("table alias").setDebugActions(*debug)
@@ -325,8 +326,7 @@ unordered_sql = Group(
     Optional(
         (FROM.suppress().setDebugActions(*debug) + delimitedList(Group(table_source)) + ZeroOrMore(join))("from") +
         Optional(WHERE.suppress().setDebugActions(*debug) + expr.setName("where"))("where") +
-        Optional(GROUP_BY.suppress().setDebugActions(*debug) + delimitedList(Group(selectColumn))("groupby").setName(
-            "groupby")) +
+        Optional(GROUP_BY.suppress().setDebugActions(*debug) + delimitedList(Group(selectColumn))("groupby").setName("groupby")) +
         Optional(HAVING.suppress().setDebugActions(*debug) + expr("having").setName("having")) +
         Optional(LIMIT.suppress().setDebugActions(*debug) + expr("limit")) +
         Optional(OFFSET.suppress().setDebugActions(*debug) + expr("offset"))
