@@ -10,8 +10,10 @@
 from __future__ import absolute_import, division, unicode_literals
 
 import ast
+import operator
 import sys
 
+from mo_future import reduce, text
 from pyparsing import Combine, Forward, Group, Keyword, Literal, Optional, ParserElement, Regex, Word, ZeroOrMore, \
     alphanums, alphas, delimitedList, infixNotation, opAssoc, restOfLine
 
@@ -19,12 +21,12 @@ from moz_sql_parser.debugs import debug
 from moz_sql_parser.keywords import AND, AS, ASC, BETWEEN, CASE, COLLATE_NOCASE, CROSS_JOIN, DESC, ELSE, END, FROM, \
     FULL_JOIN, FULL_OUTER_JOIN, GROUP_BY, HAVING, IN, INNER_JOIN, IS, IS_NOT, JOIN, LEFT_JOIN, LEFT_OUTER_JOIN, LIKE, \
     LIMIT, NOT_BETWEEN, NOT_IN, NOT_LIKE, OFFSET, ON, OR, ORDER_BY, RESERVED, RIGHT_JOIN, RIGHT_OUTER_JOIN, SELECT, \
-    THEN, UNION, UNION_ALL, USING, WHEN, WHERE, binary_ops, unary_ops, WITH
+    THEN, UNION, UNION_ALL, USING, WHEN, WHERE, binary_ops, unary_ops, WITH, durations
 
 ParserElement.enablePackrat()
 
 # PYPARSING USES A LOT OF STACK SPACE
-sys.setrecursionlimit(1500)
+sys.setrecursionlimit(3000)
 
 IDENT_CHAR = alphanums + "@_$"
 
@@ -146,6 +148,15 @@ def to_case_call(instring, tokensStart, retTokens):
     return {"case": cases}
 
 
+def to_date_call(instring, tokensStart, retTokens):
+    return {"date": retTokens.params}
+
+
+def to_interval_call(instring, tokensStart, retTokens):
+    # ARRANGE INTO {interval: params} FORMAT
+    return {"interval": [retTokens['count'], retTokens['duration'][:-1]]}
+
+
 def to_when_call(instring, tokensStart, retTokens):
     tok = retTokens
     return {"when": tok.when, "then":tok.then}
@@ -258,16 +269,32 @@ ordered_sql = Forward()
 
 
 call_function = (
-        ident.copy()("op").setName("function name").setDebugActions(*debug) +
-        Literal("(").suppress() +
-        Optional(ordered_sql | Group(delimitedList(expr)))("params") +
-        Literal(")").suppress()
+    ident.copy()("op").setName("function name").setDebugActions(*debug) +
+    Literal("(").suppress() +
+    Optional(ordered_sql | Group(delimitedList(expr)))("params") +
+    Literal(")").suppress()
 ).addParseAction(to_json_call).setDebugActions(*debug)
 
+
+def _or(values):
+    output = values[0]
+    for v in values[1:]:
+        output |= v
+    return output
+
+
+interval = (
+    Keyword("interval", caseless=True).suppress().setDebugActions(*debug) +
+    (realNum | intNum)("count").setDebugActions(*debug) +
+    _or([Keyword(d, caseless=True)("duration") for d in durations])
+).addParseAction(to_interval_call).setDebugActions(*debug)
+
 compound = (
+    Keyword("null", caseless=True).setName("null").setDebugActions(*debug) |
     (Keyword("not", caseless=True)("op").setDebugActions(*debug) + expr("params")).addParseAction(to_json_call) |
     (Keyword("distinct", caseless=True)("op").setDebugActions(*debug) + expr("params")).addParseAction(to_json_call) |
-    Keyword("null", caseless=True).setName("null").setDebugActions(*debug) |
+    (Keyword("date", caseless=True).setDebugActions(*debug) + sqlString("params")).addParseAction(to_date_call) |
+    interval |
     case |
     (Literal("(").suppress() + ordered_sql + Literal(")").suppress()) |
     (Literal("(").suppress() + Group(delimitedList(expr)) + Literal(")").suppress()) |

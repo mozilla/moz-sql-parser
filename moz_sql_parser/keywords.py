@@ -122,3 +122,14 @@ precedence = {
     "and": 10,
     "or": 11
 }
+
+durations = [
+    "milliseconds",
+    "seconds",
+    "minutes",
+    "hours",
+    "days",
+    "weeks",
+    "months",
+    "years"
+]
