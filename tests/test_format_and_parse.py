@@ -1088,3 +1088,8 @@ from benn.college_football_players
             expected_json = {'select': {'value': 't1.field1'},
                              'from': ['t1', {join_keyword: 't2', 'on': {'eq': ['t1.id', 't2.id']}}]}
             self.verify_formatting(expected_sql, expected_json)
+
+    def test_193(self):
+        expected_sql = "SELECT s.a FROM generate_series(1,2) AS s(a)"
+        expected_json = {'select': {'value': 's.a'}, 'from': {'value': {'generate_series': [1, 2]}, 'name': 's(a)'}}
+        self.verify_formatting(expected_sql, expected_json)
