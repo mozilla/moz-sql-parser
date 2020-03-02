@@ -52,6 +52,8 @@ for name, v in list(locs.items()):
         n = name.lower().replace("_", " ")
         value = locs[name] = Keyword(n, caseless=True).setName(n).setDebugActions(*debug)
         reserved.append(value)
+
+RESERVED2 = reserved
 RESERVED = MatchFirst(reserved)
 
 join_keywords = {

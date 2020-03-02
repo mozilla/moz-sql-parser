@@ -15,7 +15,7 @@ import re
 
 from mo_future import string_types, text, first, long, is_text
 
-from moz_sql_parser.keywords import RESERVED, join_keywords, precedence, binary_ops
+from moz_sql_parser.keywords import RESERVED, RESERVED2, join_keywords, precedence, binary_ops
 
 VALID = re.compile(r'^[a-zA-Z_]\w*$')
 
@@ -33,7 +33,7 @@ def should_quote(identifier):
     """
     return (
         identifier != '*' and (
-            not VALID.match(identifier) or identifier in RESERVED))
+            not VALID.match(identifier) or identifier in RESERVED2))
 
 
 def split_field(field):
@@ -244,8 +244,11 @@ class Formatter:
         parts = ['CASE']
         for check in checks:
             if isinstance(check, dict):
-                parts.extend(['WHEN', self.dispatch(check['when'])])
-                parts.extend(['THEN', self.dispatch(check['then'])])
+                if 'when' in check and 'then' in check:
+                    parts.extend(['WHEN', self.dispatch(check['when'])])
+                    parts.extend(['THEN', self.dispatch(check['then'])])
+                else:
+                    parts.extend(['ELSE', self.dispatch(check)])
             else:
                 parts.extend(['ELSE', self.dispatch(check)])
         parts.append('END')
