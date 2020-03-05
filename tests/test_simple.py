@@ -13,7 +13,7 @@ import json
 from unittest import TestCase, skipIf
 
 from moz_sql_parser import parse
-from .test_resources import IS_MASTER
+from test_resources import IS_MASTER
 
 try:
     from tests.util import assertRaises
