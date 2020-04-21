@@ -33,7 +33,7 @@ def should_quote(identifier):
     """
     return (
         identifier != '*' and (
-            not VALID.match(identifier) or identifier in RESERVED))
+            not VALID.match(identifier) or len(list(RESERVED.scanString(identifier)))))
 
 
 def split_field(field):
