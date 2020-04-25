@@ -180,7 +180,6 @@ class Formatter:
     def value(self, json):
         parts = [self.dispatch(json['value'])]
         if 'name' in json:
-            print(json)
             parts.extend(['AS', self.dispatch(json['name'])])
         return ' '.join(parts)
 
