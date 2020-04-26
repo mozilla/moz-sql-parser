@@ -410,7 +410,7 @@ class TestSimple(TestCase):
                         })
         self.assertEqual(result, expected)
 
-    def test_with_cte(self):
+    def test_with_cte_various(self):
         expected = "WITH t1 AS (SELECT a FROM table), t2 AS (SELECT 1) SELECT * FROM t1, t2"
         result = format({'select': '*', 'from': ['t1', 't2'], 
                          'with': [{'name': 't1', 'value': {'select': {'value': 'a'}, 'from': 'table'}}, 
