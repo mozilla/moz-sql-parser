@@ -112,6 +112,7 @@ def Operator(op):
 class Formatter:
 
     clauses = [
+        'with_',
         'select',
         'from_',
         'where',
@@ -294,6 +295,17 @@ class Formatter:
             for part in [getattr(self, clause)(json)]
             if part
         )
+
+    def with_(self, json):
+        if 'with' in json:
+            with_ = json['with']
+            if not isinstance(with_, list):
+                with_ = [with_]
+            parts = ', '.join(
+                '{0} AS {1}'.format(part['name'], self.dispatch(part['value']))
+                for part in with_
+            )
+            return 'WITH {0}'.format(parts)
 
     def select(self, json):
         if 'select' in json:
