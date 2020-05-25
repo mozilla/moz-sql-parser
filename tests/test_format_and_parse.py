@@ -1101,3 +1101,7 @@ from benn.college_football_players
             expected_json = {'select': {'value': 't1.field1'},
                              'from': ['t1', {join_keyword: 't2', 'on': {'eq': ['t1.id', 't2.id']}}]}
             self.verify_formatting(expected_sql, expected_json)
+
+    def test_193(self):
+        expected_sql = "SELECT id, CASE WHEN id < 13 THEN 'child' WHEN id < 20 THEN 'teenager' ELSE 'adult' END AS id_range FROM users"
+        self.assertEqual(expected_sql, format(parse(expected_sql)))

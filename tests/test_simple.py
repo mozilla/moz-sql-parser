@@ -856,7 +856,7 @@ class TestSimple(TestCase):
         }
         self.assertEqual(result, expected)
 
-    # @skipIf(not IS_MASTER, "Takes too long, and does not test net new features")
+    #@skipIf(not IS_MASTER, "Takes too long, and does not test net new features")
     def test_issue_103(self):
         #        0         1         2         3         4         5         6         7         8         9
         #        012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789

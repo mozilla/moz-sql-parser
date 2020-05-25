@@ -2,57 +2,59 @@ from pyparsing import Keyword, MatchFirst
 
 from moz_sql_parser.debugs import debug
 
-AND = None
-AS = None
-ASC = None
-BETWEEN = None
-CASE = None
-COLLATE_NOCASE = None
-CROSS_JOIN = None
-DESC = None
-END = None
-ELSE = None
-FROM = None
-FULL_JOIN = None
-FULL_OUTER_JOIN = None
-GROUP_BY = None
-HAVING = None
-IN = None
-INNER_JOIN = None
-IS = None
-IS_NOT = None
-JOIN = None
-LEFT_JOIN = None
-LEFT_OUTER_JOIN = None
-LIKE = None
-LIMIT = None
-NOT_BETWEEN = None
-NOT_IN = None
-NOT_LIKE = None
-OFFSET = None
-ON = None
-OR = None
-ORDER_BY = None
-RESERVED = None
-RIGHT_JOIN = None
-RIGHT_OUTER_JOIN = None
-SELECT = None
-THEN = None
-UNION = None
-UNION_ALL = None
-USING = None
-WITH = None
-WHEN = None
-WHERE = None
+sql_reserved_words = [
+    "AND",
+    "AS",
+    "ASC",
+    "BETWEEN",
+    "CASE",
+    "COLLATE_NOCASE",
+    "CROSS_JOIN",
+    "DESC",
+    "END",
+    "ELSE",
+    "FROM",
+    "FULL_JOIN",
+    "FULL_OUTER_JOIN",
+    "GROUP_BY",
+    "HAVING",
+    "IN",
+    "INNER_JOIN",
+    "IS",
+    "IS_NOT",
+    "JOIN",
+    "LEFT_JOIN",
+    "LEFT_OUTER_JOIN",
+    "LIKE",
+    "LIMIT",
+    "NOT_BETWEEN",
+    "NOT_IN",
+    "NOT_LIKE",
+    "OFFSET",
+    "ON",
+    "OR",
+    "ORDER_BY",
+    "RESERVED",
+    "RIGHT_JOIN",
+    "RIGHT_OUTER_JOIN",
+    "SELECT",
+    "THEN",
+    "UNION",
+    "UNION_ALL",
+    "USING",
+    "WITH",
+    "WHEN",
+    "WHERE",
+]
 
-locs = locals()
-reserved = []
-for name, v in list(locs.items()):
-    if v is None:
-        n = name.lower().replace("_", " ")
-        value = locs[name] = Keyword(n, caseless=True).setName(n).setDebugActions(*debug)
-        reserved.append(value)
-RESERVED = MatchFirst(reserved)
+reserved_keywords = []
+for name in sql_reserved_words:
+    n = name.lower().replace("_", " ")
+    value = locals()[name] = (
+        Keyword(n, caseless=True).setName(n).setDebugActions(*debug)
+    )
+    reserved_keywords.append(value)
+RESERVED = MatchFirst(reserved_keywords)
 
 join_keywords = {
     "join",
@@ -66,10 +68,7 @@ join_keywords = {
     "left outer join",
 }
 
-unary_ops = {
-    "-": "neg",
-    "~": "binary_not"
-}
+unary_ops = {"-": "neg", "~": "binary_not"}
 
 binary_ops = {
     "||": "concat",
@@ -93,8 +92,8 @@ binary_ops = {
     "is": "eq",
     "not like": "nlike",
     "not between": "not_between",
-    "or":"or",
-    "and":"and"
+    "or": "or",
+    "and": "and",
 }
 
 precedence = {
@@ -120,7 +119,7 @@ precedence = {
     "like": 8,
     "nlike": 8,
     "and": 10,
-    "or": 11
+    "or": 11,
 }
 
 durations = [
@@ -131,5 +130,5 @@ durations = [
     "days",
     "weeks",
     "months",
-    "years"
+    "years",
 ]
