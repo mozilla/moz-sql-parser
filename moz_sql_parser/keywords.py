@@ -50,7 +50,7 @@ sql_reserved_words = [
 reserved_keywords = []
 for name in sql_reserved_words:
     n = name.lower().replace("_", " ")
-    value = sql_reserved_words[name] = (
+    value = locals()[name] = (
         Keyword(n, caseless=True).setName(n).setDebugActions(*debug)
     )
     reserved_keywords.append(value)
