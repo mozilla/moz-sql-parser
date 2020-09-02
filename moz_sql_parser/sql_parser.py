@@ -208,6 +208,8 @@ def to_union_call(instring, tokensStart, retTokens):
         output["orderby"] = tok.get('orderby')
     if tok.get('limit'):
         output["limit"] = tok.get('limit')
+    if tok.get('offset'):
+        output["offset"] = tok.get('offset')
     return output
 
 
