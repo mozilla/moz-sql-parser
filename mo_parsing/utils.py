@@ -166,7 +166,7 @@ def wrap_parse_action(func):
     def wrapper(*args):
         try:
             s, i, token = args
-            original_type = token.type_for_result
+            original_type = token.type
             result = func(*args[start:])
             if result is None:
                 return token

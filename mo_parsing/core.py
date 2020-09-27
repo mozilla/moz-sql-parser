@@ -213,7 +213,7 @@ class ParserElement(object):
                 Log.error("expecting ParseResult")
             if self.__class__.__name__ == "Forward":
                 pass  # OK
-            elif tokens.type_for_result is not self:
+            elif tokens.type is not self:
                 Log.error("expecting correct type to come from self")
 
             if self.parseAction and (doActions or self.callDuringTry):
@@ -616,47 +616,14 @@ class ParserElement(object):
         return NotAny(self)
 
     def __iter__(self):
-        # must implement __iter__ to override legacy use of sequential access to __getitem__ to
-        # iterate over a sequence
-        raise TypeError("%r object is not iterable" % self.__class__.__name__)
-
-    def __getattr__(self, item):
-        Log.error("use __getitem__({{item}})", item=item)
+        raise NotImplemented()
 
     def __getitem__(self, key):
-        """
-        use ``[]`` indexing notation as a short form for expression repetition:
-         - ``expr[n]`` is equivalent to ``expr*n``
-         - ``expr[m, n]`` is equivalent to ``expr*(m, n)``
-         - ``expr[n, ...]`` or ``expr[n,]`` is equivalent
-              to ``expr*n + ZeroOrMore(expr)``
-              (read as "at least n instances of ``expr``")
-         - ``expr[..., n]`` is equivalent to ``expr*(0, n)``
-              (read as "0 to n instances of ``expr``")
-         - ``expr[...]`` and ``expr[0, ...]`` are equivalent to ``ZeroOrMore(expr)``
-         - ``expr[1, ...]`` is equivalent to ``OneOrMore(expr)``
-         ``None`` may be used in place of ``...``.
-
-        Note that ``expr[..., n]`` and ``expr[m, n]``do not raise an exception
-        if more than ``n`` ``expr``s exist in the input stream.  If this behavior is
-        desired, then write ``expr[..., n] + ~expr``.
-        """
         return self * key
 
     def __call__(self, name):
         """
         Shortcut for :class:`.set_token_name`, with ``listAllMatches=False``.
-
-        If ``name`` is given with a trailing ``'*'`` character, then ``listAllMatches`` will be
-        passed as ``True``.
-
-        If ``name` is omitted, same as calling :class:`copy`.
-
-        Example::
-
-            # these are equivalent
-            userdata = Word(alphas).set_token_name("name") + Word(nums + "-").set_token_name("socsecno")
-            userdata = Word(alphas)("name") + Word(nums + "-")("socsecno")
         """
         if not name:
             return self

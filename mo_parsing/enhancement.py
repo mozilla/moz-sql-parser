@@ -3,16 +3,15 @@
 from mo_dots import Null, coalesce
 from mo_future import text
 from mo_logs import Log, Except
-from mo_logs.exceptions import get_stacktrace
 
+from mo_parsing.core import ParserElement
 from mo_parsing.engine import noop
 from mo_parsing.exceptions import (
     ParseBaseException,
     ParseException,
     RecursiveGrammarException,
 )
-from mo_parsing.core import ParserElement
-from mo_parsing.results import ParseResults, Annotation, get_name
+from mo_parsing.results import ParseResults, Annotation
 from mo_parsing.utils import _MAX_INT, empty_list, empty_tuple
 
 # import later
@@ -54,8 +53,8 @@ class ParseElementEnhance(ParserElement):
 
     def parseImpl(self, instring, loc, doActions=True):
         loc, output = self.expr._parse(instring, loc, doActions)
-        # if output.type_for_result == self:
-        #     Log.error("not expected")
+        if output.type == self:
+            Log.error("not expected")
         return loc, ParseResults(self, [output])
 
     def leaveWhitespace(self):
@@ -491,6 +490,10 @@ class Forward(ParserElement):
         output.expr = self.expr
         return output
 
+    @property
+    def name(self):
+        return self.type.expr.token_name
+
     def __lshift__(self, other):
         name = None
         while isinstance(other, Forward):
@@ -543,7 +546,7 @@ class Forward(ParserElement):
     def parseImpl(self, instring, loc, doActions=True):
         if self.expr != None:
             loc, output = self.expr._parse(instring, loc, doActions)
-            if output.type_for_result is self:
+            if output.type is self:
                 Log.error("not expected")
             return loc, output
         else:
@@ -618,7 +621,7 @@ class Combine(TokenConverter):
 
 
 def _combine_post_parse(instring, loc, tokenlist):
-    type_ = tokenlist.type_for_result
+    type_ = tokenlist.type
     retToks = ParseResults(type_, [tokenlist.asString(sep=type_.separator)])
 
     return retToks
@@ -688,7 +691,7 @@ class OpenDict(TokenConverter):
 
 
 def _dict_post_parse(instring, loc, tokenlist):
-    acc = tokenlist.tokens_for_result
+    acc = tokenlist.tokens
     for a in list(acc):
         for tok in list(a):
             if isinstance(tok, int):
@@ -738,7 +741,7 @@ class Suppress(TokenConverter):
 
 
 def _suppress_post_parse(instring, loc, tokenlist):
-    return ParseResults(tokenlist.type_for_result, [])
+    return ParseResults(tokenlist.type, [])
 
 
 class PrecededBy(ParseElementEnhance):

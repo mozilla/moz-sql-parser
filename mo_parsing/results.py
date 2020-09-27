@@ -2,7 +2,7 @@
 from collections import MutableMapping
 
 from mo_dots import is_many
-from mo_future import is_text, text, PY3, NEXT
+from mo_future import is_text, text, PY3
 from mo_logs import Log
 
 from mo_parsing import engine
@@ -10,17 +10,6 @@ from mo_parsing import engine
 Suppress, ParserElement, Forward, Group, Dict, Token, Empty = [None] * 7
 
 _get = object.__getattribute__
-
-
-def get_name(tok):
-    try:
-        if isinstance(tok, Forward):
-            return tok.type_for_result.expr.token_name
-        if isinstance(tok, ParseResults):
-            return _get(tok, "type_for_result").token_name
-        return None
-    except Exception as e:
-        raise e
 
 
 class ParseResults(object):
@@ -67,11 +56,14 @@ class ParseResults(object):
         - year: 1999
     """
 
-    __slots__ = ["tokens_for_result", "type_for_result",]
+    __slots__ = [
+        "tokens",
+        "type",
+    ]
 
     @property
-    def name_for_result(self):
-        return get_name(self)
+    def name(self):
+        return self.type.token_name
 
     # Performance tuning: we construct a *lot* of these, so keep this
     # constructor as small and fast as possible
@@ -83,23 +75,23 @@ class ParseResults(object):
         if isinstance(toklist, ParseResults) or not isinstance(toklist, (list, tuple)):
             Log.error("no longer accepted")
 
-        self.tokens_for_result = toklist
-        self.type_for_result = result_type
+        self.tokens = toklist
+        self.type = result_type
 
     def _get_item_by_name(self, i):
         # return open list of (modal, value) pairs
         # modal==True means only the last value is relevant
-        for tok in self.tokens_for_result:
+        for tok in self.tokens:
             if isinstance(tok, ParseResults):
-                name = get_name(tok)
+                name = tok.name
                 if name == i:
-                    if isinstance(tok.type_for_result, Group):
+                    if isinstance(tok.type, Group):
                         yield tok
                     else:
-                        for t in tok.tokens_for_result:
+                        for t in tok.tokens:
                             yield t
                     continue
-                elif isinstance(tok.type_for_result, Group):
+                elif isinstance(tok.type, Group):
                     continue
                 elif name:
                     continue
@@ -116,34 +108,33 @@ class ParseResults(object):
         elif isinstance(i, slice):
             return list(iter(self))[i]
         else:
-            if get_name(self) == i:
+            if self.name == i:
                 return self
 
             values = list(self._get_item_by_name(i))
             if len(values) == 1:
                 return values[0]
-            return ParseResults(self.type_for_result, values)
-
+            return ParseResults(self.type, values)
 
     def __setitem__(self, k, v):
         if isinstance(k, (slice, int)):
             Log.error("do not know how to handle")
         else:
-            for i, vv in enumerate(self.tokens_for_result):
-                if get_name(vv) == k:
-                    self.tokens_for_result[i] = v
+            for i, vv in enumerate(self.tokens):
+                if isinstance(vv, ParseResults) and vv.name == k:
+                    self.tokens[i] = v
                     break
             else:
-                self.tokens_for_result.append(Annotation(k, [v]))
+                self.tokens.append(Annotation(k, [v]))
 
     def __contains__(self, k):
-        return any(get_name(r) == k for r in self.tokens_for_result)
+        return any((r.name) == k for r in self.tokens)
 
     def __len__(self):
-        if isinstance(self.type_for_result, Group):
-            if not self.tokens_for_result:
+        if isinstance(self.type, Group):
+            if not self.tokens:
                 return 0
-            return len(self.tokens_for_result[0])
+            return len(self.tokens[0])
         else:
             return sum(1 for t in self)
 
@@ -163,11 +154,7 @@ class ParseResults(object):
             Log.error("do not know how to handle")
 
     def __bool__(self):
-        try:
-            NEXT(self.iteritems())()
-            return True
-        except Exception:
-            return False
+        return not not self.tokens
 
     __nonzero__ = __bool__
 
@@ -175,29 +162,27 @@ class ParseResults(object):
         if isinstance(self, Annotation):
             return
         else:
-            for r in self.tokens_for_result:
+            for r in self.tokens:
                 if isinstance(r, ParseResults):
                     if isinstance(r, Annotation):
                         return
-                    elif isinstance(r.type_for_result, Group):
+                    elif isinstance(r.type, Group):
                         yield r
-                    elif not isinstance(r.type_for_result, Group):
+                    elif not isinstance(r.type, Group):
                         for mm in r:
                             yield mm
                 else:
                     yield r
 
     def _del_item_by_index(self, index):
-        for i, t in enumerate(self.tokens_for_result):
-            if isinstance(t.type_for_result, (Group, Token)):
+        for i, t in enumerate(self.tokens):
+            if isinstance(t.type, (Group, Token)):
                 if index < 1:
-                    del self.tokens_for_result[i]
-                    name = get_name(t)
+                    del self.tokens[i]
+                    name = t.name
                     if name:
-                        if not isinstance(t.type_for_result, Annotation):
-                            self.tokens_for_result.append(
-                                Annotation(name, t.tokens_for_result)
-                            )
+                        if not isinstance(t.type, Annotation):
+                            self.tokens.append(Annotation(name, t.tokens))
                     return
                 else:
                     index -= 1
@@ -214,27 +199,27 @@ class ParseResults(object):
         if isinstance(key, (int, slice)):
             Log.error("not allowed")
         else:
-            if key == self.name_for_result:
-                new_type = self.type_for_result.copy()
+            if key == self.name:
+                new_type = self.type.copy()
                 new_type.token_name = None
-                self.type_for_result = new_type
+                self.type = new_type
                 return
-            for i, t in enumerate(self.tokens_for_result):
-                name = get_name(t)
+            for i, t in enumerate(self.tokens):
+                name = t.name
                 if name == key:
-                    new_type = t.type_for_result.copy()
+                    new_type = t.type.copy()
                     new_type.token_name = None
-                    t.type_for_result = new_type
+                    t.type = new_type
                     return
                 elif not isinstance(t, ParseResults):
                     pass
-                elif isinstance(t.type_for_result, (Group, Token)):
+                elif isinstance(t.type, (Group, Token)):
                     pass
                 else:
                     del t[key]
 
     def __reversed__(self):
-        return reversed(self.tokens_for_result)
+        return reversed(self.tokens)
 
     def iterkeys(self):
         for k, _ in self.iteritems():
@@ -246,13 +231,13 @@ class ParseResults(object):
 
     def iteritems(self):
         output = {}
-        for r in self.tokens_for_result:
+        for r in self.tokens:
             if isinstance(r, ParseResults):
-                name = get_name(r)
+                name = r.name
                 if name:
                     add(output, name, [r])
                     continue
-                if isinstance(r.type_for_result, Group):
+                if isinstance(r.type, Group):
                     continue
                 for k, v in r.iteritems():
                     add(output, k, v)
@@ -276,8 +261,8 @@ class ParseResults(object):
 
     def haskeys(self):
         """Since keys() returns an iterator, this method is helpful in bypassing
-           code that looks for the existence of any defined results names."""
-        return any(get_name(r) for r in self.tokens_for_result)
+        code that looks for the existence of any defined results names."""
+        return any((r.name) for r in self.tokens)
 
     def pop(self, index=-1, default=None):
         """
@@ -343,14 +328,11 @@ class ParseResults(object):
         else:
             return defaultValue
 
-
     def __contains__(self, item):
         return bool(self[item])
 
     def __add__(self, other):
-        return ParseResults(
-            Group(self.type_for_result + other.type_for_result), self.tokens_for_result + other.tokens_for_result
-        )
+        return ParseResults(Group(self.type + other.type), self.tokens + other.tokens)
 
     def __radd__(self, other):
         if not other:  # happens when using sum() on parsers
@@ -360,28 +342,23 @@ class ParseResults(object):
 
     def __repr__(self):
         try:
-            return repr(self.tokens_for_result)
+            return repr(self.tokens)
         except Exception as e:
             Log.warning("problem", cause=e)
             return "[]"
 
     def __data__(self):
-        return [v.__data__() if isinstance(v, ParserElement) else v for v in self.tokens_for_result]
+        return [
+            v.__data__() if isinstance(v, ParserElement) else v for v in self.tokens
+        ]
 
     def __str__(self):
-        if not self.tokens_for_result:
+        if not self.tokens:
             return ""
-        elif len(self.tokens_for_result) == 1:
-            return text(self.tokens_for_result[0])
+        elif len(self.tokens) == 1:
+            return text(self.tokens[0])
         else:
-            return (
-                "["
-                + ", ".join(
-                    text(v)
-                    for v in self.tokens_for_result
-                )
-                + "]"
-            )
+            return "[" + ", ".join(text(v) for v in self.tokens) + "]"
 
     def _asStringList(self):
         for t in self:
@@ -419,10 +396,10 @@ class ParseResults(object):
                 return []
             elif isinstance(obj, ParseResults):
                 output = []
-                for t in obj.tokens_for_result:
+                for t in obj.tokens:
                     inner = internal(t, depth + 1)
                     output.extend(inner)
-                if isinstance(obj.type_for_result, Group):
+                if isinstance(obj.type, Group):
                     return [output]
                 else:
                     return output
@@ -430,7 +407,7 @@ class ParseResults(object):
                 return [obj]
 
         output = internal(self, 0)
-        # if isinstance(self.type_for_result, Group):
+        # if isinstance(self.type, Group):
         #     return simpler(output)
         # else:
         return output
@@ -439,12 +416,11 @@ class ParseResults(object):
         """
         Returns a new copy of a :class:`ParseResults` object.
         """
-        ret = ParseResults(self.type_for_result, list(self.tokens_for_result))
+        ret = ParseResults(self.type, list(self.tokens))
         return ret
 
-
     def __lookup(self, sub):
-        for name, value in self.tokens_for_result:
+        for name, value in self.tokens:
             if sub is value:
                 return name
         return None
@@ -474,19 +450,19 @@ class ParseResults(object):
             ssn : 111-22-3333
             house_number : 221B
         """
-        if get_name(self):
-            return get_name(self)
-        elif len(self.tokens_for_result) == 1:
-            return get_name(self.tokens_for_result[0])
+        if self.name:
+            return self.name
+        elif len(self.tokens) == 1:
+            return self.tokens[0].name
         else:
             return None
 
     def __getnewargs__(self):
-        old_parser = self.type_for_result
+        old_parser = self.type
         parser_type = globals().get(old_parser.__class__.__name__, ParserElement)
         new_parser = parser_type(None)
         new_parser.token_name = old_parser.token_name
-        return new_parser, self.tokens_for_result
+        return new_parser, self.tokens
 
     def __dir__(self):
         return dir(type(self))
@@ -526,7 +502,7 @@ class Annotation(ParseResults):
         ParseResults.__init__(self, Empty()(name), value)
 
     def __repr__(self):
-        return "{" + get_name(self) + ": ...}"
+        return "{" + (self.name) + ": ...}"
 
 
 MutableMapping.register(ParseResults)

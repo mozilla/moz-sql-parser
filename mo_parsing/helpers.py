@@ -385,10 +385,10 @@ def extractText(s, l, t):
     d = t[1]
     content = s[t["_original_start"] : t["_original_end"]]
     annotations = [
-        Annotation(k, v[0].tokens_for_result) if len(v) == 1 and v[0].name_for_result == k else Annotation(k, v)
+        Annotation(k, v[0].tokens) if len(v) == 1 and v[0].name == k else Annotation(k, v)
         for k, v in d.items()
     ]
-    return ParseResults(d.type_for_result, [content] + annotations)
+    return ParseResults(d.type, [content] + annotations)
 
 
 def ungroup(expr):
