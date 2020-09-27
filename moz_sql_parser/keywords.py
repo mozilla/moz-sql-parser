@@ -1,6 +1,4 @@
-from pyparsing import Keyword, MatchFirst
-
-from moz_sql_parser.debugs import debug
+from mo_parsing import Keyword, MatchFirst
 
 sql_reserved_words = [
     "AND",
@@ -51,7 +49,7 @@ reserved_keywords = []
 for name in sql_reserved_words:
     n = name.lower().replace("_", " ")
     value = locals()[name] = (
-        Keyword(n, caseless=True).setName(n).setDebugActions(*debug)
+        Keyword(n, caseless=True).set_parser_name("keyword: "+n).suppress()
     )
     reserved_keywords.append(value)
 RESERVED = MatchFirst(reserved_keywords)

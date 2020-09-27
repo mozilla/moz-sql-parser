@@ -14,7 +14,7 @@ import json
 from threading import Lock
 
 from mo_future import binary_type, items, number_types, text
-from pyparsing import ParseException, ParseResults
+from mo_parsing import ParseException, ParseResults
 
 from moz_sql_parser.debugs import all_exceptions
 from moz_sql_parser.sql_parser import SQLParser
