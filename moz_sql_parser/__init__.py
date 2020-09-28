@@ -66,9 +66,7 @@ def _scrub(result):
         return result.decode('utf8')
     elif isinstance(result, number_types):
         return result
-    elif not result:
-        return {}
-    elif isinstance(result, (list, ParseResults)):
+    elif isinstance(result, list):
         if not result:
             return None
         elif len(result) == 1:
@@ -86,19 +84,20 @@ def _scrub(result):
             elif all(isinstance(r, number_types) or (isinstance(r, Mapping) and "literal" in r.keys()) for r in output):
                 output = {"literal": [r['literal'] if isinstance(r, Mapping) else r for r in output]}
             return output
-    elif not items(result):
-        return {}
     else:
-        return {
+        output = {
             k: vv
-            for k, v in result.items()
+            for k, v in list(result.items())
             for vv in [_scrub(v)]
             if vv != None
         }
+        if output:
+            return output
+
+        return _scrub(result.tokens)
 
 
 _ = json.dumps
-
 
 __all__ = [
     'parse',

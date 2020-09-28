@@ -13,7 +13,7 @@ import ast
 import sys
 
 from mo_parsing import Combine, Forward, Group, Keyword, Literal, Optional, Regex, Word, ZeroOrMore, \
-    alphanums, delimitedList, infixNotation, opAssoc, restOfLine
+    alphanums, delimitedList, infixNotation, opAssoc, restOfLine, ParseResults
 from mo_parsing.engine import Engine
 from moz_sql_parser.debugs import debug
 from moz_sql_parser.keywords import AND, AS, ASC, BETWEEN, CASE, COLLATE_NOCASE, CROSS_JOIN, DESC, ELSE, END, FROM, \
@@ -68,7 +68,7 @@ KNOWN_OPS = [
     OR.set_parser_name("or")
 ]
 
-def to_json_operator(instring, tokensStart, retTokens):
+def to_json_operator(retTokens, tokensStart, instring):
     # ARRANGE INTO {op: params} FORMAT
     tok = retTokens
     op = tok[1]
@@ -124,7 +124,7 @@ def to_json_operator(instring, tokensStart, retTokens):
         return to_json_operator(None, None, [[simple] + tok[3:]])
 
 
-def to_json_call(instring, tokensStart, retTokens):
+def to_json_call(retTokens):
     # ARRANGE INTO {op: params} FORMAT
     tok = retTokens
     op = tok.op.lower()
@@ -138,7 +138,7 @@ def to_json_call(instring, tokensStart, retTokens):
     return {op: params}
 
 
-def to_case_call(instring, tokensStart, retTokens):
+def to_case_call(retTokens):
     tok = retTokens
     cases = list(tok.case)
     elze = getattr(tok, "else", None)
@@ -147,21 +147,21 @@ def to_case_call(instring, tokensStart, retTokens):
     return {"case": cases}
 
 
-def to_date_call(instring, tokensStart, retTokens):
+def to_date_call(retTokens):
     return {"date": retTokens.params}
 
 
-def to_interval_call(instring, tokensStart, retTokens):
+def to_interval_call(retTokens):
     # ARRANGE INTO {interval: params} FORMAT
     return {"interval": [retTokens['count'], retTokens['duration'][:-1]]}
 
 
-def to_when_call(instring, tokensStart, retTokens):
+def to_when_call(retTokens):
     tok = retTokens
     return {"when": tok.when, "then":tok.then}
 
 
-def to_join_call(instring, tokensStart, retTokens):
+def to_join_call(retTokens):
     tok = retTokens
 
     if tok.join.name:
@@ -177,7 +177,8 @@ def to_join_call(instring, tokensStart, retTokens):
     return output
 
 
-def to_select_call(instring, tokensStart, retTokens):
+
+def to_select_call(retTokens):
     tok = retTokens[0]
 
     if tok['value'][0][0] == '*':
@@ -186,7 +187,7 @@ def to_select_call(instring, tokensStart, retTokens):
         return tok
 
 
-def to_union_call(instring, tokensStart, retTokens):
+def to_union_call(retTokens):
     tok = retTokens
     unions = tok['from']['union']
     if len(unions) == 1:
@@ -207,22 +208,22 @@ def to_union_call(instring, tokensStart, retTokens):
         output["orderby"] = tok.get('orderby')
     if tok.get('limit'):
         output["limit"] = tok.get('limit')
-    return output
+    return ParseResults(retTokens.type, [output])
 
 
-def to_with_clause(instring, tokensStart, retTokens):
-    tok = retTokens[0]
+def to_with_clause(retTokens):
+    tok = retTokens
     query = tok['query'][0]
     if tok['with']:
         assignments = [
-            {"name": w.name, "value": w.value[0]}
+            {"name": w['name'], "value": w['value'][0]}
             for w in tok['with']
         ]
         query['with'] = assignments
     return query
 
 
-def unquote(instring, tokensStart, retTokens):
+def unquote(retTokens):
     val = retTokens[0]
     if val.startswith("'") and val.endswith("'"):
         val = "'"+val[1:-1].replace("''", "\\'")+"'"
@@ -238,7 +239,7 @@ def unquote(instring, tokensStart, retTokens):
     return un
 
 
-def to_string(instring, tokensStart, retTokens):
+def to_string(retTokens):
     val = retTokens[0]
     val = "'"+val[1:-1].replace("''", "\\'")+"'"
     return {"literal": ast.literal_eval(val)}

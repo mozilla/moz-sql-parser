@@ -1,8 +1,10 @@
 # encoding: utf-8
+import inspect
 from collections import MutableMapping
+from time import sleep
 
 from mo_dots import is_many
-from mo_future import is_text, text, PY3
+from mo_future import is_text, text, PY3, NEXT
 from mo_logs import Log
 
 from mo_parsing import engine
@@ -78,13 +80,12 @@ class ParseResults(object):
         self.tokens = toklist
         self.type = result_type
 
-    def _get_item_by_name(self, i):
+    def _get_item_by_name(self, name):
         # return open list of (modal, value) pairs
         # modal==True means only the last value is relevant
         for tok in self.tokens:
             if isinstance(tok, ParseResults):
-                name = tok.name
-                if name == i:
+                if tok.name == name:
                     if isinstance(tok.type, Group):
                         yield tok
                     else:
@@ -93,9 +94,9 @@ class ParseResults(object):
                     continue
                 elif isinstance(tok.type, Group):
                     continue
-                elif name:
+                elif tok.name:
                     continue
-                for f in tok._get_item_by_name(i):
+                for f in tok._get_item_by_name(name):
                     yield f
 
     def __getitem__(self, i):
@@ -154,7 +155,17 @@ class ParseResults(object):
             Log.error("do not know how to handle")
 
     def __bool__(self):
-        return not not self.tokens
+        try:
+            NEXT(self.iteritems())()
+            return True
+        except Exception:
+            pass
+
+        try:
+            NEXT(self.__iter__())()
+            return True
+        except Exception:
+            return False
 
     __nonzero__ = __bool__
 
@@ -230,16 +241,22 @@ class ParseResults(object):
             yield v
 
     def iteritems(self):
+        if self.name:
+            yield self.name, self.tokens
+            return
+
         output = {}
-        for r in self.tokens:
-            if isinstance(r, ParseResults):
-                name = r.name
-                if name:
-                    add(output, name, [r])
+        for tok in self.tokens:
+            if isinstance(tok, ParseResults):
+                if tok.name:
+                    if isinstance(tok.type, Group):
+                        add(output, tok.name, [tok])
+                    else:
+                        add(output, tok.name, list(tok))
                     continue
-                if isinstance(r.type, Group):
+                if isinstance(tok.type, Group):
                     continue
-                for k, v in r.iteritems():
+                for k, v in tok.iteritems():
                     add(output, k, v)
         for k, v in output.items():
             yield k, v
@@ -274,32 +291,6 @@ class ParseResults(object):
         semantics and pop the corresponding value from any defined results
         names. A second default return value argument is supported, just as in
         ``dict.pop()``.
-
-        Example::
-
-            def remove_first(tokens):
-                tokens.pop(0)
-            print(OneOrMore(Word(nums)).parseString("0 123 321")) # -> ['0', '123', '321']
-            print(OneOrMore(Word(nums)).addParseAction(remove_first).parseString("0 123 321")) # -> ['123', '321']
-
-            label = Word(alphas)
-            patt = label("LABEL") + OneOrMore(Word(nums))
-            print(patt.parseString("AAB 123 321"))
-
-            # Use pop() in a parse action to remove named result (note that corresponding value is not
-            # removed from list form of results)
-            def remove_LABEL(tokens):
-                tokens.pop("LABEL")
-                return tokens
-            patt.addParseAction(remove_LABEL)
-            print(patt.parseString("AAB 123 321"))
-
-        prints::
-
-            ['AAB', '123', '321']
-            - LABEL: AAB
-
-            ['AAB', '123', '321']
         """
         ret = self[index]
         del self[index]
@@ -312,16 +303,6 @@ class ParseResults(object):
         ``defaultValue`` is specified.
 
         Similar to ``dict.get()``.
-
-        Example::
-
-            integer = Word(nums)
-            date_str = integer("year") + '/' + integer("month") + '/' + integer("day")
-
-            result = date_str.parseString("1999/12/31")
-            print(result.get("year")) # -> '1999'
-            print(result.get("hour", "not specified")) # -> 'not specified'
-            print(result.get("hour")) # -> None
         """
         if key in self:
             return self[key]
@@ -353,7 +334,9 @@ class ParseResults(object):
         ]
 
     def __str__(self):
-        if not self.tokens:
+        if len(inspect.stack(0)) > 30:
+            return "..."
+        elif not self.tokens:
             return ""
         elif len(self.tokens) == 1:
             return text(self.tokens[0])
