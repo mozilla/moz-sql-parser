@@ -188,7 +188,7 @@ class ParserElement(object):
             return value[0], value[1]
 
         try:
-            self.engine.debugActions.TRY(instring, loc, self)
+            self.engine.debugActions.TRY(self, loc, instring)
             start = preloc = loc
             try:
                 start = preloc = self.engine.skip(instring, loc)
@@ -197,9 +197,9 @@ class ParserElement(object):
                 except IndexError:
                     if self.parser_config.mayIndexError or preloc >= len(instring):
                         ex = ParseException(
-                            instring,
-                            len(instring),
                             self,
+                            len(instring),
+                            instring,
                         )
                         packrat_cache.set(lookup, ex.__class__(*ex.args))
                         raise ex
@@ -219,14 +219,7 @@ class ParserElement(object):
             if self.parseAction and (doActions or self.callDuringTry):
                 try:
                     for fn in self.parseAction:
-                        tokens = fn(instring, start, tokens)
-
-                    if not isinstance(tokens, ParseResults):
-                        Log.error("expecting ParseResult")
-                    if self.__class__.__name__ == "Forward":
-                        pass  # OK
-                    elif tokens.type_for_result is not self:
-                        Log.error("expecting correct type to come from self")
+                        tokens = fn(tokens, start, instring)
                 except Exception as err:
                     self.engine.debugActions.FAIL(instring, start, self, err)
                     raise
@@ -236,17 +229,14 @@ class ParserElement(object):
             packrat_cache.set(lookup, pe.__class__(*pe.args))
             raise
 
-        try:
-            packrat_cache.set(lookup, (loc, tokens))
-        except Exception as e:
-            raise e
+        packrat_cache.set(lookup, (loc, tokens))
         return loc, tokens
 
     def tryParse(self, instring, loc):
         try:
             return self._parse(instring, loc, doActions=False)[0]
         except ParseFatalException:
-            raise ParseException(instring, loc, self)
+            raise ParseException(self, loc, instring)
 
     def canParseNext(self, instring, loc):
         try:

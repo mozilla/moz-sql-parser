@@ -6,6 +6,7 @@ import string
 import sys
 import warnings
 from itertools import filterfalse
+from types import FunctionType
 
 from mo_future import text, unichr
 from mo_logs import Log, Except
@@ -39,8 +40,6 @@ def get_function_arguments(func):
         return builtin_lookup.get(func.__name__, ("unknown",))
 
 
-
-
 class __config_flags:
     """Internal class for defining compatibility and debugging flags"""
 
@@ -51,14 +50,9 @@ class __config_flags:
     @classmethod
     def _set(cls, dname, value):
         if dname in cls._fixed_names:
-            warnings.warn(
-                "{}.{} {} is {} and cannot be overridden".format(
-                    cls.__name__,
-                    dname,
-                    cls._type_desc,
-                    str(getattr(cls, dname)).upper(),
-                )
-            )
+            warnings.warn("{}.{} {} is {} and cannot be overridden".format(
+                cls.__name__, dname, cls._type_desc, str(getattr(cls, dname)).upper(),
+            ))
             return
         if dname in cls._all_names:
             setattr(cls, dname, value)
@@ -69,7 +63,6 @@ class __config_flags:
     disable = classmethod(lambda cls, name: cls._set(name, False))
 
 
-
 alphas = string.ascii_uppercase + string.ascii_lowercase
 nums = "0123456789"
 hexnums = nums + "ABCDEFabcdef"
@@ -78,22 +71,22 @@ _bslash = chr(92)
 printables = "".join(c for c in string.printable if c not in string.whitespace)
 
 
-def col(loc, strg):
+def col(loc, string):
     """Returns current column within a string, counting newlines as line separators.
-   The first column is number 1.
+    The first column is number 1.
 
-   Note: the default parsing behavior is to expand tabs in the input string
-   before starting the parsing process.  See
-   :class:`ParserElement.parseString` for more
-   information on parsing strings containing ``<TAB>`` s, and suggested
-   methods to maintain a consistent view of the parsed string, the parse
-   location, and line and column positions within the parsed string.
-   """
-    s = strg
+    Note: the default parsing behavior is to expand tabs in the input string
+    before starting the parsing process.  See
+    :class:`ParserElement.parseString` for more
+    information on parsing strings containing ``<TAB>`` s, and suggested
+    methods to maintain a consistent view of the parsed string, the parse
+    location, and line and column positions within the parsed string.
+    """
+    s = string
     return 1 if 0 < loc < len(s) and s[loc - 1] == "\n" else loc - s.rfind("\n", 0, loc)
 
 
-def lineno(loc, strg):
+def lineno(loc, string):
     """Returns current line number within a string, counting newlines as line separators.
     The first line is number 1.
 
@@ -103,18 +96,17 @@ def lineno(loc, strg):
     suggested methods to maintain a consistent view of the parsed string, the
     parse location, and line and column positions within the parsed string.
     """
-    return strg.count("\n", 0, loc) + 1
+    return string.count("\n", 0, loc) + 1
 
 
-def line(loc, strg):
-    """Returns the line of text containing loc within a string, counting newlines as line separators.
-       """
-    lastCR = strg.rfind("\n", 0, loc)
-    nextCR = strg.find("\n", loc)
+def line(loc, string):
+    """Returns the line of text containing loc within a string, counting newlines as line separators."""
+    lastCR = string.rfind("\n", 0, loc)
+    nextCR = string.find("\n", loc)
     if nextCR >= 0:
-        return strg[lastCR + 1 : nextCR]
+        return string[lastCR + 1 : nextCR]
     else:
-        return strg[lastCR + 1 :]
+        return string[lastCR + 1 :]
 
 
 "decorator to trim function calls to match the arity of the target"
@@ -126,48 +118,34 @@ def wrap_parse_action(func):
     from mo_parsing.enhancement import Group
 
     if func in singleArgBuiltins:
-        return lambda s, l, t: func(t)
-
-    try:
-        if func.__class__.__name__ == "staticmethod":
-            func = func.__func__
-            spec = inspect.getfullargspec(func)
-
-            self_arg = 1 if spec.args and spec.args[0] in ("self", "cls") else 0
-            if spec.varargs:
-                start = 0
-            else:
-                start = 3 + self_arg - len(spec.args)
-        elif isinstance(func, type):
-            # use __init__., assume the self is already bound
-            spec = inspect.getfullargspec(func.__init__)
-            if spec.varargs:
-                start = 0
-            else:
-                start = 4 - len(spec.args)
-        else:
-            spec = inspect.getfullargspec(func)
-
-            self_arg = 1 if spec.args and spec.args[0] in ("self", "cls") else 0
-            if spec.varargs:
-                start = 0
-            else:
-                start = 3 + self_arg - len(spec.args)
-    except Exception as e:
-        e = Except.wrap(e)
-        func = func.__call__
         spec = inspect.getfullargspec(func)
-        self_arg = 1 if spec.args and spec.args[0] == "self" else 0
-        if spec.varargs:
-            start = 0
-        else:
-            start = 3 + self_arg - len(spec.args)
+    elif func.__class__.__name__ == "staticmethod":
+        func = func.__func__
+        spec = inspect.getfullargspec(func)
+    elif func.__class__.__name__ == "builtin_function_or_method":
+        spec = inspect.getfullargspec(func)
+    elif isinstance(func, type):
+        spec = inspect.getfullargspec(func.__init__)
+        func = func.__call__
+    elif isinstance(func, FunctionType):
+        spec = inspect.getfullargspec(func)
+    elif hasattr(func, "__call__"):
+        spec = inspect.getfullargspec(func)
+
+    if spec.varargs:
+        num_args = 3
+    elif spec.args and spec.args[0] in ["cls", "self"]:
+        num_args = len(spec.args) - 1
+    else:
+        num_args = len(spec.args)
 
     def wrapper(*args):
         try:
-            s, i, token = args
+            token, index, string = args
+            if isinstance(token, str):
+                Log.note("error")
             original_type = token.type
-            result = func(*args[start:])
+            result = func(*args[:num_args])
             if result is None:
                 return token
             elif isinstance(result, (list, tuple)):
@@ -181,13 +159,23 @@ def wrap_parse_action(func):
             else:
                 return ParseResults(original_type, [result])
         except Exception as cause:
+            cause_ = Except.wrap(cause)
+            if "positional arguments but" in cause_:
+                Log.warning("", cause=cause)
+            if "'str' object has no attribute 'type'" in cause_:
+                Log.warning("", cause=cause)
+            if "sequence item 0: expected str instance" in cause_:
+                Log.warning("", cause=cause)
+            if "takes exactly one argument (2 given)" in cause_:
+                Log.warning("", cause=cause)
             if (
                 isinstance(cause, TypeError)
                 and spec.args[0] == "self"
                 and "required positional argument" in cause.args[0]
             ):
                 Log.error(
-                    "Did you provide a `self` argument to a static function?", cause=cause
+                    "Did you provide a `self` argument to a static function?",
+                    cause=cause,
                 )
 
             f = ParseException(*args)
@@ -213,7 +201,6 @@ def _xml_escape(data):
     for from_, to_ in zip(from_symbols, to_symbols):
         data = data.replace(from_, to_)
     return data
-
 
 
 def traceParseAction(f):
@@ -245,7 +232,7 @@ def traceParseAction(f):
 
     def z(*paArgs):
         thisFunc = f.__name__
-        s, l, t = paArgs[-3:]
+        t, l, s = paArgs[-3:]
         if len(paArgs) > 3:
             thisFunc = paArgs[0].__class__.__name__ + "." + thisFunc
         sys.stderr.write(
@@ -476,5 +463,3 @@ setattr(parsing_unicode.Japanese, "ひらがな", parsing_unicode.Japanese.Hirag
 setattr(parsing_unicode, "한국어", parsing_unicode.Korean)
 setattr(parsing_unicode, "ไทย", parsing_unicode.Thai)
 setattr(parsing_unicode, "देवनागरी", parsing_unicode.Devanagari)
-
-

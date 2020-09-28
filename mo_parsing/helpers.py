@@ -113,7 +113,7 @@ def countedArray(expr, intExpr=None):
 
     arrayExpr = Forward()
 
-    def countFieldParseAction(s, l, t):
+    def countFieldParseAction(t, l, s):
         n = t[0]
         arrayExpr << (n and Group(And([expr] * n)) or Group(empty))
         return []
@@ -153,7 +153,7 @@ def matchPreviousLiteral(expr):
     """
     rep = Forward()
 
-    def copyTokenToRepeater(s, l, t):
+    def copyTokenToRepeater(t, l, s):
         if t:
             if len(t) == 1:
                 rep << t[0]
@@ -188,10 +188,10 @@ def matchPreviousExpr(expr):
     e2 = expr.copy()
     rep <<= e2
 
-    def copyTokenToRepeater(s, l, t):
+    def copyTokenToRepeater(t, l, s):
         matchTokens = _flatten(t)
 
-        def mustMatchTheseTokens(s, l, t):
+        def mustMatchTheseTokens(t, l, s):
             theseTokens = _flatten(t)
             if theseTokens != matchTokens:
                 raise ParseException("", 0, "")
@@ -375,13 +375,13 @@ def originalTextFor(expr, asString=True):
         ['<b> bold <i>text</i> </b>']
         ['<i>text</i>']
     """
-    locMarker = Empty().addParseAction(lambda s, loc, t: loc)
+    locMarker = Empty().addParseAction(lambda t, l, s: l)
     matchExpr = locMarker("_original_start") + Group(expr) + locMarker("_original_end")
     matchExpr = matchExpr.addParseAction(extractText)
     return matchExpr
 
 
-def extractText(s, l, t):
+def extractText(t, l, s):
     d = t[1]
     content = s[t["_original_start"] : t["_original_end"]]
     annotations = [
@@ -423,7 +423,7 @@ def locatedExpr(expr):
         [[8, 'lksdjjf', 15]]
         [[18, 'lkkjj', 23]]
     """
-    locator = Empty().addParseAction(lambda s, l, t: l)
+    locator = Empty().addParseAction(lambda t, l, s: l)
     return Group(locator("locn_start") + Group(expr)("value") + locator("locn_end"))
 
 
@@ -513,13 +513,13 @@ stringEnd = StringEnd().set_parser_name("stringEnd")
 
 _escapedPunc = Word(
     _bslash, r"\[]-*.$+^?()~ ", exact=2
-).addParseAction(lambda s, l, t: t[0][1])
+).addParseAction(lambda t, l, s: t[0][1])
 _escapedHexChar = (
-    Regex(r"\\0?[xX][0-9a-fA-F]+").addParseAction(lambda s, l, t: unichr(int(
+    Regex(r"\\0?[xX][0-9a-fA-F]+").addParseAction(lambda t, l, s: unichr(int(
         t[0].lstrip(r"\0x"), 16
     )))
 )
-_escapedOctChar = Regex(r"\\0[0-7]+").addParseAction(lambda s, l, t: unichr(int(
+_escapedOctChar = Regex(r"\\0[0-7]+").addParseAction(lambda t, l, s: unichr(int(
     t[0][1:], 8
 )))
 _singleChar = (
@@ -596,12 +596,12 @@ def replaceWith(replStr):
 
         OneOrMore(term).parseString("324 234 N/A 234") # -> [324, 234, nan, 234]
     """
-    def replacer(s, l, t):
+    def replacer(t, l, s):
         return [replStr]
     return replacer
 
 
-def removeQuotes(s, l, t):
+def removeQuotes(t, l, s):
     """Helper parse action for removing quotation marks from parsed
     quoted strings.
 
@@ -625,7 +625,7 @@ def tokenMap(func, *args):
     :return:  map(func(e), token)
     """
 
-    def pa(s, l, t):
+    def pa(t, l, s):
         return [func(tokn, *args) for tokn in t]
 
     try:
@@ -690,7 +690,7 @@ def makeHTMLTags(tagStr, suppress_LT=Suppress("<"), suppress_GT=Suppress(">")):
             )))
             + Optional(
                 "/", default=[False]
-            )("empty").addParseAction(lambda s, l, t: t[0] == "/")
+            )("empty").addParseAction(lambda t, l, s: t[0] == "/")
             + suppress_GT
         )
         .set_token_name("start" + simpler_name)
@@ -772,7 +772,7 @@ def withAttribute(*args, **attrDict):
         attrs = attrDict.items()
     attrs = [(k, v) for k, v in attrs]
 
-    def pa(s, l, tokens):
+    def pa(tokens, l, s):
         for attrName, attrValue in attrs:
             if attrName not in tokens:
                 raise ParseException(s, l, "no matching attribute " + attrName)
@@ -941,8 +941,8 @@ def infixNotation(baseExpr, spec, lpar=Suppress("("), rpar=Suppress(")")):
     opList = tuple(opList)
 
     def record_op(*op):
-        def output(tex, ind, tok):
-            return [(tok, op)]
+        def output(tokens, loc, string):
+            return [(tokens, op)]
 
         return output
 
@@ -963,7 +963,7 @@ def infixNotation(baseExpr, spec, lpar=Suppress("("), rpar=Suppress(")")):
         for opPart in op
     ])
 
-    def make_tree(instring, loc, tokens):
+    def make_tree(tokens, loc, string):
         flat_tokens = list(tokens)
         num = len(opList)
         op_index = 0
@@ -1030,7 +1030,7 @@ def infixNotation(baseExpr, spec, lpar=Suppress("("), rpar=Suppress(")")):
                     continue
 
             for p in parse_actions:
-                result = p(instring, -1, result)
+                result = p(result, -1, string)
             offset = (0, 2, 3, 5)[arity]
             flat_tokens[i : i + offset] = [(result, (expr,))]
             op_index = 0
@@ -1134,7 +1134,7 @@ def indentedBlock(blockStatementExpr, indentStack, indent=True):
     def reset_stack():
         indentStack[:] = backup_stack
 
-    def checkPeerIndent(s, l, t):
+    def checkPeerIndent(t, l, s):
         if l >= len(s):
             return
         curCol = col(l, s)
@@ -1143,14 +1143,14 @@ def indentedBlock(blockStatementExpr, indentStack, indent=True):
                 raise ParseException(s, l, "illegal nesting")
             raise ParseException(s, l, "not a peer entry")
 
-    def checkSubIndent(s, l, t):
+    def checkSubIndent(t, l, s):
         curCol = col(l, s)
         if curCol > indentStack[-1]:
             indentStack.append(curCol)
         else:
             raise ParseException(s, l, "not a subentry")
 
-    def checkUnindent(s, l, t):
+    def checkUnindent(t, l, s):
         if l >= len(s):
             return
         curCol = col(l, s)
@@ -1492,7 +1492,7 @@ def convertToDate(fmt="%Y-%m-%d"):
         [datetime.date(1999, 12, 31)]
     """
 
-    def cvt_fn(s, l, t):
+    def cvt_fn(t, l, s):
         try:
             return datetime.strptime(t[0], fmt).date()
         except ValueError as ve:
@@ -1519,7 +1519,7 @@ def convertToDatetime(fmt="%Y-%m-%dT%H:%M:%S.%f"):
         [datetime.datetime(1999, 12, 31, 23, 59, 59, 999000)]
     """
 
-    def cvt_fn(s, l, t):
+    def cvt_fn(t, l, s):
         try:
             return datetime.strptime(t[0], fmt)
         except ValueError as ve:
@@ -1547,7 +1547,7 @@ uuid = (
 _html_stripper = anyOpenTag.suppress() | anyCloseTag.suppress()
 
 
-def stripHTMLTags(s, l, tokens):
+def stripHTMLTags(tokens, l, s):
     """Parse action to remove HTML tags from web page HTML source
 
     Example::

@@ -202,7 +202,7 @@ class And(ParseExpression):
                 raise e
             except ParseBaseException as pe:
                 if encountered_error_stop:
-                    raise ParseSyntaxException(pe.pstr, pe.loc, pe.parserElement)
+                    raise ParseSyntaxException(pe.parserElement, pe.loc, pe.pstr)
                 else:
                     raise pe
             except IndexError as ie:
@@ -385,7 +385,7 @@ class MatchFirst(ParseExpression):
                 maxException.msg = "Expecting " + text(self)
                 raise maxException
             else:
-                raise ParseException(instring, loc, self)
+                raise ParseException(self, loc, instring)
 
     def __or__(self, other):
         if other is Ellipsis:
