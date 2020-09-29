@@ -1,7 +1,7 @@
 # encoding: utf-8
 import inspect
 from collections import MutableMapping
-from time import sleep
+from itertools import count
 
 from mo_dots import is_many
 from mo_future import is_text, text, PY3, NEXT
@@ -11,53 +11,8 @@ from mo_parsing import engine
 
 Suppress, ParserElement, Forward, Group, Dict, Token, Empty = [None] * 7
 
-_get = object.__getattribute__
-
 
 class ParseResults(object):
-    """Structured parse results, to provide multiple means of access to
-    the parsed data:
-
-       - as a list (``len(results)``)
-       - by list index (``results[0], results[1]``, etc.)
-       - by attribute (``results.<token_name>`` - see :class:`ParserElement.set_token_name`)
-
-    Example::(pars
-
-        integer = Word(nums)
-        date_str = (integer.set_token_name("year") + '/'
-                        + integer.set_token_name("month") + '/'
-                        + integer.set_token_name("day"))
-        # equivalent form:
-        # date_str = integer("year") + '/' + integer("month") + '/' + integer("day")
-
-        # parseString returns a ParseResults object
-        result = date_str.parseString("1999/12/31")
-
-        def test(s, fn=repr):
-            print("%s -> %s" % (s, fn(eval(s))))
-        test("list(result)")
-        test("result[0]")
-        test("result['month']")
-        test("result.day")
-        test("'month' in result")
-        test("'minutes' in result")
-        test("result", str)
-
-    prints::
-
-        list(result) -> ['1999', '/', '12', '/', '31']
-        result[0] -> '1999'
-        result['month'] -> '12'
-        result.day -> '31'
-        'month' in result -> True
-        'minutes' in result -> False
-        result -> ['1999', '/', '12', '/', '31']
-        - day: 31
-        - month: 12
-        - year: 1999
-    """
-
     __slots__ = [
         "tokens",
         "type",
@@ -67,16 +22,7 @@ class ParseResults(object):
     def name(self):
         return self.type.token_name
 
-    # Performance tuning: we construct a *lot* of these, so keep this
-    # constructor as small and fast as possible
     def __init__(self, result_type, toklist=None):
-        if not isinstance(result_type, ParserElement):
-            Log.error("not expected")
-        if isinstance(result_type, Forward):
-            Log.error("not expected")
-        if isinstance(toklist, ParseResults) or not isinstance(toklist, (list, tuple)):
-            Log.error("no longer accepted")
-
         self.tokens = toklist
         self.type = result_type
 
@@ -99,20 +45,20 @@ class ParseResults(object):
                 for f in tok._get_item_by_name(name):
                     yield f
 
-    def __getitem__(self, i):
-        if isinstance(i, int):
-            if i < 0:
-                i = len(self) + i
+    def __getitem__(self, item):
+        if isinstance(item, int):
+            if item < 0:
+                item = len(self) + item
             for ii, v in enumerate(self):
-                if i == ii:
+                if item == ii:
                     return v
-        elif isinstance(i, slice):
-            return list(iter(self))[i]
+        elif isinstance(item, slice):
+            return list(iter(self))[item]
         else:
-            if self.name == i:
+            if self.name == item:
                 return self
 
-            values = list(self._get_item_by_name(i))
+            values = list(self._get_item_by_name(item))
             if len(values) == 1:
                 return values[0]
             return ParseResults(self.type, values)
@@ -131,17 +77,12 @@ class ParseResults(object):
     def __contains__(self, k):
         return any((r.name) == k for r in self.tokens)
 
-    def __len__(self):
-        if isinstance(self.type, Group):
-            if not self.tokens:
-                return 0
-            return len(self.tokens[0])
-        else:
-            return sum(1 for t in self)
+    def length(self):
+        return sum(1 for _ in self)
 
     def __eq__(self, other):
         if other == None:
-            return len(self) == 0
+            return not self.__bool__()
         elif is_text(other):
             try:
                 return "".join(self) == other

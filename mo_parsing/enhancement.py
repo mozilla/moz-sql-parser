@@ -53,8 +53,6 @@ class ParseElementEnhance(ParserElement):
 
     def parseImpl(self, instring, loc, doActions=True):
         loc, output = self.expr._parse(instring, loc, doActions)
-        if output.type == self:
-            Log.error("not expected")
         return loc, ParseResults(self, [output])
 
     def leaveWhitespace(self):
@@ -696,7 +694,7 @@ def _dict_post_parse(tokens, loc, string):
         for tok in list(a):
             if isinstance(tok, int):
                 Log.error("not expected")
-            if len(tok) == 0:
+            if not tok:
                 continue
             ikey = tok[0]
             rest = list(tok[1:])

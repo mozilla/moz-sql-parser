@@ -72,43 +72,29 @@ class Literal(Token):
     def __init__(self, matchString):
         super(Literal, self).__init__()
         self.match = matchString
-        self.matchLen = len(matchString)
-        try:
-            self.firstMatchChar = matchString[0]
-        except IndexError:
-            warnings.warn(
-                "null string passed to Literal; use Empty() instead",
-                SyntaxWarning,
-                stacklevel=2,
-            )
-            self.__class__ = Empty
-        self.parser_name = '"%s"' % text(self.match)
+        self.parser_name = matchString
         self.parser_config.mayReturnEmpty = False
         self.parser_config.mayIndexError = False
 
-        # Performance tuning: modify __class__ to select
-        # a parseImpl optimized for single-character check
-        if self.matchLen == 1 and type(self) is Literal:
+        if len(matchString) == 0:
+            Log.error("Literal must be at least one character")
+        if len(matchString) == 1:
             self.__class__ = _SingleCharLiteral
 
     def copy(self):
         output = ParserElement.copy(self)
-        output.firstMatchChar = self.firstMatchChar
         output.match = self.match
-        output.matchLen = self.matchLen
         return output
 
     def parseImpl(self, instring, loc, doActions=True):
-        if instring[loc] == self.firstMatchChar and instring.startswith(
-            self.match, loc
-        ):
+        if instring.startswith(self.match, loc):
             return loc + self.matchLen, ParseResults(self, [self.match])
         raise ParseException(self, loc, instring)
 
 
 class _SingleCharLiteral(Literal):
     def parseImpl(self, instring, loc, doActions=True):
-        if instring[loc] == self.firstMatchChar:
+        if instring[loc] == self.match:
             return loc + 1, ParseResults(self, [self.match])
         raise ParseException(self, loc, instring)
 
@@ -198,6 +184,9 @@ class CaselessKeyword(Keyword):
         )
 
     def parseImpl(self, instring, loc, doActions=True):
+        if instring[loc:].startswith("WHERE") and self.match == "WHERE":
+            a = loc
+
         end = loc + self.matchLen
         if instring[loc:end].upper() == self.match:
             try:

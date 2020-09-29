@@ -9,6 +9,7 @@
 
 from __future__ import absolute_import, division, unicode_literals
 
+import re
 from pprint import pformat
 from unittest import skip, TestCase
 
@@ -38,6 +39,12 @@ class VerificationException(Exception):
         res = EXCEPTION_MESSAGE % (self.expected_sql, self.new_sql, pformat(self.expected_json), pformat(self.new_json))
         return res
 
+
+def remove_whitespace(sql):
+    # WE ASSUME A WHITESPACE REMOVAL IS GOOD ENOUGH FOR COMPARE
+    return re.sub(r"\s+", "", sql, flags=re.UNICODE)
+
+
 class TestFormatAndParse(TestCase):
 
     def verify_formatting(self, expected_sql, expected_json):
@@ -45,6 +52,7 @@ class TestFormatAndParse(TestCase):
         new_json = ""
         try:
             new_sql = format(expected_json)
+            # self.assertEqual(remove_whitespace((new_sql), remove_whitespace((expected_sql)
             new_json = parse(new_sql)
             self.assertEqual(new_json, expected_json)
         except Exception as e:

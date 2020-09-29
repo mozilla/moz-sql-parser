@@ -49,7 +49,7 @@ reserved_keywords = []
 for name in sql_reserved_words:
     n = name.lower().replace("_", " ")
     value = locals()[name] = (
-        Keyword(n, caseless=True).set_parser_name("keyword: "+n).suppress()
+        Keyword(n, caseless=True).set_parser_name(n).suppress()
     )
     reserved_keywords.append(value)
 RESERVED = MatchFirst(reserved_keywords)

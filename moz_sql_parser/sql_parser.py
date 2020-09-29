@@ -108,12 +108,12 @@ def to_json_operator(retTokens, tokensStart, instring):
 
     operands = [tok[0], tok[2]]
     simple = {clean_op: operands}
-    if len(tok) <= 3:
+    if tok.length() <= 3:
         return simple
 
     if clean_op in {"add", "mul", "and", "or"}:
         # ACCUMULATE SUBSEQUENT, IDENTICAL OPS
-        for i in range(3, len(tok), 2):
+        for i in range(3, tok.length(), 2):
             if tok[i] != op:
                 return to_json_operator(None, None, [[simple] + tok[i:]])
             else:
@@ -189,7 +189,7 @@ def to_select_call(retTokens):
 
 def to_union_call(retTokens):
     tok = retTokens
-    unions = tok['from']['union']
+    unions = list(t for t in tok['from']['union'])
     if len(unions) == 1:
         output = unions[0]
     else:
