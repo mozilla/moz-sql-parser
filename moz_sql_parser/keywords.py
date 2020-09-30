@@ -1,8 +1,26 @@
 from mo_parsing import Keyword, MatchFirst
 
-sql_reserved_words = [
-    "AND",
+sql_clauses = [
     "AS",
+    "FROM",
+    "GROUP_BY",
+    "HAVING",
+    "JOIN",
+    "LEFT_JOIN",
+    "LEFT_OUTER_JOIN",
+    "LIMIT",
+    "OFFSET",
+    "ORDER_BY",
+    "RIGHT_JOIN",
+    "RIGHT_OUTER_JOIN",
+    "SELECT",
+    "USING",
+    "WITH",
+    "WHERE",
+]
+
+sql_operators = [
+    "AND",
     "ASC",
     "BETWEEN",
     "CASE",
@@ -11,45 +29,38 @@ sql_reserved_words = [
     "DESC",
     "END",
     "ELSE",
-    "FROM",
     "FULL_JOIN",
     "FULL_OUTER_JOIN",
-    "GROUP_BY",
-    "HAVING",
     "IN",
     "INNER_JOIN",
     "IS",
     "IS_NOT",
-    "JOIN",
-    "LEFT_JOIN",
-    "LEFT_OUTER_JOIN",
     "LIKE",
-    "LIMIT",
     "NOT_BETWEEN",
     "NOT_IN",
     "NOT_LIKE",
-    "OFFSET",
     "ON",
     "OR",
-    "ORDER_BY",
     "RESERVED",
-    "RIGHT_JOIN",
-    "RIGHT_OUTER_JOIN",
-    "SELECT",
     "THEN",
     "UNION",
     "UNION_ALL",
-    "USING",
-    "WITH",
     "WHEN",
-    "WHERE",
 ]
 
 reserved_keywords = []
-for name in sql_reserved_words:
+for name in sql_clauses:
     n = name.lower().replace("_", " ")
     value = locals()[name] = (
-        Keyword(n, caseless=True).set_parser_name(n).suppress()
+        # WE suppress() THE CLAUSES
+        Keyword(n, caseless=True).suppress().set_parser_name(n)
+    )
+    reserved_keywords.append(value)
+for name in sql_operators:
+    n = name.lower().replace("_", " ")
+    value = locals()[name] = (
+        # DO NTO suppress() OPERATORS, SO WE CAN POST-PROCESSES THEM EASIER
+        Keyword(n, caseless=True).set_parser_name(n)
     )
     reserved_keywords.append(value)
 RESERVED = MatchFirst(reserved_keywords)

@@ -1,7 +1,6 @@
 # encoding: utf-8
 import inspect
 from collections import MutableMapping
-from itertools import count
 
 from mo_dots import is_many
 from mo_future import is_text, text, PY3, NEXT
@@ -9,7 +8,7 @@ from mo_logs import Log
 
 from mo_parsing import engine
 
-Suppress, ParserElement, Forward, Group, Dict, Token, Empty = [None] * 7
+Suppress, ParserElement, NO_PARSER, NO_RESULTS, Forward, Group, Dict, Token, Empty = [None] * 9
 
 
 class ParseResults(object):
@@ -55,13 +54,13 @@ class ParseResults(object):
         elif isinstance(item, slice):
             return list(iter(self))[item]
         else:
-            if self.name == item:
-                return self
-
             values = list(self._get_item_by_name(item))
+            if len(values) == 0:
+                return NO_RESULTS
             if len(values) == 1:
                 return values[0]
-            return ParseResults(self.type, values)
+            # ENCAPSULATE IN A ParseResults FOR FURTHER NAVIGATION
+            return ParseResults(NO_PARSER, values)
 
     def __setitem__(self, k, v):
         if isinstance(k, (slice, int)):
@@ -240,8 +239,7 @@ class ParseResults(object):
     def get(self, key, defaultValue=None):
         """
         Returns named result matching the given key, or if there is no
-        such name, then returns the given ``defaultValue`` or ``None`` if no
-        ``defaultValue`` is specified.
+        such name, then returns the given ``defaultValue``
 
         Similar to ``dict.get()``.
         """
@@ -342,12 +340,6 @@ class ParseResults(object):
         """
         ret = ParseResults(self.type, list(self.tokens))
         return ret
-
-    def __lookup(self, sub):
-        for name, value in self.tokens:
-            if sub is value:
-                return name
-        return None
 
     def getName(self):
         r"""

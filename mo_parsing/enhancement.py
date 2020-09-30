@@ -548,7 +548,7 @@ class Forward(ParserElement):
                 Log.error("not expected")
             return loc, output
         else:
-            raise ParseException(self, loc)
+            raise ParseException(self, loc, instring)
 
     def __str__(self):
         if self.parser_name:
@@ -705,26 +705,8 @@ def _dict_post_parse(tokens, loc, string):
 
 
 class Suppress(TokenConverter):
-    """Converter for ignoring the results of a parsed expression.
-
-    Example::
-
-        source = "a, b, c,d"
-        wd = Word(alphas)
-        wd_list1 = wd + ZeroOrMore(',' + wd)
-        print(wd_list1.parseString(source))
-
-        # often, delimiters that are useful during parsing are just in the
-        # way afterward - use Suppress to keep them out of the parsed output
-        wd_list2 = wd + ZeroOrMore(Suppress(',') + wd)
-        print(wd_list2.parseString(source))
-
-    prints::
-
-        ['a', ',', 'b', ',', 'c', ',', 'd']
-        ['a', 'b', 'c', 'd']
-
-    (See also :class:`delimitedList`.)
+    """
+    Converter for ignoring the results of a parsed expression.
     """
 
     def __init__(self, expr):

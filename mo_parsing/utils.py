@@ -159,25 +159,7 @@ def wrap_parse_action(func):
             else:
                 return ParseResults(original_type, [result])
         except Exception as cause:
-            cause_ = Except.wrap(cause)
-            if "positional arguments but" in cause_:
-                Log.warning("", cause=cause)
-            if "'str' object has no attribute 'type'" in cause_:
-                Log.warning("", cause=cause)
-            if "sequence item 0: expected str instance" in cause_:
-                Log.warning("", cause=cause)
-            if "takes exactly one argument (2 given)" in cause_:
-                Log.warning("", cause=cause)
-            if (
-                isinstance(cause, TypeError)
-                and spec.args[0] == "self"
-                and "required positional argument" in cause.args[0]
-            ):
-                Log.error(
-                    "Did you provide a `self` argument to a static function?",
-                    cause=cause,
-                )
-
+            Log.warning("parse action should not raise exception", cause=cause)
             f = ParseException(*args)
             f.__cause__ = cause
             raise f

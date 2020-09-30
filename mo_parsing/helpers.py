@@ -836,7 +836,6 @@ opAssoc.RIGHT = object()
 
 def infixNotation(baseExpr, spec, lpar=Suppress("("), rpar=Suppress(")")):
     """
-
     :param baseExpr: expression representing the most basic element for the
        nested
     :param spec: list of tuples, one for each operator precedence level
@@ -863,42 +862,34 @@ def infixNotation(baseExpr, spec, lpar=Suppress("("), rpar=Suppress(")")):
     :param rpar: expression for matching right-parentheses
        (default= ``Suppress(')')``)
     :return: ParserElement
-
-    Example::
-
-        # simple example of four-function arithmetic with ints and
-        # variable names
-        integer = signed_integer
-        varname = identifier
-
-        arith_expr = infixNotation(integer | varname,
-            [
-            ('-', 1, opAssoc.RIGHT),
-            (oneOf('* /'), 2, opAssoc.LEFT),
-            (oneOf('+ -'), 2, opAssoc.LEFT),
-            ])
-
-        test.runTests(arith_expr, '''
-            5+3*6
-            (5+3)*6
-            -2--11
-            ''', fullDump=False)
-
-    prints::
-
-        5+3*6
-        [[5, '+', [3, '*', 6]]]
-
-        (5+3)*6
-        [[[5, '+', 3], '*', 6]]
-
-        -2--11
-        [[['-', 2], '-', ['-', 11]]]
     """
 
-    norm = engine.CURRENT.normalize
+    all_op = {}
+    def norm(op):
+        output = all_op.get(id(op))
+        if output:
+            return output
+
+        def record_self(tok):
+            ParseResults(tok.type, [tok.type.parser_name])
+
+        output = engine.CURRENT.normalize(op)
+        if isinstance(output, Suppress):
+            output = output.expr
+        output = output.addParseAction(record_self)
+        all_op[id(op)] = output
+        return output
 
     opList = []
+    """
+    SCRUBBED LIST OF OPERATORS
+    * expr - used exclusively for ParseResult(expr, [...]), not used to match
+    * (op,) - used to match 
+    * arity - same
+    * assoc - same
+    * parse_actions - same
+    """
+
     for operDef in spec:
         op, arity, assoc, rest = operDef[0], operDef[1], operDef[2], operDef[3:]
         parse_actions = list(map(wrap_parse_action, listwrap(rest[0]))) if rest else []
@@ -907,7 +898,7 @@ def infixNotation(baseExpr, spec, lpar=Suppress("("), rpar=Suppress(")")):
             if assoc == opAssoc.RIGHT:
                 opList.append((
                     Group(baseExpr + op),
-                    (op,),
+                    op,
                     arity,
                     assoc,
                     parse_actions,
@@ -915,7 +906,7 @@ def infixNotation(baseExpr, spec, lpar=Suppress("("), rpar=Suppress(")")):
             else:
                 opList.append((
                     Group(op + baseExpr),
-                    (op,),
+                    op,
                     arity,
                     assoc,
                     parse_actions,
@@ -924,7 +915,7 @@ def infixNotation(baseExpr, spec, lpar=Suppress("("), rpar=Suppress(")")):
             op = norm(op)
             opList.append((
                 Group(baseExpr + op + baseExpr),
-                (op,),
+                op,
                 arity,
                 assoc,
                 parse_actions,
@@ -940,41 +931,41 @@ def infixNotation(baseExpr, spec, lpar=Suppress("("), rpar=Suppress(")")):
             ))
     opList = tuple(opList)
 
-    def record_op(*op):
+    def record_op(op):
         def output(tokens, loc, string):
             return [(tokens, op)]
 
         return output
 
     prefix_ops = MatchFirst([
-        op[0].addParseAction(record_op(op))
+        op.addParseAction(record_op(op))
         for expr, op, arity, assoc, pa in opList
         if arity == 1 and assoc == opAssoc.RIGHT
     ])
     suffix_ops = MatchFirst([
-        op[0].addParseAction(record_op(op))
+        op.addParseAction(record_op(op))
         for expr, op, arity, assoc, pa in opList
         if arity == 1 and assoc == opAssoc.LEFT
     ])
     ops = MatchFirst([
-        opPart.addParseAction(record_op(op, opPart))
+        opPart.addParseAction(record_op(opPart))
         for expr, op, arity, assoc, pa in opList
         if arity > 1
-        for opPart in op
+        for opPart in (op if isinstance(op, tuple) else [op])
     ])
 
     def make_tree(tokens, loc, string):
         flat_tokens = list(tokens)
         num = len(opList)
         op_index = 0
-        while len(flat_tokens) > 1 or op_index >= num:
+        while len(flat_tokens) > 1 and op_index < num:
             expr, op, arity, assoc, parse_actions = opList[op_index]
             if arity == 1:
                 if assoc == opAssoc.RIGHT:
                     # PREFIX OPERATOR -3
                     todo = list(reversed(list(enumerate(flat_tokens[:-1]))))
                     for i, (r, o) in todo:
-                        if o == (op,):
+                        if o == op:
                             result = ParseResults(expr, (r, flat_tokens[i + 1][0]))
                             break
                     else:
@@ -984,7 +975,7 @@ def infixNotation(baseExpr, spec, lpar=Suppress("("), rpar=Suppress(")")):
                     # SUFFIX OPERATOR 3!
                     todo = list(enumerate(flat_tokens[1:]))
                     for i, (r, o) in todo:
-                        if o == (op,):
+                        if o == op:
                             result = ParseResults(expr, (flat_tokens[i][0], r,))
                             break
                     else:
@@ -996,7 +987,7 @@ def infixNotation(baseExpr, spec, lpar=Suppress("("), rpar=Suppress(")")):
                     todo = list(reversed(todo))
 
                 for i, (r, o) in todo:
-                    if o == (op, op[0]):
+                    if o == op:
                         result = ParseResults(
                             expr, (flat_tokens[i][0], r, flat_tokens[i + 2][0])
                         )
@@ -1011,9 +1002,9 @@ def infixNotation(baseExpr, spec, lpar=Suppress("("), rpar=Suppress(")")):
                     todo = list(reversed(todo))
 
                 for i, (r0, o0) in todo:
-                    if o0 == (op, op[0]):
+                    if o0 == op[0]:
                         r1, o1 = flat_tokens[i + 3]
-                        if o1 == (op, op[1]):
+                        if o1 == op[1]:
                             result = ParseResults(
                                 expr,
                                 (

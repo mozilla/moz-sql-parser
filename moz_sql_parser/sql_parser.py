@@ -55,17 +55,16 @@ KNOWN_OPS = [
         Literal("<>").set_parser_name("neq") |
         Literal("=").set_parser_name("eq")
     ),
-
-    (BETWEEN.set_parser_name("between"), AND),
+    (BETWEEN, AND),
     (NOT_BETWEEN.set_parser_name("not_between"), AND),
-    IN.set_parser_name("in"),
+    IN,
     NOT_IN.set_parser_name("nin"),
     IS_NOT.set_parser_name("neq"),
-    IS.set_parser_name("is"),
-    LIKE.set_parser_name("like"),
+    IS,
+    LIKE,
     NOT_LIKE.set_parser_name("nlike"),
-    AND.set_parser_name("and"),
-    OR.set_parser_name("or")
+    AND,
+    OR
 ]
 
 def to_json_operator(retTokens, tokensStart, instring):
@@ -83,7 +82,7 @@ def to_json_operator(retTokens, tokensStart, instring):
         elif o.matches(op):
             break
     else:
-        if op == COLLATE_NOCASE.match:
+        if COLLATE_NOCASE.matches(op):
             op = COLLATE_NOCASE.name
             return {op: tok[0]}
         else:
@@ -179,7 +178,7 @@ def to_join_call(retTokens):
 
 
 def to_select_call(retTokens):
-    tok = retTokens[0]
+    tok = retTokens
 
     if tok['value'][0][0] == '*':
         return ['*']
@@ -199,15 +198,13 @@ def to_union_call(retTokens):
         if any(o.lower().replace(" ", "_") != op for o in operators[1:]):
             raise Exception("Expecting all \"union all\" or all \"union\", not some combination")
 
-        if not tok.get('orderby') and not tok.get('limit'):
+        if not tok['orderby'] and not tok['limit']:
             return {op: sources}
         else:
             output = {"from": {op: sources}}
 
-    if tok.get('orderby'):
-        output["orderby"] = tok.get('orderby')
-    if tok.get('limit'):
-        output["limit"] = tok.get('limit')
+    output["orderby"] = tok['orderby']
+    output["limit"] = tok['limit']
     return ParseResults(retTokens.type, [output])
 
 

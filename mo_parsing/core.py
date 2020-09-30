@@ -744,7 +744,14 @@ def is_decorated(parser):
 
 
 # export
-from mo_parsing import results, engine, cache
+from mo_parsing import cache, engine, results
 
-results.ParserElement = ParserElement
 engine.ParserElement = ParserElement
+results.ParserElement = ParserElement
+
+NO_PARSER = ParserElement()
+NO_RESULTS = ParseResults(NO_PARSER, [])
+
+results.NO_RESULTS = NO_RESULTS
+results.NO_PARSER = NO_PARSER
+del results

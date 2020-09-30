@@ -85,9 +85,10 @@ def _scrub(result):
                 output = {"literal": [r['literal'] if isinstance(r, Mapping) else r for r in output]}
             return output
     else:
+        kv_pairs = list(result.items())
         output = {
             k: vv
-            for k, v in list(result.items())
+            for k, v in kv_pairs
             for vv in [_scrub(v)]
             if vv != None
         }
