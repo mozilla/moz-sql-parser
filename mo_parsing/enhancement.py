@@ -638,51 +638,24 @@ class Group(TokenConverter):
 
 
 class Dict(Group):
-    """Converter to return a repetitive expression as a list, but also
-    as a dictionary. Each element can also be referenced using the first
-    token in the expression as its key. Useful for tabular report
-    scraping when the first column can be used as a item key.
-
-    Example::
-
-        data_word = Word(alphas)
-        label = data_word + FollowedBy(':')
-        attr_expr = Group(label + Suppress(':') + OneOrMore(data_word).addParseAction(' '.join))
-
-        text = "shape: SQUARE posn: upper left color: light blue texture: burlap"
-        attr_expr = (label + Suppress(':') + OneOrMore(data_word, stopOn=label).addParseAction(' '.join))
-
-        # print attributes as plain groups
-        print(OneOrMore(attr_expr).parseString(text))
-
-        # instead of OneOrMore(expr), parse using Dict(OneOrMore(Group(expr))) - Dict will auto-assign names
-        result = Dict(OneOrMore(Group(attr_expr))).parseString(text)
-        print(result)
-
-        # access named fields as dict entries, or output as dict
-        print(result['shape'])
-        print(result)
-
-    prints::
-
-        ['shape', 'SQUARE', 'posn', 'upper left', 'color', 'light blue', 'texture', 'burlap']
-        [['shape', 'SQUARE'], ['posn', 'upper left'], ['color', 'light blue'], ['texture', 'burlap']]
-        - color: light blue
-        - posn: upper left
-        - shape: SQUARE
-        - texture: burlap
-        SQUARE
-        {'color': 'light blue', 'posn': 'upper left', 'texture': 'burlap', 'shape': 'SQUARE'}
-
-    See more examples at :class:`ParseResults` of accessing fields by results name.
     """
+    Convert a list of tuples [(name, v1, v2, ...), ...]
+    int dict-like lookup     {name: [v1, v2, ...], ...}
 
+    mo-parsing uses the names of the ParserElement to name ParseResults,
+    but this is a static naming scheme. Dict allows dynamic naming;
+    Effectively defining new named ParserElements (called Annotations)
+    at parse time
+    """
     def __init__(self, expr):
         Group.__init__(self, expr)
         self.parseAction.append(_dict_post_parse)
 
 
 class OpenDict(TokenConverter):
+    """
+    Same as Dict, but not grouped: Open to previous (or subsequent) name: value pairs
+    """
     def __init__(self, expr):
         TokenConverter.__init__(self, expr)
         self.parseAction.append(_dict_post_parse)
@@ -692,13 +665,12 @@ def _dict_post_parse(tokens, loc, string):
     acc = tokens.tokens
     for a in list(acc):
         for tok in list(a):
-            if isinstance(tok, int):
-                Log.error("not expected")
             if not tok:
                 continue
-            ikey = tok[0]
-            rest = list(tok[1:])
-            new_tok = Annotation(text(ikey), rest)
+            kv = list(tok)
+            key = kv[0]
+            value = kv[1:]
+            new_tok = Annotation(text(key), value)
             acc.append(new_tok)
 
     return tokens

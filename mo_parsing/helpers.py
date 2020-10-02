@@ -381,11 +381,11 @@ def originalTextFor(expr, asString=True):
     return matchExpr
 
 
-def extractText(t, l, s):
-    d = t[1]
-    content = s[t["_original_start"] : t["_original_end"]]
+def extractText(tokens, loc, string):
+    start, d, end = tokens
+    content = string[start:end]
     annotations = [
-        Annotation(k, v[0].tokens) if len(v) == 1 and v[0].name == k else Annotation(k, v)
+        Annotation(k, v)
         for k, v in d.items()
     ]
     return ParseResults(d.type, [content] + annotations)
@@ -650,23 +650,6 @@ def makeHTMLTags(tagStr, suppress_LT=Suppress("<"), suppress_GT=Suppress(">")):
     """Helper to construct opening and closing tag expressions for HTML,
     given a tag name. Matches tags in either upper or lower case,
     attributes with namespaces and with quoted or unquoted values.
-
-    Example::
-
-        text = '<td>More info at the <a href="https://github.com/mo_parsing/mo_parsing/wiki">mo_parsing</a> wiki page</td>'
-        # makeHTMLTags returns mo_parsing expressions for the opening and
-        # closing tags as a 2-tuple
-        a, a_end = makeHTMLTags("A")
-        link_expr = a + SkipTo(a_end)("link_text") + a_end
-
-        for link in link_expr.searchString(text):
-            # attributes in the <A> tag (like "href" shown here) are
-            # also accessible as named results
-            print(link.link_text, '->', link.href)
-
-    prints::
-
-        mo_parsing -> https://github.com/mo_parsing/mo_parsing/wiki
     """
     if isinstance(tagStr, text):
         resname = tagStr
@@ -874,11 +857,12 @@ def infixNotation(baseExpr, spec, lpar=Suppress("("), rpar=Suppress(")")):
             ParseResults(tok.type, [tok.type.parser_name])
 
         output = engine.CURRENT.normalize(op)
-        if isinstance(output, Suppress):
+        is_suppressed = isinstance(output, Suppress)
+        if is_suppressed:
             output = output.expr
         output = output.addParseAction(record_self)
-        all_op[id(op)] = output
-        return output
+        all_op[id(op)] = is_suppressed, output
+        return is_suppressed, output
 
     opList = []
     """
@@ -894,11 +878,12 @@ def infixNotation(baseExpr, spec, lpar=Suppress("("), rpar=Suppress(")")):
         op, arity, assoc, rest = operDef[0], operDef[1], operDef[2], operDef[3:]
         parse_actions = list(map(wrap_parse_action, listwrap(rest[0]))) if rest else []
         if arity == 1:
-            op = norm(op)
+            is_suppressed, op = norm(op)
             if assoc == opAssoc.RIGHT:
                 opList.append((
                     Group(baseExpr + op),
                     op,
+                    is_suppressed,
                     arity,
                     assoc,
                     parse_actions,
@@ -907,24 +892,27 @@ def infixNotation(baseExpr, spec, lpar=Suppress("("), rpar=Suppress(")")):
                 opList.append((
                     Group(op + baseExpr),
                     op,
+                    is_suppressed,
                     arity,
                     assoc,
                     parse_actions,
                 ))
         elif arity == 2:
-            op = norm(op)
+            is_suppressed, op = norm(op)
             opList.append((
                 Group(baseExpr + op + baseExpr),
                 op,
+                is_suppressed,
                 arity,
                 assoc,
                 parse_actions,
             ))
         elif arity == 3:
-            op = (norm(op[0]), norm(op[1]))
+            is_suppressed, op = zip(norm(op[0]), norm(op[1]))
             opList.append((
                 Group(baseExpr + op[0] + baseExpr + op[1] + baseExpr),
                 op,
+                is_suppressed,
                 arity,
                 assoc,
                 parse_actions,
@@ -939,17 +927,17 @@ def infixNotation(baseExpr, spec, lpar=Suppress("("), rpar=Suppress(")")):
 
     prefix_ops = MatchFirst([
         op.addParseAction(record_op(op))
-        for expr, op, arity, assoc, pa in opList
+        for expr, op, is_suppressed, arity, assoc, pa in opList
         if arity == 1 and assoc == opAssoc.RIGHT
     ])
     suffix_ops = MatchFirst([
         op.addParseAction(record_op(op))
-        for expr, op, arity, assoc, pa in opList
+        for expr, op, is_suppressed, arity, assoc, pa in opList
         if arity == 1 and assoc == opAssoc.LEFT
     ])
     ops = MatchFirst([
         opPart.addParseAction(record_op(opPart))
-        for expr, op, arity, assoc, pa in opList
+        for expr, op, is_suppressed, arity, assoc, pa in opList
         if arity > 1
         for opPart in (op if isinstance(op, tuple) else [op])
     ])
@@ -959,14 +947,17 @@ def infixNotation(baseExpr, spec, lpar=Suppress("("), rpar=Suppress(")")):
         num = len(opList)
         op_index = 0
         while len(flat_tokens) > 1 and op_index < num:
-            expr, op, arity, assoc, parse_actions = opList[op_index]
+            expr, op, is_suppressed, arity, assoc, parse_actions = opList[op_index]
             if arity == 1:
                 if assoc == opAssoc.RIGHT:
                     # PREFIX OPERATOR -3
                     todo = list(reversed(list(enumerate(flat_tokens[:-1]))))
                     for i, (r, o) in todo:
                         if o == op:
-                            result = ParseResults(expr, (r, flat_tokens[i + 1][0]))
+                            if is_suppressed:
+                                result = ParseResults(expr, (flat_tokens[i + 1][0],))
+                            else:
+                                result = ParseResults(expr, (r, flat_tokens[i + 1][0]))
                             break
                     else:
                         op_index += 1
@@ -976,7 +967,10 @@ def infixNotation(baseExpr, spec, lpar=Suppress("("), rpar=Suppress(")")):
                     todo = list(enumerate(flat_tokens[1:]))
                     for i, (r, o) in todo:
                         if o == op:
-                            result = ParseResults(expr, (flat_tokens[i][0], r,))
+                            if is_suppressed:
+                                result = ParseResults(expr, (flat_tokens[i][0],))
+                            else:
+                                result = ParseResults(expr, (flat_tokens[i][0], r,))
                             break
                     else:
                         op_index += 1
@@ -988,9 +982,14 @@ def infixNotation(baseExpr, spec, lpar=Suppress("("), rpar=Suppress(")")):
 
                 for i, (r, o) in todo:
                     if o == op:
-                        result = ParseResults(
-                            expr, (flat_tokens[i][0], r, flat_tokens[i + 2][0])
-                        )
+                        if is_suppressed:
+                            result = ParseResults(
+                                expr, (flat_tokens[i][0], flat_tokens[i + 2][0])
+                            )
+                        else:
+                            result = ParseResults(
+                                expr, (flat_tokens[i][0], r, flat_tokens[i + 2][0])
+                            )
                         break
                 else:
                     op_index += 1
@@ -1005,16 +1004,18 @@ def infixNotation(baseExpr, spec, lpar=Suppress("("), rpar=Suppress(")")):
                     if o0 == op[0]:
                         r1, o1 = flat_tokens[i + 3]
                         if o1 == op[1]:
-                            result = ParseResults(
-                                expr,
-                                (
-                                    flat_tokens[i][0],
-                                    r0,
-                                    flat_tokens[i + 2][0],
-                                    r1,
-                                    flat_tokens[i + 4][0],
-                                ),
-                            )
+                            seq = [
+                                flat_tokens[i][0],
+                                flat_tokens[i + 2][0],
+                                flat_tokens[i + 4][0],
+                            ]
+                            s0, s1 = is_suppressed
+                            if not s1:
+                                seq.insert(2, r1)
+                            if not s0:
+                                seq.insert(1, r0)
+
+                            result = ParseResults(expr, seq)
                             break
                 else:
                     op_index += 1

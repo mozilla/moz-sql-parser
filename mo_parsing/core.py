@@ -292,6 +292,9 @@ class ParserElement(object):
         expr = self.streamline()
         for e in expr.engine.ignore_list:
             e.streamline()
+        if expr.token_name:
+            # TOP LEVEL NAMES ARE NOT ALLOWED
+            expr = Group(expr)
         try:
             loc, tokens = expr._parse(instring, 0)
             if parseAll:

@@ -88,7 +88,7 @@ class Literal(Token):
 
     def parseImpl(self, instring, loc, doActions=True):
         if instring.startswith(self.match, loc):
-            return loc + self.matchLen, ParseResults(self, [self.match])
+            return loc + len(self.match), ParseResults(self, [self.match])
         raise ParseException(self, loc, instring)
 
 
@@ -201,28 +201,23 @@ class CaselessLiteral(Literal):
     """Token to match a specified string, ignoring case of letters.
     Note: the matched results will always be in the case of the given
     match string, NOT the case of the input text.
-
-    Example::
-
-        OneOrMore(CaselessLiteral("CMD")).parseString("cmd CMD Cmd10") # -> ['CMD', 'CMD', 'CMD']
-
-    (Contrast with example for :class:`CaselessKeyword`.)
     """
 
     def __init__(self, matchString):
-        super(CaselessLiteral, self).__init__(matchString.upper())
+        Literal.__init__(self, matchString.upper())
         # Preserve the defining literal.
-        self.returnString = matchString
-        self.parser_name = "'%s'" % self.returnString
+        self.match = matchString
+        self.pattern = re.compile(re.escape(matchString), re.I)
+        self.parser_name = str(self.pattern)
 
     def copy(self):
         output = Literal.copy(self)
-        output.returnString = self.returnString
+        output.pattern = self.pattern
         return output
 
     def parseImpl(self, instring, loc, doActions=True):
-        if instring[loc : loc + self.matchLen].upper() == self.match:
-            return loc + self.matchLen, ParseResults(self, [self.returnString])
+        if self.pattern.match(instring, loc):
+            return loc + len(self.match), ParseResults(self, [self.match])
         raise ParseException(self, loc, instring)
 
 

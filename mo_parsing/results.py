@@ -3,7 +3,7 @@ import inspect
 from collections import MutableMapping
 
 from mo_dots import is_many
-from mo_future import is_text, text, PY3, NEXT
+from mo_future import is_text, text, PY3, NEXT, zip_longest
 from mo_logs import Log
 
 from mo_parsing import engine
@@ -88,9 +88,11 @@ class ParseResults(object):
             except Exception as e:
                 return False
         elif is_many(other):
-            return all(s == o for s, o in zip(self.other))
-        elif len(self) == 1:
+            return all(s == o for s, o in zip_longest(self, other))
+        elif self.length() == 1:
             return self[0] == other
+        elif not self:
+            return False
         else:
             Log.error("do not know how to handle")
 
@@ -108,6 +110,10 @@ class ParseResults(object):
             return False
 
     __nonzero__ = __bool__
+
+    # USE self.length()
+    # def __len__(self):
+    #     raise NotImplementedError()
 
     def __iter__(self):
         if isinstance(self, Annotation):
@@ -181,18 +187,11 @@ class ParseResults(object):
             yield v
 
     def iteritems(self):
-        if self.name:
-            yield self.name, self.tokens
-            return
-
         output = {}
         for tok in self.tokens:
             if isinstance(tok, ParseResults):
                 if tok.name:
-                    if isinstance(tok.type, Group):
-                        add(output, tok.name, [tok])
-                    else:
-                        add(output, tok.name, list(tok))
+                    add(output, tok.name, [tok])
                     continue
                 if isinstance(tok.type, Group):
                     continue
@@ -413,12 +412,17 @@ class Annotation(ParseResults):
     __slots__ = []
 
     def __init__(self, name, value):
+        if not name:
+            Log.error("expecting a name")
         if not isinstance(value, list):
             Log.error("expecting a list")
         ParseResults.__init__(self, Empty()(name), value)
 
+    def __str__(self):
+        return "{" + text(self.name) + ": " + text(self.tokens) + "}"
+
     def __repr__(self):
-        return "{" + (self.name) + ": ...}"
+        return "Annotation(" + repr(self.name) + ", " + repr(self.tokens) + ")"
 
 
 MutableMapping.register(ParseResults)
