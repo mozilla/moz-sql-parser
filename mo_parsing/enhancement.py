@@ -12,7 +12,7 @@ from mo_parsing.exceptions import (
     RecursiveGrammarException,
 )
 from mo_parsing.results import ParseResults, Annotation
-from mo_parsing.utils import _MAX_INT, empty_list, empty_tuple
+from mo_parsing.utils import _MAX_INT, empty_list, empty_tuple, is_forward
 
 # import later
 Token, Literal, Keyword, Word, CharsNotIn, _PositionToken, StringEnd, Empty = [None] * 8
@@ -40,6 +40,8 @@ class ParseElementEnhance(ParserElement):
             Log.error("expecting an expression")
         ParserElement.__init__(self)
         self.expr = expr = engine.CURRENT.normalize(expr)
+        if is_forward(expr):
+            expr.track(self)
         self.parser_config.mayIndexError = expr.parser_config.mayIndexError
         self.parser_config.mayReturnEmpty = expr.parser_config.mayReturnEmpty
 
@@ -476,6 +478,7 @@ class Forward(ParserElement):
     def __init__(self, expr=Null):
         ParserElement.__init__(self)
         self.expr = None
+        self.used_by = []
         self.parser_config.mayIndexError = expr.parser_config.mayIndexError
         self.parser_config.mayReturnEmpty = expr.parser_config.mayReturnEmpty
         self.strRepr = None  # avoid recursion
@@ -484,17 +487,21 @@ class Forward(ParserElement):
 
     def copy(self):
         output = ParserElement.copy(self)
-        output.strRepr = None
         output.expr = self.expr
+        output.strRepr = None
+        output.used_by = []
         return output
 
     @property
     def name(self):
         return self.type.expr.token_name
 
+    def track(self, expr):
+        self.used_by.append(expr)
+
     def __lshift__(self, other):
         name = None
-        while isinstance(other, Forward):
+        while is_forward(other):
             name = coalesce(name, other.parser_name)
             other = other.expr
 
@@ -574,6 +581,7 @@ class Forward(ParserElement):
         output = self.copy()
         output.token_name = name
         if output.expr:
+            # WILL TRIGGER A COPY
             output.expr = output.expr(name)
         return output
 
@@ -582,7 +590,6 @@ class TokenConverter(ParseElementEnhance):
     """
     Abstract subclass of :class:`ParseExpression`, for converting parsed results.
     """
-
     pass
 
 
@@ -591,18 +598,6 @@ class Combine(TokenConverter):
     By default, the matching patterns must also be contiguous in the
     input string; this can be disabled by specifying
     ``'adjacent=False'`` in the constructor.
-
-    Example::
-
-        real = Word(nums) + '.' + Word(nums)
-        print(real.parseString('3.1416')) # -> ['3', '.', '1416']
-        # will also erroneously match the following
-        print(real.parseString('3. 1416')) # -> ['3', '.', '1416']
-
-        real = Combine(Word(nums) + '.' + Word(nums))
-        print(real.parseString('3.1416')) # -> ['3.1416']
-        # no match when there are internal spaces
-        print(real.parseString('3. 1416')) # -> Exception: Expected W:(0123...)
     """
 
     def __init__(self, expr, separator="", adjacent=True):
@@ -790,7 +785,6 @@ core.NotAny = NotAny
 core.Suppress = Suppress
 core.Group = Group
 
-results.Forward = Forward
 results.Group = Group
 results.Dict = Dict
 results.Suppress = Suppress

@@ -16,7 +16,7 @@ from mo_parsing.exceptions import (
 from mo_parsing.results import ParseResults
 from mo_parsing.utils import (
     _MAX_INT,
-    wrap_parse_action, empty_tuple,
+    wrap_parse_action, empty_tuple, is_forward,
 )
 
 # import later
@@ -211,7 +211,7 @@ class ParserElement(object):
 
             if not isinstance(tokens, ParseResults):
                 Log.error("expecting ParseResult")
-            if self.__class__.__name__ == "Forward":
+            if is_forward(self):
                 pass  # OK
             elif tokens.type is not self:
                 Log.error("expecting correct type to come from self")

@@ -1,14 +1,12 @@
 # encoding: utf-8
-import sys
 from operator import itemgetter
 
-from mo_dots import unwrap
 from mo_future import Iterable, text, generator_types
 from mo_logs import Log
 
 from mo_parsing.core import ParserElement, _PendingSkip, is_decorated
 from mo_parsing.engine import Engine
-from mo_parsing.enhancement import OneOrMore, Optional, SkipTo, ZeroOrMore, Many
+from mo_parsing.enhancement import Optional, SkipTo, Many
 from mo_parsing.exceptions import (
     ParseBaseException,
     ParseException,
@@ -16,7 +14,7 @@ from mo_parsing.exceptions import (
 )
 from mo_parsing.results import ParseResults
 from mo_parsing.tokens import Empty
-from mo_parsing.utils import empty_list, empty_tuple, _MAX_INT
+from mo_parsing.utils import empty_list, empty_tuple, is_forward
 
 
 class ParseExpression(ParserElement):
@@ -35,6 +33,9 @@ class ParseExpression(ParserElement):
             exprs = [exprs]
 
         self.exprs = [engine.CURRENT.normalize(e) for e in exprs]
+        for e in self.exprs:
+            if is_forward(e):
+                e.track(self)
 
     def copy(self):
         output = ParserElement.copy(self)
@@ -458,7 +459,7 @@ class Each(ParseExpression):
                         del count[i]
                     matchOrder.append(e)
                     break
-                except ParseException:
+                except ParseException as pe:
                     continue
             else:
                 break

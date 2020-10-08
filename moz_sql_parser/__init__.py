@@ -9,13 +9,13 @@
 
 from __future__ import absolute_import, division, unicode_literals
 
-from collections import Mapping
 import json
+from collections import Mapping
 from threading import Lock
 
-from mo_future import binary_type, items, number_types, text
-from mo_parsing import ParseException, ParseResults
+from mo_future import binary_type, number_types, text
 
+from mo_parsing import ParseException
 from moz_sql_parser.debugs import all_exceptions
 from moz_sql_parser.sql_parser import SQLParser
 
@@ -67,17 +67,18 @@ def _scrub(result):
     elif isinstance(result, number_types):
         return result
     elif isinstance(result, list):
-        if not result:
+        output = [
+            rr
+            for r in result
+            for rr in [_scrub(r)]
+            if rr != None
+        ]
+
+        if not output:
             return None
-        elif len(result) == 1:
-            return _scrub(result[0])
+        elif len(output) == 1:
+            return output[0]
         else:
-            output = [
-                rr
-                for r in result
-                for rr in [_scrub(r)]
-                if rr != None
-            ]
             # IF ALL MEMBERS OF A LIST ARE LITERALS, THEN MAKE THE LIST LITERAL
             if all(isinstance(r, number_types) for r in output):
                 pass
@@ -85,6 +86,7 @@ def _scrub(result):
                 output = {"literal": [r['literal'] if isinstance(r, Mapping) else r for r in output]}
             return output
     else:
+        # ATTEMPT A DICT INTERPRETATION
         kv_pairs = list(result.items())
         output = {
             k: vv
@@ -95,7 +97,7 @@ def _scrub(result):
         if output:
             return output
 
-        return _scrub(result.tokens)
+        return _scrub(list(result))
 
 
 _ = json.dumps

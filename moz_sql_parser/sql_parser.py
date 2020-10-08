@@ -126,13 +126,13 @@ def to_json_operator(retTokens, tokensStart, instring):
 def to_json_call(retTokens):
     # ARRANGE INTO {op: params} FORMAT
     tok = retTokens
-    op = tok.op.lower()
+    op = tok['op'].lower()
     op = unary_ops.get(op, op)
 
-    params = tok.params
+    params = tok['params']
     if not params:
         params = None
-    elif len(params) == 1:
+    elif params.length() == 1:
         params = params[0]
     return {op: params}
 
@@ -176,14 +176,9 @@ def to_join_call(retTokens):
     return output
 
 
-
 def to_select_call(retTokens):
-    tok = retTokens
-
-    if tok['value'][0][0] == '*':
+    if retTokens['value'][0][0] == '*':
         return ['*']
-    else:
-        return tok
 
 
 def to_union_call(retTokens):
@@ -205,7 +200,7 @@ def to_union_call(retTokens):
 
     output["orderby"] = tok['orderby']
     output["limit"] = tok['limit']
-    return ParseResults(retTokens.type, [output])
+    return [output]
 
 
 def to_with_clause(retTokens):
@@ -266,7 +261,7 @@ ordered_sql = Forward()
 
 
 call_function = (
-    ident.copy()("op").set_parser_name("function name") +
+    ident("op").set_parser_name("function name") +
     Literal("(").suppress() +
     Optional(ordered_sql | Group(delimitedList(expr)))("params") +
     Literal(")").suppress()
@@ -301,7 +296,7 @@ compound = (
     (Literal("-")("op") + expr("params")).addParseAction(to_json_call) |
     sqlString.set_parser_name("string") |
     call_function |
-    ident.copy().set_parser_name("variable")
+    ident.set_parser_name("variable")
 )
 expr << Group(infixNotation(
     compound,
@@ -325,7 +320,7 @@ expr << Group(infixNotation(
 
 # SQL STATEMENT
 selectColumn = Group(
-    Group(expr).set_parser_name("expression1")("value") + Optional(Optional(AS) + ident.copy().set_parser_name("column_name1")("name")) |
+    Group(expr).set_parser_name("expression1")("value") + Optional(Optional(AS) + ident.set_parser_name("column_name1")("name")) |
     Literal('*')("value")
 ).set_parser_name("column").addParseAction(to_select_call)
 

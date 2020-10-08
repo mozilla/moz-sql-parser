@@ -33,6 +33,10 @@ singleArgBuiltins = [
 builtin_lookup = {"".join.__name__: ("iterable",)}
 
 
+def is_forward(expr):
+    return expr.__class__.__name__ == "Forward"
+
+
 def get_function_arguments(func):
     try:
         return func.__code__.co_varnames[: func.__code__.co_argcount]
@@ -142,22 +146,16 @@ def wrap_parse_action(func):
     def wrapper(*args):
         try:
             token, index, string = args
-            if isinstance(token, str):
-                Log.note("error")
-            original_type = token.type
             result = func(*args[:num_args])
             if result is None:
                 return token
-            elif isinstance(result, (list, tuple)):
-                return ParseResults(original_type, result)
             elif isinstance(result, ParseResults):
                 return result
-            elif original_type.__class__.__name__ == "Forward":
-                return ParseResults(original_type.expr, [result])
-            elif isinstance(original_type, Group):
-                return ParseResults(original_type.expr, [result])
+
+            if isinstance(result, (list, tuple)):
+                return ParseResults(token.type, result)
             else:
-                return ParseResults(original_type, [result])
+                return ParseResults(token.type, [result])
         except Exception as cause:
             Log.warning("parse action should not raise exception", cause=cause)
             f = ParseException(*args)

@@ -8,7 +8,7 @@ from mo_logs import Log
 
 from mo_parsing import engine
 
-Suppress, ParserElement, NO_PARSER, NO_RESULTS, Forward, Group, Dict, Token, Empty = [None] * 9
+Suppress, ParserElement, NO_PARSER, NO_RESULTS, Group, Dict, Token, Empty = [None] * 8
 
 
 class ParseResults(object):
@@ -64,14 +64,22 @@ class ParseResults(object):
 
     def __setitem__(self, k, v):
         if isinstance(k, (slice, int)):
-            Log.error("do not know how to handle")
-        else:
-            for i, vv in enumerate(self.tokens):
-                if isinstance(vv, ParseResults) and vv.name == k:
+            Log.error("not supported")
+
+        for i, tok in enumerate(self.tokens):
+            if isinstance(tok, ParseResults):
+                if tok.name == k:
                     self.tokens[i] = v
-                    break
-            else:
-                self.tokens.append(Annotation(k, [v]))
+                    v = None  # ERASE ALL OTHERS
+                elif isinstance(tok.type, Group):
+                    continue
+                elif tok.name:
+                    continue
+
+                tok.__setitem__(k, None)  # ERASE ALL CHILDREN
+
+        if v is not None:
+            self.tokens.append(Annotation(k, [v]))
 
     def __contains__(self, k):
         return any((r.name) == k for r in self.tokens)
@@ -111,25 +119,20 @@ class ParseResults(object):
 
     __nonzero__ = __bool__
 
-    # USE self.length()
-    # def __len__(self):
-    #     raise NotImplementedError()
-
     def __iter__(self):
-        if isinstance(self, Annotation):
-            return
-        else:
-            for r in self.tokens:
-                if isinstance(r, ParseResults):
-                    if isinstance(r, Annotation):
-                        return
-                    elif isinstance(r.type, Group):
-                        yield r
-                    elif not isinstance(r.type, Group):
-                        for mm in r:
-                            yield mm
-                else:
+        for r in self.tokens:
+            if isinstance(r, Annotation):
+                continue
+            elif isinstance(r, ParseResults):
+                if isinstance(r, Annotation):
+                    return
+                elif isinstance(r.type, Group):
                     yield r
+                elif not isinstance(r.type, Group):
+                    for mm in r:
+                        yield mm
+            else:
+                yield r
 
     def _del_item_by_index(self, index):
         for i, t in enumerate(self.tokens):
