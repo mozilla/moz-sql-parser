@@ -66,6 +66,8 @@ def _scrub(result):
         return result.decode('utf8')
     elif isinstance(result, number_types):
         return result
+    elif isinstance(result, dict) and not result:
+        return result
     elif isinstance(result, list):
         output = [
             rr
@@ -91,6 +93,7 @@ def _scrub(result):
         output = {
             k: vv
             for k, v in kv_pairs
+            if v is not None
             for vv in [_scrub(v)]
             if vv != None
         }

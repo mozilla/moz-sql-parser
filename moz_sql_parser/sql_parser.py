@@ -131,7 +131,7 @@ def to_json_call(retTokens):
 
     params = tok['params']
     if not params:
-        params = None
+        params = {}
     elif params.length() == 1:
         params = params[0]
     return {op: params}
@@ -147,7 +147,7 @@ def to_case_call(retTokens):
 
 
 def to_date_call(retTokens):
-    return {"date": retTokens.params}
+    return {"date": retTokens['params']}
 
 
 def to_interval_call(retTokens):
@@ -157,22 +157,19 @@ def to_interval_call(retTokens):
 
 def to_when_call(retTokens):
     tok = retTokens
-    return {"when": tok.when, "then":tok.then}
+    return {"when": tok['when'], "then": tok['then']}
 
 
 def to_join_call(retTokens):
     tok = retTokens
 
-    if tok.join.name:
-        output = {tok.op: {"name": tok.join.name, "value": tok.join.value}}
+    if tok['join']['name']:
+        output = {tok['op']: {"name": tok['join']['name'], "value": tok['join']['value']}}
     else:
-        output = {tok.op: tok.join}
+        output = {tok['op']: tok['join']}
 
-    if tok.on:
-        output['on'] = tok.on
-
-    if tok.using:
-        output['using'] = tok.using
+    output['on'] = tok['on']
+    output['using'] = tok['using']
     return output
 
 
@@ -283,7 +280,6 @@ interval = (
 
 compound = (
     Keyword("null", caseless=True).set_parser_name("null") |
-    (Keyword("not", caseless=True)("op") + expr("params")).addParseAction(to_json_call) |
     (Keyword("distinct", caseless=True)("op") + expr("params")).addParseAction(to_json_call) |
     (Keyword("date", caseless=True) + sqlString("params")).addParseAction(to_date_call) |
     interval |
@@ -292,8 +288,6 @@ compound = (
     (Literal("(").suppress() + Group(delimitedList(expr)) + Literal(")").suppress()) |
     realNum.set_parser_name("float") |
     intNum.set_parser_name("int") |
-    (Literal("~")("op") + expr("params")).addParseAction(to_json_call) |
-    (Literal("-")("op") + expr("params")).addParseAction(to_json_call) |
     sqlString.set_parser_name("string") |
     call_function |
     ident.set_parser_name("variable")
@@ -302,6 +296,19 @@ expr << Group(infixNotation(
     compound,
     [
         (
+            Literal("~")("not"),
+            1,
+            opAssoc.LEFT,
+            to_json_operator
+        ),
+        (
+            Literal("-")("neg"),
+            1,
+            opAssoc.LEFT,
+            to_json_operator
+        ),
+    ] + [
+        (
             o,
             3 if isinstance(o, tuple) else 2,
             opAssoc.LEFT,
@@ -309,6 +316,12 @@ expr << Group(infixNotation(
         )
         for o in KNOWN_OPS
     ]+[
+        (
+            Keyword("not", caseless=True),
+            1,
+            opAssoc.LEFT,
+            to_json_operator
+        ),
         (
             COLLATE_NOCASE,
             1,
