@@ -743,7 +743,7 @@ from benn.college_football_players
     @skip("broken")
     def test_112(self):
         expected_sql = "SELECT f1 COLLATE nocase AS x FROM test1 ORDER BY x"
-        expected_json = {'from': 'test1', 'select': {'value': {'collate nocase': 'f1'}}, 'orderby': {'value': 'x'}}
+        expected_json = {'from': 'test1', 'select': {'value': {'collate': ['f1', "nocase"]}}, 'orderby': {'value': 'x'}}
         self.verify_formatting(expected_sql, expected_json)
 
     def test_113(self):

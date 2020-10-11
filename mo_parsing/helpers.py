@@ -4,7 +4,7 @@ import warnings
 from collections import Iterable
 from datetime import datetime
 
-from mo_dots import Data, listwrap
+from mo_dots import listwrap
 from mo_future import text
 
 from mo_parsing.engine import Engine
@@ -21,7 +21,7 @@ from mo_parsing.enhancement import (
     ZeroOrMore, OpenDict,
 )
 from mo_parsing.exceptions import ParseException
-from mo_parsing.results import ParseResults, Annotation
+from mo_parsing.results import ParseResults, Annotation, NO_PARSER
 from mo_parsing.tokens import (
     CaselessKeyword,
     CaselessLiteral,
@@ -34,11 +34,9 @@ from mo_parsing.tokens import (
     Regex,
     StringEnd,
     StringStart,
-    White,
     Word,
     Literal,
     _escapeRegexRangeChars,
-    Token,
 )
 from mo_parsing.utils import (
     _bslash,
@@ -812,9 +810,8 @@ def withClass(classname, namespace=""):
     return withAttribute(**{classattr: classname})
 
 
-opAssoc = Data()
-opAssoc.LEFT = object()
-opAssoc.RIGHT = object()
+LEFT_ASSOC = object()
+RIGHT_ASSOC = object()
 
 
 def infixNotation(baseExpr, spec, lpar=Suppress("("), rpar=Suppress(")")):
@@ -833,7 +830,7 @@ def infixNotation(baseExpr, spec, lpar=Suppress("("), rpar=Suppress(")")):
          2, or 3)
        - rightLeftAssoc is the indicator whether the operator is right
          or left associative, using the mo_parsing-defined constants
-         ``opAssoc.RIGHT`` and ``opAssoc.LEFT``.
+         ``RIGHT_ASSOC`` and ``LEFT_ASSOC``.
        - parseAction is the parse action to be associated with
          expressions matching this operator expression (the parse action
          tuple member may be omitted); if the parse action is passed
@@ -868,7 +865,7 @@ def infixNotation(baseExpr, spec, lpar=Suppress("("), rpar=Suppress(")")):
     """
     SCRUBBED LIST OF OPERATORS
     * expr - used exclusively for ParseResult(expr, [...]), not used to match
-    * (op,) - used to match 
+    * op - used to match 
     * arity - same
     * assoc - same
     * parse_actions - same
@@ -879,7 +876,7 @@ def infixNotation(baseExpr, spec, lpar=Suppress("("), rpar=Suppress(")")):
         parse_actions = list(map(wrap_parse_action, listwrap(rest[0]))) if rest else []
         if arity == 1:
             is_suppressed, op = norm(op)
-            if assoc == opAssoc.RIGHT:
+            if assoc == RIGHT_ASSOC:
                 opList.append((
                     Group(baseExpr + op),
                     op,
@@ -920,20 +917,19 @@ def infixNotation(baseExpr, spec, lpar=Suppress("("), rpar=Suppress(")")):
     opList = tuple(opList)
 
     def record_op(op):
-        def output(tokens, loc, string):
-            return [(tokens, op)]
-
+        def output(tokens):
+            return ParseResults(NO_PARSER, [(tokens, op)])
         return output
 
     prefix_ops = MatchFirst([
         op.addParseAction(record_op(op))
         for expr, op, is_suppressed, arity, assoc, pa in opList
-        if arity == 1 and assoc == opAssoc.RIGHT
+        if arity == 1 and assoc == RIGHT_ASSOC
     ])
     suffix_ops = MatchFirst([
         op.addParseAction(record_op(op))
         for expr, op, is_suppressed, arity, assoc, pa in opList
-        if arity == 1 and assoc == opAssoc.LEFT
+        if arity == 1 and assoc == LEFT_ASSOC
     ])
     ops = MatchFirst([
         opPart.addParseAction(record_op(opPart))
@@ -949,7 +945,7 @@ def infixNotation(baseExpr, spec, lpar=Suppress("("), rpar=Suppress(")")):
         while len(flat_tokens) > 1 and op_index < num:
             expr, op, is_suppressed, arity, assoc, parse_actions = opList[op_index]
             if arity == 1:
-                if assoc == opAssoc.RIGHT:
+                if assoc == RIGHT_ASSOC:
                     # PREFIX OPERATOR -3
                     todo = list(reversed(list(enumerate(flat_tokens[:-1]))))
                     for i, (r, o) in todo:
@@ -977,7 +973,7 @@ def infixNotation(baseExpr, spec, lpar=Suppress("("), rpar=Suppress(")")):
                         continue
             elif arity == 2:
                 todo = list(enumerate(flat_tokens[1:-1]))
-                if assoc == opAssoc.RIGHT:
+                if assoc == RIGHT_ASSOC:
                     todo = list(reversed(todo))
 
                 for i, (r, o) in todo:
@@ -997,7 +993,7 @@ def infixNotation(baseExpr, spec, lpar=Suppress("("), rpar=Suppress(")")):
 
             else:  # arity==3
                 todo = list(enumerate(flat_tokens[1:-3]))
-                if assoc == opAssoc.RIGHT:
+                if assoc == RIGHT_ASSOC:
                     todo = list(reversed(todo))
 
                 for i, (r0, o0) in todo:

@@ -635,6 +635,8 @@ class ParserElement(object):
             Log.error("not expected")
         output = self.copy()
         output.token_name = name
+        if not output.parser_name:
+            output.parser_name = name
         return output
 
     def suppress(self):
@@ -752,7 +754,7 @@ from mo_parsing import cache, engine, results
 engine.ParserElement = ParserElement
 results.ParserElement = ParserElement
 
-NO_PARSER = ParserElement()
+NO_PARSER = ParserElement()  # USE THIS WHEN YOU DO NOT CARE ABOUT THE PARSER TYPE
 NO_RESULTS = ParseResults(NO_PARSER, [])
 
 results.NO_RESULTS = NO_RESULTS

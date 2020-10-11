@@ -79,7 +79,7 @@ I will be adding questions here:
 
 **How can I make the parsing more efficient?**
 
-Look at `infixNotation()`, notice how it handles a single operator, we will focus on just `opAssoc.LEFT`, and `arity==2` because the rest have a similar problem:
+Look at `infixNotation()`, notice how it handles a single operator, we will focus on just `LEFT_ASSOC`, and `arity==2` because the rest have a similar problem:
 
 https://github.com/pyparsing/pyparsing/blob/0d88a303a7f7e574bfc0c06ad6f84ca8c9d4d248/pyparsing.py#L5661
 

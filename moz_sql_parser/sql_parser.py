@@ -12,14 +12,17 @@ from __future__ import absolute_import, division, unicode_literals
 import ast
 import sys
 
+from mo_future import is_text, text
+
 from mo_parsing import Combine, Forward, Group, Keyword, Literal, Optional, Regex, Word, ZeroOrMore, \
-    alphanums, delimitedList, infixNotation, opAssoc, restOfLine, ParseResults
+    alphanums, delimitedList, infixNotation, restOfLine, RIGHT_ASSOC, LEFT_ASSOC
 from mo_parsing.engine import Engine
 from moz_sql_parser.debugs import debug
-from moz_sql_parser.keywords import AND, AS, ASC, BETWEEN, CASE, COLLATE_NOCASE, CROSS_JOIN, DESC, ELSE, END, FROM, \
-    FULL_JOIN, FULL_OUTER_JOIN, GROUP_BY, HAVING, IN, INNER_JOIN, IS, IS_NOT, JOIN, LEFT_JOIN, LEFT_OUTER_JOIN, LIKE, \
-    LIMIT, NOT_BETWEEN, NOT_IN, NOT_LIKE, OFFSET, ON, OR, ORDER_BY, RESERVED, RIGHT_JOIN, RIGHT_OUTER_JOIN, SELECT, \
-    THEN, UNION, UNION_ALL, USING, WHEN, WHERE, binary_ops, unary_ops, WITH, durations
+from moz_sql_parser.keywords import AS, ASC, CASE, CROSS_JOIN, DESC, ELSE, END, FROM, \
+    FULL_JOIN, FULL_OUTER_JOIN, GROUP_BY, HAVING, INNER_JOIN, JOIN, LEFT_JOIN, LEFT_OUTER_JOIN, LIMIT, OFFSET, ON, \
+    ORDER_BY, RIGHT_JOIN, RIGHT_OUTER_JOIN, SELECT, \
+    THEN, UNION, UNION_ALL, USING, WHEN, WHERE, unary_ops, WITH, durations, NEG, NOT, KNOWN_OPS, RESERVED, BINARY_NOT, \
+    binary_ops, NULL, NOCASE
 
 engine = Engine().use()
 engine.set_debug_actions(*debug)
@@ -29,105 +32,56 @@ sys.setrecursionlimit(3000)
 
 IDENT_CHAR = alphanums + "@_$"
 
-KNOWN_OPS = [
-    # https://www.sqlite.org/lang_expr.html
-    Literal("||").set_parser_name("concat"),
-    (
-        Literal("*").set_parser_name("mul") |
-        Literal("/").set_parser_name("div") |
-        Literal("%").set_parser_name("mod")
-    ),
-    (
-        Literal("+").set_parser_name("add") |
-        Literal("-").set_parser_name("sub")
-    ),
-    Literal("&").set_parser_name("binary_and"),
-    Literal("|").set_parser_name("binary_or"),
-    (
-        Literal(">=").set_parser_name("gte") |
-        Literal("<=").set_parser_name("lte") |
-        Literal("<").set_parser_name("lt") |
-        Literal(">").set_parser_name("gt")
-    ),
-    (
-        Literal("==").set_parser_name("eq") |
-        Literal("!=").set_parser_name("neq") |
-        Literal("<>").set_parser_name("neq") |
-        Literal("=").set_parser_name("eq")
-    ),
-    (BETWEEN, AND),
-    (NOT_BETWEEN.set_parser_name("not_between"), AND),
-    IN,
-    NOT_IN.set_parser_name("nin"),
-    IS_NOT.set_parser_name("neq"),
-    IS,
-    LIKE,
-    NOT_LIKE.set_parser_name("nlike"),
-    AND,
-    OR
-]
 
-def to_json_operator(retTokens, tokensStart, instring):
+def to_json_operator(tokens):
     # ARRANGE INTO {op: params} FORMAT
-    tok = retTokens
-    op = tok[1]
-    clean_op = op.lower()
-    clean_op = binary_ops.get(clean_op, clean_op)
+    length = len(tokens.tokens)
+    if length ==2:
+        return {tokens.tokens[0].type.parser_name: tokens[1]}
+    elif length == 5:
+        return {tokens.tokens[1].type.parser_name: [tokens[0], tokens[2], tokens[4]]}
 
-    for o in KNOWN_OPS:
-        if isinstance(o, tuple):
-            # TRINARY OPS
-            if o[0].matches(op):
-                return {clean_op: [tok[0], tok[2], tok[4]]}
-        elif o.matches(op):
-            break
-    else:
-        if COLLATE_NOCASE.matches(op):
-            op = COLLATE_NOCASE.name
-            return {op: tok[0]}
+    op = tokens[1]
+    if not isinstance(op, text):
+        op = op.type.parser_name
+    op = binary_ops.get(op, op)
+    if op == "eq":
+        if tokens[2] == "null":
+            return {"missing": tokens[0]}
+        elif tokens[0] == "null":
+            return {"missing": tokens[2]}
+    elif op == "neq":
+        if tokens[2] == "null":
+            return {"exists": tokens[0]}
+        elif tokens[0] == "null":
+            return {"exists": tokens[2]}
+    elif op == "is":
+        if tokens[2] == 'null':
+            return {"missing": tokens[0]}
         else:
-            raise Exception("not found")
-
-    if clean_op == "eq":
-        if tok[2] == "null":
-            return {"missing": tok[0]}
-        elif tok[0] == "null":
-            return {"missing": tok[2]}
-    elif clean_op == "neq":
-        if tok[2] == "null":
-            return {"exists": tok[0]}
-        elif tok[0] == "null":
-            return {"exists": tok[2]}
-    elif clean_op == "is":
-        if tok[2] == 'null':
-            return {"missing": tok[0]}
+            return {"exists": tokens[0]}
+    elif op == "is_not":
+        if tokens[2] == 'null':
+            return {"exists": tokens[0]}
         else:
-            return {"exists": tok[0]}
+            return {"missing": tokens[0]}
+
+    operands = [tokens[0], tokens[2]]
+    simple = {op: operands}
+
+    if op in {"add", "mul", "and", "or"}:
+        prefix = operands[0].tokens[0].get(op)
+        if prefix:
+            # ACCUMULATE SUBSEQUENT, IDENTICAL OPS
+            return {op: prefix + [operands[1]]}
+    return simple
 
 
-    operands = [tok[0], tok[2]]
-    simple = {clean_op: operands}
-    if tok.length() <= 3:
-        return simple
-
-    if clean_op in {"add", "mul", "and", "or"}:
-        # ACCUMULATE SUBSEQUENT, IDENTICAL OPS
-        for i in range(3, tok.length(), 2):
-            if tok[i] != op:
-                return to_json_operator(None, None, [[simple] + tok[i:]])
-            else:
-                operands.append(tok[i+1])
-        return simple
-    else:
-        # SIMPLE BINARY
-        return to_json_operator(None, None, [[simple] + tok[3:]])
-
-
-def to_json_call(retTokens):
+def to_json_call(tokens):
     # ARRANGE INTO {op: params} FORMAT
-    tok = retTokens
+    tok = tokens
     op = tok['op'].lower()
-    op = unary_ops.get(op, op)
+    op = binary_ops.get(op, op)
 
     params = tok['params']
     if not params:
@@ -137,8 +91,8 @@ def to_json_call(retTokens):
     return {op: params}
 
 
-def to_case_call(retTokens):
-    tok = retTokens
+def to_case_call(tokens):
+    tok = tokens
     cases = list(tok.case)
     elze = getattr(tok, "else", None)
     if elze:
@@ -146,62 +100,60 @@ def to_case_call(retTokens):
     return {"case": cases}
 
 
-def to_date_call(retTokens):
-    return {"date": retTokens['params']}
-
-
-def to_interval_call(retTokens):
+def to_interval_call(tokens):
     # ARRANGE INTO {interval: params} FORMAT
-    return {"interval": [retTokens['count'], retTokens['duration'][:-1]]}
+    return {"interval": [tokens['count'], tokens['duration'][:-1]]}
 
 
-def to_when_call(retTokens):
-    tok = retTokens
+def to_when_call(tokens):
+    tok = tokens
     return {"when": tok['when'], "then": tok['then']}
 
 
-def to_join_call(retTokens):
-    tok = retTokens
-
+def to_join_call(tokens):
+    tok = tokens
+    op = tok['op'].type.parser_name
     if tok['join']['name']:
-        output = {tok['op']: {"name": tok['join']['name'], "value": tok['join']['value']}}
+        output = {op: {"name": tok['join']['name'], "value": tok['join']['value']}}
     else:
-        output = {tok['op']: tok['join']}
+        output = {op: tok['join']}
 
     output['on'] = tok['on']
     output['using'] = tok['using']
     return output
 
 
-def to_select_call(retTokens):
-    if retTokens['value'][0][0] == '*':
+def to_select_call(tokens):
+    if tokens['value'][0][0] == '*':
         return ['*']
 
 
-def to_union_call(retTokens):
-    tok = retTokens
-    unions = list(t for t in tok['from']['union'])
+def to_union_call(tokens):
+    unions = list(tokens['from']['union'])
     if len(unions) == 1:
         output = unions[0]
     else:
         sources = [unions[i] for i in range(0, len(unions), 2)]
         operators = [unions[i] for i in range(1, len(unions), 2)]
-        op = operators[0].lower().replace(" ", "_")
-        if any(o.lower().replace(" ", "_") != op for o in operators[1:]):
+        if is_text(operators[0]):
+            op = operators[0]
+        else:
+            op = operators[0].type.parser_name
+        if any(o.type.parser_name != op for o in operators[1:]):
             raise Exception("Expecting all \"union all\" or all \"union\", not some combination")
 
-        if not tok['orderby'] and not tok['limit']:
+        if not tokens['orderby'] and not tokens['limit']:
             return {op: sources}
         else:
             output = {"from": {op: sources}}
 
-    output["orderby"] = tok['orderby']
-    output["limit"] = tok['limit']
+    output["orderby"] = tokens['orderby']
+    output["limit"] = tokens['limit']
     return [output]
 
 
-def to_with_clause(retTokens):
-    tok = retTokens
+def to_with_clause(tokens):
+    tok = tokens
     query = tok['query'][0]
     if tok['with']:
         assignments = [
@@ -212,8 +164,8 @@ def to_with_clause(retTokens):
     return query
 
 
-def unquote(retTokens):
-    val = retTokens[0]
+def unquote(tokens):
+    val = tokens[0]
     if val.startswith("'") and val.endswith("'"):
         val = "'"+val[1:-1].replace("''", "\\'")+"'"
         # val = val.replace(".", "\\.")
@@ -228,8 +180,8 @@ def unquote(retTokens):
     return un
 
 
-def to_string(retTokens):
-    val = retTokens[0]
+def to_string(tokens):
+    val = tokens[0]
     val = "'"+val[1:-1].replace("''", "\\'")+"'"
     return {"literal": ast.literal_eval(val)}
 
@@ -279,9 +231,10 @@ interval = (
 ).addParseAction(to_interval_call)
 
 compound = (
-    Keyword("null", caseless=True).set_parser_name("null") |
+    NULL |
+    NOCASE |
     (Keyword("distinct", caseless=True)("op") + expr("params")).addParseAction(to_json_call) |
-    (Keyword("date", caseless=True) + sqlString("params")).addParseAction(to_date_call) |
+    (Keyword("date", caseless=True)("op") + sqlString("params")).addParseAction(to_json_call) |
     interval |
     case |
     (Literal("(").suppress() + ordered_sql + Literal(")").suppress()) |
@@ -296,38 +249,12 @@ expr << Group(infixNotation(
     compound,
     [
         (
-            Literal("~")("not"),
-            1,
-            opAssoc.LEFT,
-            to_json_operator
-        ),
-        (
-            Literal("-")("neg"),
-            1,
-            opAssoc.LEFT,
-            to_json_operator
-        ),
-    ] + [
-        (
             o,
-            3 if isinstance(o, tuple) else 2,
-            opAssoc.LEFT,
+            1 if o in unary_ops else (3 if isinstance(o, tuple) else 2),
+            RIGHT_ASSOC if o in unary_ops else LEFT_ASSOC,
             to_json_operator
         )
         for o in KNOWN_OPS
-    ]+[
-        (
-            Keyword("not", caseless=True),
-            1,
-            opAssoc.LEFT,
-            to_json_operator
-        ),
-        (
-            COLLATE_NOCASE,
-            1,
-            opAssoc.LEFT,
-            to_json_operator
-        )
     ]
 ).set_parser_name("expression"))
 
@@ -370,8 +297,8 @@ unordered_sql = Group(
     Optional(
         (FROM + delimitedList(Group(table_source)) + ZeroOrMore(join))("from") +
         Optional(WHERE + expr.set_parser_name("where"))("where") +
-        Optional(GROUP_BY + delimitedList(Group(selectColumn))("groupby").set_parser_name("groupby")) +
-        Optional(HAVING + expr("having").set_parser_name("having")) +
+        Optional(GROUP_BY + delimitedList(Group(selectColumn))("groupby")) +
+        Optional(HAVING + expr("having")) +
         Optional(LIMIT + expr("limit")) +
         Optional(OFFSET + expr("offset"))
     )
@@ -382,7 +309,7 @@ ordered_sql << Group(
         unordered_sql +
         ZeroOrMore((UNION_ALL | UNION) + unordered_sql)
     )("union"))("from") +
-    Optional(ORDER_BY + delimitedList(Group(sortColumn))("orderby").set_parser_name("orderby")) +
+    Optional(ORDER_BY + delimitedList(Group(sortColumn))("orderby")) +
     Optional(LIMIT + expr("limit")) +
     Optional(OFFSET + expr("offset"))
 ).addParseAction(to_union_call)

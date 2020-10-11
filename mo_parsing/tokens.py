@@ -70,9 +70,8 @@ class Literal(Token):
     """
 
     def __init__(self, matchString):
-        super(Literal, self).__init__()
+        Token.__init__(self)
         self.match = matchString
-        self.parser_name = matchString
         self.parser_config.mayReturnEmpty = False
         self.parser_config.mayIndexError = False
 
@@ -140,6 +139,7 @@ class Keyword(Token):
         else:
             self.identChars = "".join(sorted(set(identChars)))
         self.match = matchString
+        self.token_name = matchString
         self.parser_name = '"%s"' % self.match
         self.parser_config.mayReturnEmpty = False
         self.parser_config.mayIndexError = False

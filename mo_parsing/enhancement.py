@@ -551,6 +551,7 @@ class Forward(ParserElement):
     def parseImpl(self, instring, loc, doActions=True):
         if self.expr != None:
             loc, output = self.expr._parse(instring, loc, doActions)
+
             if output.type is self:
                 Log.error("not expected")
             return loc, output
