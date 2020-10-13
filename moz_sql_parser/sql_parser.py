@@ -13,9 +13,10 @@ import ast
 import sys
 
 from mo_future import is_text, text
+from mo_math import is_number
 
 from mo_parsing import Combine, Forward, Group, Keyword, Literal, Optional, Regex, Word, ZeroOrMore, \
-    alphanums, delimitedList, infixNotation, restOfLine, RIGHT_ASSOC, LEFT_ASSOC
+    alphanums, delimitedList, infixNotation, restOfLine, RIGHT_ASSOC, LEFT_ASSOC, ParseResults
 from mo_parsing.engine import Engine
 from moz_sql_parser.debugs import debug
 from moz_sql_parser.keywords import AS, ASC, CASE, CROSS_JOIN, DESC, ELSE, END, FROM, \
@@ -37,7 +38,10 @@ def to_json_operator(tokens):
     # ARRANGE INTO {op: params} FORMAT
     length = len(tokens.tokens)
     if length ==2:
-        return {tokens.tokens[0].type.parser_name: tokens[1]}
+        op = tokens.tokens[0].type.parser_name
+        if op == "neg" and is_number(tokens[1]):
+            return -tokens[1]
+        return {op: tokens[1]}
     elif length == 5:
         return {tokens.tokens[1].type.parser_name: [tokens[0], tokens[2], tokens[4]]}
 
@@ -70,10 +74,12 @@ def to_json_operator(tokens):
     simple = {op: operands}
 
     if op in {"add", "mul", "and", "or"}:
-        prefix = operands[0].tokens[0].get(op)
-        if prefix:
-            # ACCUMULATE SUBSEQUENT, IDENTICAL OPS
-            return {op: prefix + [operands[1]]}
+        operand0 = operands[0]
+        if isinstance(operand0, ParseResults):
+            prefix = operand0.tokens[0].get(op)
+            if prefix:
+                # ACCUMULATE SUBSEQUENT, IDENTICAL OPS
+                return {op: prefix + [operands[1]]}
     return simple
 
 
@@ -86,15 +92,17 @@ def to_json_call(tokens):
     params = tok['params']
     if not params:
         params = {}
-    elif params.length() == 1:
+    elif isinstance(params, list) and len(params) == 1:
         params = params[0]
+    elif isinstance(params, ParseResults) and params.length() == 1:
+        params = params[0]
+
     return {op: params}
 
 
 def to_case_call(tokens):
-    tok = tokens
-    cases = list(tok.case)
-    elze = getattr(tok, "else", None)
+    cases = list(tokens['case'])
+    elze = tokens["else"]
     if elze:
         cases.append(elze)
     return {"case": cases}
@@ -210,7 +218,7 @@ ordered_sql = Forward()
 
 
 call_function = (
-    ident("op").set_parser_name("function name") +
+    ident("op") +
     Literal("(").suppress() +
     Optional(ordered_sql | Group(delimitedList(expr)))("params") +
     Literal(")").suppress()
@@ -243,7 +251,7 @@ compound = (
     intNum.set_parser_name("int") |
     sqlString.set_parser_name("string") |
     call_function |
-    ident.set_parser_name("variable")
+    ident
 )
 expr << Group(infixNotation(
     compound,
@@ -260,7 +268,7 @@ expr << Group(infixNotation(
 
 # SQL STATEMENT
 selectColumn = Group(
-    Group(expr).set_parser_name("expression1")("value") + Optional(Optional(AS) + ident.set_parser_name("column_name1")("name")) |
+    Group(expr).set_parser_name("expression1")("value") + Optional(Optional(AS) + ident("name").set_parser_name("column_name1")) |
     Literal('*')("value")
 ).set_parser_name("column").addParseAction(to_select_call)
 
@@ -296,7 +304,7 @@ unordered_sql = Group(
     SELECT + delimitedList(selectColumn)("select") +
     Optional(
         (FROM + delimitedList(Group(table_source)) + ZeroOrMore(join))("from") +
-        Optional(WHERE + expr.set_parser_name("where"))("where") +
+        Optional(WHERE + expr("where")) +
         Optional(GROUP_BY + delimitedList(Group(selectColumn))("groupby")) +
         Optional(HAVING + expr("having")) +
         Optional(LIMIT + expr("limit")) +

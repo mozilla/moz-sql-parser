@@ -7,6 +7,7 @@ from mo_future import is_text, text, PY3, NEXT, zip_longest
 from mo_logs import Log
 
 from mo_parsing import engine
+from mo_parsing.utils import is_forward
 
 Suppress, ParserElement, NO_PARSER, NO_RESULTS, Group, Dict, Token, Empty = [None] * 8
 
@@ -33,11 +34,15 @@ class ParseResults(object):
                 if tok.name == name:
                     if isinstance(tok.type, Group):
                         yield tok
+                    elif is_forward(tok.type) and isinstance(tok.tokens[0].type, Group):
+                        yield tok
                     else:
                         for t in tok.tokens:
                             yield t
                     continue
                 elif isinstance(tok.type, Group):
+                    continue
+                elif is_forward(tok.type) and isinstance(tok.tokens[0].type, Group):
                     continue
                 elif tok.name:
                     continue
@@ -45,6 +50,9 @@ class ParseResults(object):
                     yield f
 
     def __getitem__(self, item):
+        if is_forward(self):
+            return self.tokens[0][item]
+
         if isinstance(item, int):
             if item < 0:
                 item = len(self) + item
@@ -66,12 +74,18 @@ class ParseResults(object):
         if isinstance(k, (slice, int)):
             Log.error("not supported")
 
+        if is_forward(self):
+            self.tokens[0][k] = v
+            return
+
         for i, tok in enumerate(self.tokens):
             if isinstance(tok, ParseResults):
                 if tok.name == k:
                     self.tokens[i] = v
                     v = None  # ERASE ALL OTHERS
                 elif isinstance(tok.type, Group):
+                    continue
+                elif is_forward(tok.type) and isinstance(tok.tokens[0].type, Group):
                     continue
                 elif tok.name:
                     continue
@@ -120,6 +134,12 @@ class ParseResults(object):
     __nonzero__ = __bool__
 
     def __iter__(self):
+        if is_forward(self.type):
+            output = list(self.tokens[0])
+            for i in output:
+                yield i
+            return
+
         for r in self.tokens:
             if isinstance(r, Annotation):
                 continue
@@ -127,6 +147,8 @@ class ParseResults(object):
                 if isinstance(r, Annotation):
                     return
                 elif isinstance(r.type, Group):
+                    yield r
+                elif is_forward(r.type) and isinstance(r.tokens[0].type, Group):
                     yield r
                 elif not isinstance(r.type, Group):
                     for mm in r:
@@ -190,6 +212,9 @@ class ParseResults(object):
             yield v
 
     def iteritems(self):
+        if is_forward(self.type):
+            return self.tokens[0].iteritems()
+
         output = {}
         for tok in self.tokens:
             if isinstance(tok, ParseResults):
@@ -197,6 +222,8 @@ class ParseResults(object):
                     add(output, tok.name, [tok])
                     continue
                 if isinstance(tok.type, Group):
+                    continue
+                if is_forward(tok.type) and isinstance(tok.tokens[0].type, Group):
                     continue
                 for k, v in tok.iteritems():
                     add(output, k, v)

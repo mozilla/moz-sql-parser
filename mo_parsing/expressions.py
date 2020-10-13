@@ -59,14 +59,6 @@ class ParseExpression(ParserElement):
         output.exprs = [e.leaveWhitespace() for e in self.exprs]
         return output
 
-    def __str__(self):
-        try:
-            return super(ParseExpression, self).__str__()
-        except Exception:
-            pass
-
-        return "%s:(%s)" % (self.__class__.__name__, text(self.exprs))
-
     def streamline(self):
         if self.streamlined:
             return self
@@ -188,7 +180,7 @@ class And(ParseExpression):
         )
         return output
 
-    def parseImpl(self, instring, loc, doActions=True):
+    def parseImpl(self, string, loc, doActions=True):
         # pass False as last arg to _parse for first element, since we already
         # pre-parsed the string as part of our And pre-parsing
         encountered_error_stop = False
@@ -198,7 +190,8 @@ class And(ParseExpression):
                 encountered_error_stop = True
                 continue
             try:
-                loc, exprtokens = e._parse(instring, loc, doActions)
+                loc, exprtokens = e._parse(string, loc, doActions)
+                acc.append(exprtokens)
             except ParseSyntaxException as e:
                 raise e
             except ParseBaseException as pe:
@@ -208,15 +201,9 @@ class And(ParseExpression):
                     raise pe
             except IndexError as ie:
                 if encountered_error_stop:
-                    raise ParseSyntaxException(instring, len(instring), self)
+                    raise ParseSyntaxException(string, len(string), self)
                 else:
                     raise ie
-
-            if not isinstance(exprtokens, ParseResults):
-                Log.error(
-                    "expecting {{type}} to emit parseresults", type=e.__class__.__name__
-                )
-            acc.append(exprtokens)
 
         return loc, ParseResults(self, acc)
 
@@ -267,22 +254,22 @@ class Or(ParseExpression):
         else:
             self.parser_config.mayReturnEmpty = True
 
-    def parseImpl(self, instring, loc, doActions=True):
+    def parseImpl(self, string, loc, doActions=True):
         maxExcLoc = -1
         maxException = None
         matches = []
         for e in self.exprs:
             try:
-                loc2 = e.tryParse(instring, loc)
+                loc2 = e.tryParse(string, loc)
             except ParseException as err:
                 err.__traceback__ = None
                 if err.loc > maxExcLoc:
                     maxException = err
                     maxExcLoc = err.loc
             except IndexError:
-                if len(instring) > maxExcLoc:
-                    maxException = ParseException(instring, len(instring), self)
-                    maxExcLoc = len(instring)
+                if len(string) > maxExcLoc:
+                    maxException = ParseException(string, len(string), self)
+                    maxExcLoc = len(string)
             else:
                 # save match among all matches, to retry longest to shortest
                 matches.append((loc2, e))
@@ -296,7 +283,7 @@ class Or(ParseExpression):
                 # no further conditions or parse actions to change the selection of
                 # alternative, so the first match will be the best match
                 _, best_expr = matches[0]
-                loc, best_results = best_expr._parse(instring, loc, doActions)
+                loc, best_results = best_expr._parse(string, loc, doActions)
                 return loc, ParseResults(self, [best_results])
 
             longest = -1, None
@@ -306,7 +293,7 @@ class Or(ParseExpression):
                     return longest
 
                 try:
-                    loc2, toks = expr1._parse(instring, loc, doActions)
+                    loc2, toks = expr1._parse(string, loc, doActions)
                 except ParseException as err:
                     err.__traceback__ = None
                     if err.loc > maxExcLoc:
@@ -323,11 +310,11 @@ class Or(ParseExpression):
                 return longest
 
         if maxException is not None:
-            maxException.msg = "expecting " + text(self)
+            maxException.msg = "Expecting " + text(self)
             raise maxException
         else:
             raise ParseException(
-                instring, loc, "no defined alternatives to match", self
+                string, loc, "no defined alternatives to match", self
             )
 
     def __str__(self):
@@ -364,21 +351,21 @@ class MatchFirst(ParseExpression):
         else:
             self.parser_config.mayReturnEmpty = True
 
-    def parseImpl(self, instring, loc, doActions=True):
+    def parseImpl(self, string, loc, doActions=True):
         maxExcLoc = -1
         maxException = None
         for e in self.exprs:
             try:
-                loc, ret = e._parse(instring, loc, doActions)
+                loc, ret = e._parse(string, loc, doActions)
                 return loc, ParseResults(self, [ret])
             except ParseException as err:
                 if err.loc > maxExcLoc:
                     maxException = err
                     maxExcLoc = err.loc
             except IndexError:
-                if len(instring) > maxExcLoc:
-                    maxException = ParseException(instring, len(instring), self)
-                    maxExcLoc = len(instring)
+                if len(string) > maxExcLoc:
+                    maxException = ParseException(string, len(string), self)
+                    maxExcLoc = len(string)
 
         # only got here if no expression matched, raise exception for match that made it the furthest
         else:
@@ -386,7 +373,7 @@ class MatchFirst(ParseExpression):
                 maxException.msg = "Expecting " + text(self)
                 raise maxException
             else:
-                raise ParseException(self, loc, instring)
+                raise ParseException(self, loc, string)
 
     def __or__(self, other):
         if other is Ellipsis:
@@ -436,7 +423,7 @@ class Each(ParseExpression):
         )
         return self
 
-    def parseImpl(self, instring, loc, doActions=True):
+    def parseImpl(self, string, loc, doActions=True):
         end_loc = loc
         matchOrder = []
         todo = list(zip(
@@ -449,7 +436,7 @@ class Each(ParseExpression):
         while todo:
             for i, (c, (e, mi, ma)) in enumerate(zip(count, todo)):
                 try:
-                    temp_loc = e.tryParse(instring, end_loc)
+                    temp_loc = e.tryParse(string, end_loc)
                     if temp_loc == end_loc:
                         continue
                     end_loc = temp_loc
@@ -467,7 +454,7 @@ class Each(ParseExpression):
         for c, (e, mi, ma) in zip(count, todo):
             if c < mi:
                 raise ParseException(
-                    instring,
+                    string,
                     loc,
                     "Missing minimum (%i) more required elements (%s)" % (mi, e),
                 )
@@ -481,7 +468,7 @@ class Each(ParseExpression):
         if missing:
             missing = ", ".join(text(e) for e in missing)
             raise ParseException(
-                instring, loc, "Missing one or more required elements (%s)" % missing
+                string, loc, "Missing one or more required elements (%s)" % missing
             )
 
         # add any unmatched Optionals, in case they have default values defined
@@ -493,7 +480,7 @@ class Each(ParseExpression):
 
         results = []
         for e in matchOrder:
-            loc, result = e._parse(instring, loc, doActions)
+            loc, result = e._parse(string, loc, doActions)
             results.append(result)
 
         return loc, ParseResults(self, results)
@@ -515,5 +502,6 @@ core.MatchFirst = MatchFirst
 
 from mo_parsing import helpers
 
-helpers.MatchFirst = MatchFirst
 helpers.And = And
+helpers.Or = Or
+helpers.MatchFirst = MatchFirst

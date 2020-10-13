@@ -101,12 +101,12 @@ class ParserElement(object):
         if breakFlag:
             _parseMethod = self._parse
 
-            def breaker(instring, loc, doActions=True):
+            def breaker(string, loc, doActions=True):
                 import pdb
 
                 # this call to pdb.set_trace() is intentional, not a checkin error
                 pdb.set_trace()
-                return _parseMethod(instring, loc, doActions)
+                return _parseMethod(string, loc, doActions)
 
             breaker._originalParseMethod = _parseMethod
             self._parse = breaker
@@ -176,11 +176,11 @@ class ParserElement(object):
         self.parser_config.failAction = fn
         return self
 
-    def parseImpl(self, instring, loc, doActions=True):
+    def parseImpl(self, string, loc, doActions=True):
         return loc, ParseResults(self, [])
 
-    def _parse(self, instring, loc, doActions=True):
-        lookup = (self, instring, loc, doActions)
+    def _parse(self, string, loc, doActions=True):
+        lookup = (self, string, loc, doActions)
         value = packrat_cache.get(lookup)
         if value is not None:
             if isinstance(value, Exception):
@@ -188,42 +188,40 @@ class ParserElement(object):
             return value[0], value[1]
 
         try:
-            self.engine.debugActions.TRY(self, loc, instring)
+            self.engine.debugActions.TRY(self, loc, string)
             start = preloc = loc
             try:
-                start = preloc = self.engine.skip(instring, loc)
+                start = preloc = self.engine.skip(string, loc)
                 try:
-                    loc, tokens = self.parseImpl(instring, preloc, doActions)
+                    loc, tokens = self.parseImpl(string, preloc, doActions)
                 except IndexError:
-                    if self.parser_config.mayIndexError or preloc >= len(instring):
+                    if self.parser_config.mayIndexError or preloc >= len(string):
                         ex = ParseException(
                             self,
-                            len(instring),
-                            instring,
+                            len(string),
+                            string,
                         )
                         packrat_cache.set(lookup, ex.__class__(*ex.args))
                         raise ex
                     raise
             except Exception as err:
-                self.engine.debugActions.FAIL(instring, start, self, err)
-                self.parser_config.failAction(instring, start, self, err)
+                self.engine.debugActions.FAIL(self, start, string, err)
+                self.parser_config.failAction(self, start, string, err)
                 raise
 
             if not isinstance(tokens, ParseResults):
                 Log.error("expecting ParseResult")
-            if is_forward(self):
-                pass  # OK
-            elif tokens.type is not self:
+            if tokens.type is not self:
                 Log.error("expecting correct type to come from self")
 
             if self.parseAction and (doActions or self.callDuringTry):
                 try:
                     for fn in self.parseAction:
-                        tokens = fn(tokens, start, instring)
+                        tokens = fn(tokens, start, string)
                 except Exception as err:
-                    self.engine.debugActions.FAIL(instring, start, self, err)
+                    self.engine.debugActions.FAIL(self, start, string, err)
                     raise
-            self.engine.debugActions.MATCH(instring, start, loc, self, tokens)
+            self.engine.debugActions.MATCH(self, start, loc, string, tokens)
         except ParseBaseException as pe:
             # cache a copy of the exception, without the traceback
             packrat_cache.set(lookup, pe.__class__(*pe.args))
@@ -232,27 +230,27 @@ class ParserElement(object):
         packrat_cache.set(lookup, (loc, tokens))
         return loc, tokens
 
-    def tryParse(self, instring, loc):
+    def tryParse(self, string, loc):
         try:
-            return self._parse(instring, loc, doActions=False)[0]
+            return self._parse(string, loc, doActions=False)[0]
         except ParseFatalException:
-            raise ParseException(self, loc, instring)
+            raise ParseException(self, loc, string)
 
-    def canParseNext(self, instring, loc):
+    def canParseNext(self, string, loc):
         try:
-            self.tryParse(instring, loc)
+            self.tryParse(string, loc)
         except (ParseException, IndexError):
             return False
         else:
             return True
 
     @entrypoint
-    def parseString(self, instring, parseAll=False):
+    def parseString(self, string, parseAll=False):
         """
         Parse a string with respect to the parser definition. This function is intended as the primary interface to the
         client code.
 
-        :param instring: The input string to be parsed.
+        :param string: The input string to be parsed.
         :param parseAll: If set, the entire input string must match the grammar.
         :raises ParseException: Raised if ``parseAll`` is set and the input string does not match the whole grammar.
         :returns: the parsed data as a :class:`ParseResults` object, which may be accessed as a `list`, a `dict`, or
@@ -281,7 +279,7 @@ class ParserElement(object):
         The parsing behavior varies by the inheriting class of this abstract class. Please refer to the children
         directly to see more examples.
 
-        It raises an exception if parseAll flag is set and instring does not match the whole grammar.
+        It raises an exception if parseAll flag is set and string does not match the whole grammar.
 
         >>> res = Word('a').parseString('aaaaabaaa', parseAll=True)
         Traceback (most recent call last):
@@ -296,18 +294,18 @@ class ParserElement(object):
             # TOP LEVEL NAMES ARE NOT ALLOWED
             expr = Group(expr)
         try:
-            loc, tokens = expr._parse(instring, 0)
+            loc, tokens = expr._parse(string, 0)
             if parseAll:
-                loc = expr.engine.skip(instring, loc)
+                loc = expr.engine.skip(string, loc)
                 se = Empty() + StringEnd()
-                se._parse(instring, loc)
+                se._parse(string, loc)
         except ParseBaseException as exc:
             raise exc
         else:
             return tokens
 
     @entrypoint
-    def scanString(self, instring, maxMatches=_MAX_INT, overlap=False):
+    def scanString(self, string, maxMatches=_MAX_INT, overlap=False):
         """
         Scan the input string for expression matches.  Each match will return the
         matching tokens, start location, and end location.  May be called with optional
@@ -343,14 +341,14 @@ class ParserElement(object):
             for e in self.engine.ignore_list:
                 e.streamline()
 
-        instrlen = len(instring)
+        instrlen = len(string)
         loc = 0
         cache.resetCache()
         matches = 0
         while loc <= instrlen and matches < maxMatches:
             try:
-                preloc = self.engine.skip(instring, loc)
-                nextLoc, tokens = self._parse(instring, preloc)
+                preloc = self.engine.skip(string, loc)
+                nextLoc, tokens = self._parse(string, preloc)
             except ParseException as e:
                 loc = preloc + 1
             else:
@@ -361,7 +359,7 @@ class ParserElement(object):
                 else:
                     loc = nextLoc
 
-    def transformString(self, instring):
+    def transformString(self, string):
         """
         Extension to :class:`scanString`, to modify matching text with modified tokens that may
         be returned from a parse action.  To use ``transformString``, define a grammar and
@@ -385,8 +383,8 @@ class ParserElement(object):
         lastE = 0
         # force preservation of <TAB>s, to minimize unwanted transformation of string, and to
         # keep string locs straight between transformString and scanString
-        for t, s, e in self.scanString(instring):
-            out.append(instring[lastE:s])
+        for t, s, e in self.scanString(string):
+            out.append(string[lastE:s])
             if t:
                 if isinstance(t, ParseResults):
                     out.append("".join(t))
@@ -395,11 +393,11 @@ class ParserElement(object):
                 else:
                     out.append(t)
             lastE = e
-        out.append(instring[lastE:])
+        out.append(string[lastE:])
         out = [o for o in out if o]
         return "".join(map(text, _flatten(out)))
 
-    def searchString(self, instring, maxMatches=_MAX_INT):
+    def searchString(self, string, maxMatches=_MAX_INT):
         """
         Another extension to :class:`scanString`, simplifying the access to the tokens found
         to match the given parse expression.  May be called with optional
@@ -423,10 +421,10 @@ class ParserElement(object):
 
         if isinstance(self, Group):
             g = self
-            scanned = [t for t, s, e in self.scanString(instring, maxMatches)]
+            scanned = [t for t, s, e in self.scanString(string, maxMatches)]
         else:
             g = Group(self)
-            scanned = [ParseResults(g, [t]) for t, s, e in self.scanString(instring, maxMatches)]
+            scanned = [ParseResults(g, [t]) for t, s, e in self.scanString(string, maxMatches)]
 
         output = ParseResults(
             ZeroOrMore(g),
@@ -434,7 +432,7 @@ class ParserElement(object):
         )
         return output
 
-    def split(self, instring, maxsplit=_MAX_INT, includeSeparators=False):
+    def split(self, string, maxsplit=_MAX_INT, includeSeparators=False):
         """
         Generator method to split a string using the given expression as a separator.
         May be called with optional ``maxsplit`` argument, to limit the number of splits;
@@ -452,12 +450,12 @@ class ParserElement(object):
         """
         splits = 0
         last = 0
-        for t, s, e in self.scanString(instring, maxMatches=maxsplit):
-            yield instring[last:s]
+        for t, s, e in self.scanString(string, maxMatches=maxsplit):
+            yield string[last:s]
             if includeSeparators:
                 yield t[0]
             last = e
-        yield instring[last:]
+        yield string[last:]
 
     def __add__(self, other):
         """

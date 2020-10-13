@@ -9,7 +9,7 @@ from itertools import filterfalse
 from types import FunctionType
 
 from mo_future import text, unichr
-from mo_logs import Log, Except
+from mo_logs import Log
 
 _MAX_INT = sys.maxsize
 empty_list = []
@@ -35,6 +35,15 @@ builtin_lookup = {"".join.__name__: ("iterable",)}
 
 def is_forward(expr):
     return expr.__class__.__name__ == "Forward"
+
+
+def stack_depth():
+    count=0
+    f = sys._getframe()
+    while f:
+        f = f.f_back
+        count+=1
+    return count
 
 
 def get_function_arguments(func):
@@ -119,7 +128,6 @@ def line(loc, string):
 def wrap_parse_action(func):
     from mo_parsing.exceptions import ParseException
     from mo_parsing.results import ParseResults
-    from mo_parsing.enhancement import Group
 
     if func in singleArgBuiltins:
         spec = inspect.getfullargspec(func)

@@ -7,7 +7,7 @@ from mo_future import is_text, text
 from mo_logs import Log, strings
 
 from mo_parsing.exceptions import ParseException
-from mo_parsing.utils import lineno, col, alphanums
+from mo_parsing.utils import lineno, col, alphanums, stack_depth
 
 ParserElement, Literal, Token = [None] * 3
 
@@ -66,7 +66,7 @@ class Engine:
         #     expr = expr.copy()
         return expr
 
-    def record_exception(self, instring, loc, expr, exc):
+    def record_exception(self, string, loc, expr, exc):
         es = self.all_exceptions.setdefault(loc, [])
         es.append(exc)
 
@@ -104,28 +104,28 @@ class Engine:
         self.ignore_list.append(ignore_expr)
         return self
 
-    def skip(self, instring, start):
-        if instring is self.content:
+    def skip(self, string, start):
+        if string is self.content:
             end = self.skips.get(start)
             if end is not None:
                 return end
         else:
             self.skips = {}
-            self.content = instring
+            self.content = string
         end = self.skips[start] = start  # TO AVOID RECURSIVE LOOP
         wt = self.white_chars
-        instrlen = len(instring)
+        instrlen = len(string)
 
         more = True  # ENSURE ALTERNATING WHITESPACE AND IGNORABLES ARE SKIPPED
         while more:
             more = False
-            while end < instrlen and instring[end] in wt:
+            while end < instrlen and string[end] in wt:
                 more = True
                 end += 1
 
             for i in self.ignore_list:
                 try:
-                    next_end, _ = i.parseImpl(instring, end)
+                    next_end, _ = i.parseImpl(string, end)
                     if next_end > end:
                         more = True
                         end = next_end
@@ -144,22 +144,36 @@ class Engine:
         return "\n".join(output)
 
 
-def _defaultStartDebugAction(instring, loc, expr):
+def _defaultStartDebugAction(expr, loc, string):
     print(
-        "Match "
-        + text(expr)
-        + " at loc "
+        "  Attempt ["
+        + string[loc : loc + 10]
+        + "...] at loc "
         + text(loc)
-        + "(%d,%d)" % (lineno(loc, instring), col(loc, instring))
+        + "(%d,%d)" % (lineno(loc, string), col(loc, string))
+        + " for "
+        + " " * stack_depth()
+        + text(expr)
     )
 
 
-def _defaultSuccessDebugAction(instring, startloc, endloc, expr, toks):
-    print("Matched " + text(expr) + " -> " + str(toks))
+def _defaultSuccessDebugAction(expr, start, end, string, tokens):
+    print(
+        "> Matched ["
+        + string[start:end]
+        + "] at loc "
+        + text(start)
+        + "(%d,%d)" % (lineno(start, string), col(start, string))
+        + " for "
+        + " " * stack_depth()
+        + text(expr)
+        + " -> "
+        + str(tokens)
+    )
 
 
-def _defaultExceptionDebugAction(instring, loc, expr, exc):
-    print("Exception raised:" + text(exc))
+def _defaultExceptionDebugAction(expr, loc, string, cause):
+    print("Exception raised:" + text(cause))
 
 
 def noop(*args):

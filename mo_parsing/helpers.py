@@ -51,7 +51,7 @@ from mo_parsing.utils import (
 )
 
 # import later
-And, MatchFirst = [None] * 2
+And, Or, MatchFirst = [None] * 3
 
 
 dblQuotedString = Combine(
@@ -753,16 +753,16 @@ def withAttribute(*args, **attrDict):
         attrs = attrDict.items()
     attrs = [(k, v) for k, v in attrs]
 
-    def pa(tokens, l, s):
+    def pa(tokens, loc, string):
         for attrName, attrValue in attrs:
             if attrName not in tokens:
-                raise ParseException(s, l, "no matching attribute " + attrName)
+                raise ParseException("no matching attribute " + attrName, loc, string)
             if attrValue != withAttribute.ANY_VALUE and tokens[attrName] != attrValue:
                 raise ParseException(
-                    s,
-                    l,
                     "attribute '%s' has value '%s', must be '%s'"
                     % (attrName, tokens[attrName], attrValue),
+                    string,
+                    loc,
                 )
 
     return pa
@@ -931,7 +931,7 @@ def infixNotation(baseExpr, spec, lpar=Suppress("("), rpar=Suppress(")")):
         for expr, op, is_suppressed, arity, assoc, pa in opList
         if arity == 1 and assoc == LEFT_ASSOC
     ])
-    ops = MatchFirst([
+    ops = Or([
         opPart.addParseAction(record_op(opPart))
         for expr, op, is_suppressed, arity, assoc, pa in opList
         if arity > 1
