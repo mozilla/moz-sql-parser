@@ -114,16 +114,16 @@ class TestSimple(TestCase):
         self.assertEqual(result, expected)
 
     def test_bad_select1(self):
-        assertRaises('Expected select', lambda: parse("se1ect A, B, C from dual"))
+        assertRaises('Expecting select', lambda: parse("se1ect A, B, C from dual"))
 
     def test_bad_select2(self):
-        assertRaises('Expected {{expression1 [{[as] column_name1}]}', lambda: parse("Select &&& FROM dual"))
+        assertRaises('Expecting {{expression1 + [{[as] + column_name1}]}', lambda: parse("Select &&& FROM dual"))
 
     def test_bad_from(self):
         assertRaises('(at char 20)', lambda: parse("select A, B, C frum dual"))
 
     def test_incomplete1(self):
-        assertRaises('Expected {{expression1 [{[as] column_name1}]}', lambda: parse("SELECT"))
+        assertRaises('Expecting {{expression1 + [{[as] + column_name1}]}}', lambda: parse("SELECT"))
 
     def test_incomplete2(self):
         assertRaises("", lambda: parse("SELECT * FROM"))
@@ -288,12 +288,14 @@ class TestSimple(TestCase):
         result = parse("select a from table1 where A not like '%20%'")
         expected = {
             'from': 'table1',
-            'where': {'nlike': ['A', {"literal": "%20%"}]},
+            'where': {'not_like': ['A', {"literal": "%20%"}]},
             'select': {'value': 'a'}
         }
         self.assertEqual(result, expected)
 
     def test_like_in_select(self):
+        #               0         1         2         3         4         5         6
+        #               0123456789012345678901234567890123456789012345678901234567890123456789
         result = parse("select case when A like 'bb%' then 1 else 0 end as bb from table1")
         expected = {
             'from': 'table1',
@@ -305,7 +307,7 @@ class TestSimple(TestCase):
         result = parse("select case when A not like 'bb%' then 1 else 0 end as bb from table1")
         expected = {
             'from': 'table1',
-            'select': {'name': 'bb', 'value': {"case": [{"when": {"nlike": ["A", {"literal": "bb%"}]}, "then": 1}, 0]}}
+            'select': {'name': 'bb', 'value': {"case": [{"when": {"not_like": ["A", {"literal": "bb%"}]}, "then": 1}, 0]}}
         }
         self.assertEqual(result, expected)
 
@@ -624,7 +626,6 @@ class TestSimple(TestCase):
                     {"unhex": {"literal": "2"}}
                 ]]},
                 {"eq": ["status", 1]}
-
             ]}
         }
         self.assertEqual(result, expected)
@@ -650,6 +651,8 @@ class TestSimple(TestCase):
         self.assertEqual(result, expected)
 
     def test_binary_not(self):
+        #      0         1         2
+        #      012345678901234567890123456789
         sql = "SELECT * FROM t WHERE ~c;"
         result = parse(sql)
         expected = {

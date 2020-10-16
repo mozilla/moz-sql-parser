@@ -9,34 +9,30 @@
 
 from __future__ import absolute_import, division, unicode_literals
 
+import re
 from pprint import pformat
 from unittest import skip, TestCase
+
+from mo_logs import Log
 
 from moz_sql_parser import format, parse
 from moz_sql_parser.keywords import join_keywords
 
 EXCEPTION_MESSAGE = """
-SQL:         %s
-Broken SQL:  %s
+SQL:         {{expected_sql}}
+Broken SQL:  {{new_sql}}
 
 JSON:
-%s
+{{expected_json}}
 Broken JSON:
-%s
+{{new_json}}
 """
 
-class VerificationException(Exception):
-    """exception thrown if anything called by the verify_formatting function raises an exception"""
 
-    def __init__(self, expected_sql, expected_json, new_sql, new_json):
-        self.expected_sql = expected_sql
-        self.expected_json = expected_json
-        self.new_sql = new_sql
-        self.new_json = new_json
+def remove_whitespace(sql):
+    # WE ASSUME A WHITESPACE REMOVAL IS GOOD ENOUGH FOR COMPARE
+    return re.sub(r"\s+", "", sql, flags=re.UNICODE)
 
-    def __str__(self):
-        res = EXCEPTION_MESSAGE % (self.expected_sql, self.new_sql, pformat(self.expected_json), pformat(self.new_json))
-        return res
 
 class TestFormatAndParse(TestCase):
 
@@ -45,10 +41,18 @@ class TestFormatAndParse(TestCase):
         new_json = ""
         try:
             new_sql = format(expected_json)
+            # self.assertEqual(remove_whitespace((new_sql), remove_whitespace((expected_sql)
             new_json = parse(new_sql)
             self.assertEqual(new_json, expected_json)
-        except Exception as e:
-            raise VerificationException(expected_sql, expected_json, new_sql, new_json)
+        except Exception as cause:
+            Log.error(
+                EXCEPTION_MESSAGE,
+                expected_sql=expected_sql,
+                expected_json=expected_json,
+                new_sql=new_sql,
+                new_json=new_json,
+                cause=cause
+            )
 
     def test_two_tables(self):
         expected_sql = "SELECT * from XYZZY, ABC"
@@ -66,7 +70,6 @@ class TestFormatAndParse(TestCase):
         expected_json = {'select': [{'value': 'A'}], 'from': ['dual']}
         self.verify_formatting(expected_sql, expected_json)
 
-    @skip("Still need to figure out how to handle quotes")
     def test_select_quoted_name(self):
         expected_sql = 'Select a "@*#&", b as test."g.g".c from dual'
         expected_json = {'select': [{'name': '@*#&', 'value': 'a'}, {'name': 'test.g.g.c', 'value': 'b'}],
@@ -170,7 +173,6 @@ class TestFormatAndParse(TestCase):
             'case': [{'when': {'like': ['A', {'literal': 'bb%'}]}, 'then': 1}, 0]}}}
         self.verify_formatting(expected_sql, expected_json)
 
-    @skip("broken")
     def test_ugly_case_statement(self):
         expected_sql = """
 select player_name,
@@ -222,11 +224,10 @@ from benn.college_football_players
                                   {'name': 't2', 'value': {'select': {'value': 1}}}]}
         self.verify_formatting(expected_sql, expected_json)
 
-    @skip("Not sure why")
     def test_not_equal(self):
-        expected_sql = "select * from task where build.product is not null and build.product!='firefox'"
+        expected_sql = "SELECT * FROM task WHERE build.product IS NOT NULL AND build.product <> 'firefox'"
         expected_json = {'select': '*', 'from': 'task',
-                         'where': {'and': [{'exists': 'build.product'}, {'neq': {'build.product': 'firefox'}}]}}
+                         'where': {'and': [{'exists': 'build.product'}, {'neq': ['build.product', {"literal": "firefox"}]}]}}
         self.verify_formatting(expected_sql, expected_json)
 
     def test_pr19(self):
@@ -658,7 +659,6 @@ from benn.college_football_players
                          'orderby': {'value': 'f1'}}
         self.verify_formatting(expected_sql, expected_json)
 
-    @skip("maximum recursion depth exceeded while calling a Python object")
     def test_098(self):
         expected_sql = "SELECT coalesce(f1/(f1-11),'x'), coalesce(min(f1/(f1-11),5),'y'), coalesce(max(f1/(f1-33),6),'z') FROM test1 ORDER BY f1"
         expected_json = {'from': 'test1', 'orderby': {'value': 'f1'},
@@ -680,7 +680,6 @@ from benn.college_football_players
         expected_json = {'from': 'test1', 'select': '*', 'where': {'lt': ['f1', 0]}}
         self.verify_formatting(expected_sql, expected_json)
 
-    @skip("Need to figure out how to wrap the select in ()")
     def test_103(self):
         expected_sql = "SELECT * FROM test1 WHERE f1<(select count(*) from test2)"
         expected_json = {'from': 'test1', 'select': '*',
@@ -732,10 +731,9 @@ from benn.college_football_players
                          'where': {'and': [{'gt': ['x', 0]}, {'lt': ['y', 50]}]}}
         self.verify_formatting(expected_sql, expected_json)
 
-    @skip("broken")
     def test_112(self):
         expected_sql = "SELECT f1 COLLATE nocase AS x FROM test1 ORDER BY x"
-        expected_json = {'from': 'test1', 'select': {'value': {'collate nocase': 'f1'}}, 'orderby': {'value': 'x'}}
+        expected_json = {'from': 'test1', 'select': {'value': {'collate': ['f1', "nocase"]}}, 'orderby': {'value': 'x'}}
         self.verify_formatting(expected_sql, expected_json)
 
     def test_113(self):
@@ -758,7 +756,6 @@ from benn.college_football_players
         expected_json = {'from': ['t3', 't4'], 'select': [{'value': 't3.b'}, {'value': 't4.*'}]}
         self.verify_formatting(expected_sql, expected_json)
 
-    @skip("broken")
     def test_118b(self):
         expected_sql = "SELECT * FROM t3 UNION SELECT 3 AS a, 4 ORDER BY a"
         expected_json = {
@@ -766,7 +763,6 @@ from benn.college_football_players
             'orderby': {'value': 'a'}}
         self.verify_formatting(expected_sql, expected_json)
 
-    @skip("broken")
     def test_118c(self):
         expected_sql = "SELECT * FROM t3 UNION SELECT 3 AS a, 4 ORDER BY a"
         expected_json = {
@@ -779,19 +775,16 @@ from benn.college_football_players
         expected_json = {'union': [{'select': [{'value': 3}, {'value': 4}]}, {'from': 't3', 'select': '*'}]}
         self.verify_formatting(expected_sql, expected_json)
 
-    @skip("Need to figure out how to wrap the select in ()")
     def test_120(self):
         expected_sql = "SELECT * FROM t3 WHERE a=(SELECT 1)"
         expected_json = {'from': 't3', 'select': '*', 'where': {'eq': ['a', {'select': {'value': 1}}]}}
         self.verify_formatting(expected_sql, expected_json)
 
-    @skip("Need to figure out how to wrap the select in ()")
     def test_121(self):
         expected_sql = "SELECT * FROM t3 WHERE a=(SELECT 2)"
         expected_json = {'from': 't3', 'select': '*', 'where': {'eq': ['a', {'select': {'value': 2}}]}}
         self.verify_formatting(expected_sql, expected_json)
 
-    @skip("broken")
     def test_125(self):
         expected_sql = "SELECT count( (SELECT a FROM abc WHERE a = NULL AND b >= upper.c)) FROM abc AS upper"
         expected_json = {'from': {'value': 'abc', 'name': 'upper'}, 'select': {'value': {
@@ -805,13 +798,11 @@ from benn.college_football_players
                          'where': {'eq': ['type', {'literal': 'table'}]}}
         self.verify_formatting(expected_sql, expected_json)
 
-    @skip("broken")
     def test_128(self):
         expected_sql = "SELECT 10 IN (SELECT rowid FROM sqlite_master)"
         expected_json = {'select': {'value': {'in': [10, {'from': 'sqlite_master', 'select': {'value': 'rowid'}}]}}}
         self.verify_formatting(expected_sql, expected_json)
 
-    @skip("broken")
     def test_131(self):
         expected_sql = "SELECT 2 IN (SELECT a FROM t1)"
         expected_json = {'select': {'value': {'in': [2, {'from': 't1', 'select': {'value': 'a'}}]}}}
@@ -852,13 +843,11 @@ from benn.college_football_players
         expected_json = {'from': 'tbl2', 'select': {'value': 'f1'}, 'where': {'eq': ['f2', 2000]}}
         self.verify_formatting(expected_sql, expected_json)
 
-    @skip("broken")
     def test_150(self):
         expected_sql = "SELECT * FROM aa CROSS JOIN bb WHERE b"
         expected_json = {'from': ['aa', {'cross join': 'bb'}], 'select': '*', 'where': 'b'}
         self.verify_formatting(expected_sql, expected_json)
 
-    @skip("broken")
     def test_151(self):
         expected_sql = "SELECT * FROM aa CROSS JOIN bb WHERE NOT b"
         expected_json = {'from': ['aa', {'cross join': 'bb'}], 'select': '*', 'where': {'not': 'b'}}
@@ -869,13 +858,11 @@ from benn.college_football_players
         expected_json = {'from': ['aa', 'bb'], 'select': '*', 'where': {'min': ['a', 'b']}}
         self.verify_formatting(expected_sql, expected_json)
 
-    @skip("broken")
     def test_153(self):
         expected_sql = "SELECT * FROM aa, bb WHERE NOT min(a,b)"
         expected_json = {'from': ['aa', 'bb'], 'select': '*', 'where': {'not': {'min': ['a', 'b']}}}
         self.verify_formatting(expected_sql, expected_json)
 
-    @skip("broken")
     def test_154(self):
         expected_sql = "SELECT * FROM aa, bb WHERE CASE WHEN a=b-1 THEN 1 END"
         expected_json = {'from': ['aa', 'bb'], 'select': '*',
@@ -1086,8 +1073,6 @@ from benn.college_football_players
         expected_json = {'from': 'a', 'select': {'value': {'typeof': {'sum': 'a3'}}}, 'groupby': {'value': 'a1'}}
         self.verify_formatting(expected_sql, expected_json)
 
-    @skip("The escape function does not recognize the backticks,"
-          " and is wrapping the identifier in double quotes.")
     def test_191(self):
         expected_sql = "SELECT `user ID` FROM a"
         expected_json = {'select': {'value': 'user ID'}, 'from': 'a'}

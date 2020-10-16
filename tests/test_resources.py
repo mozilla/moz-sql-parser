@@ -992,7 +992,7 @@ class TestResources(TestCase):
         result = parse(sql)
         expected = {
             "from": "test1",
-            "select": {"name":"x", "value": {"collate nocase": "f1"}},
+            "select": {"name":"x", "value": {'collate': ['f1', "nocase"]}},
             "orderby": {"value": "x"}
         }
         self.assertEqual(result, expected)
