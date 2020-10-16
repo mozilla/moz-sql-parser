@@ -266,6 +266,12 @@ class CloseMatch(Token):
         self.parser_config.mayIndexError = False
         self.parser_config.mayReturnEmpty = False
 
+    def copy(self):
+        output = Token.copy(self)
+        output.match_string = self.match_string
+        output.maxMismatches = self.maxMismatches
+        return output
+
     def parseImpl(self, string, loc, doActions=True):
         start = loc
         instrlen = len(string)
@@ -277,10 +283,9 @@ class CloseMatch(Token):
             mismatches = []
             maxMismatches = self.maxMismatches
 
-            for match_stringloc, s_m in enumerate(zip(
+            for match_stringloc, (src, mat) in enumerate(zip(
                 string[loc:maxloc], match_string
             )):
-                src, mat = s_m
                 if src != mat:
                     mismatches.append(match_stringloc)
                     if len(mismatches) > maxMismatches:

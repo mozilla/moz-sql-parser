@@ -45,10 +45,27 @@ from mo_parsing.utils import (
 DEBUG = False
 
 
+# TODO: Replace with a stack of parse state
+_reset_actions = []
+
+def add_reset_action(action):
+    """
+    ADD A FUNCTION THAT WILL RESET GLOBAL STATE THAT A PARSER MAY USE
+    :param action:  CALLABLE
+    """
+    _reset_actions.append(action)
+
+
 locker = RLock()
 def entrypoint(func):
     def output(*args, **kwargs):
         with locker:
+            for a in _reset_actions:
+                try:
+                    a()
+                except Exception as e:
+                    Log.error("reset action failed", cause=e)
+
             return func(*args, **kwargs)
     return output
 
@@ -167,9 +184,9 @@ class ParserElement(object):
         """Define action to perform if parsing fails at this expression.
            Fail acton fn is a callable function that takes the arguments
            ``fn(s, loc, expr, err)`` where:
-           - s = string being parsed
-           - loc = location where expression match was attempted and failed
            - expr = the parse expression that failed
+           - loc = location where expression match was attempted and failed
+           - s = string being parsed
            - err = the exception thrown
            The function returns no value.  It may throw :class:`ParseFatalException`
            if it is desired to stop parsing immediately."""
@@ -201,18 +218,13 @@ class ParserElement(object):
                             len(string),
                             string,
                         )
-                        packrat_cache.set(lookup, ex.__class__(*ex.args))
+                        packrat_cache.set(lookup, ex)
                         raise ex
                     raise
             except Exception as err:
                 self.engine.debugActions.FAIL(self, start, string, err)
                 self.parser_config.failAction(self, start, string, err)
                 raise
-
-            if not isinstance(tokens, ParseResults):
-                Log.error("expecting ParseResult")
-            if tokens.type is not self:
-                Log.error("expecting correct type to come from self")
 
             if self.parseAction and (doActions or self.callDuringTry):
                 try:
@@ -223,8 +235,7 @@ class ParserElement(object):
                     raise
             self.engine.debugActions.MATCH(self, start, loc, string, tokens)
         except ParseBaseException as pe:
-            # cache a copy of the exception, without the traceback
-            packrat_cache.set(lookup, pe.__class__(*pe.args))
+            packrat_cache.set(lookup, pe)
             raise
 
         packrat_cache.set(lookup, (loc, tokens))
@@ -349,7 +360,7 @@ class ParserElement(object):
             try:
                 preloc = self.engine.skip(string, loc)
                 nextLoc, tokens = self._parse(string, preloc)
-            except ParseException as e:
+            except ParseException:
                 loc = preloc + 1
             else:
                 matches += 1
@@ -627,10 +638,6 @@ class ParserElement(object):
         :param listAllMatches:
         :return:
         """
-        if name.endswith("*"):
-            Log.warning("stop using")
-        if not is_text(name):
-            Log.error("not expected")
         output = self.copy()
         output.token_name = name
         if not output.parser_name:

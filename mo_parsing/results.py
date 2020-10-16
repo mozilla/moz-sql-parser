@@ -7,24 +7,26 @@ from mo_future import is_text, text, PY3, NEXT, zip_longest
 from mo_logs import Log
 
 from mo_parsing import engine
-from mo_parsing.utils import is_forward
+from mo_parsing.utils import is_forward, forward_type
+
+USE_ATTRIBUTE_ACCESS = False
 
 Suppress, ParserElement, NO_PARSER, NO_RESULTS, Group, Dict, Token, Empty = [None] * 8
 
 
 class ParseResults(object):
     __slots__ = [
-        "tokens",
         "type",
+        "tokens",
     ]
 
     @property
     def name(self):
         return self.type.token_name
 
-    def __init__(self, result_type, toklist=None):
-        self.tokens = toklist
+    def __init__(self, result_type, tokens=None):
         self.type = result_type
+        self.tokens = tokens
 
     def _get_item_by_name(self, name):
         # return open list of (modal, value) pairs
@@ -95,6 +97,21 @@ class ParseResults(object):
         if v is not None:
             self.tokens.append(Annotation(k, [v]))
 
+    if USE_ATTRIBUTE_ACCESS:
+        def __getattribute__(self, item):
+            try:
+                return object.__getattribute__(self, item)
+            except Exception as e:
+                output = self[item]
+                if not output:
+                    raise e
+                return output
+
+        def __setattr__(self, key, value):
+            if key in ParseResults.__slots__:
+                return object.__setattr__(self, key, value)
+            self[key] = value
+
     def __contains__(self, k):
         return any((r.name) == k for r in self.tokens)
 
@@ -135,6 +152,9 @@ class ParseResults(object):
 
     def __iter__(self):
         if is_forward(self.type):
+            if len(self.tokens) != 1:
+                Log.error("not expected")
+
             output = list(self.tokens[0])
             for i in output:
                 yield i
@@ -148,7 +168,7 @@ class ParseResults(object):
                     return
                 elif isinstance(r.type, Group):
                     yield r
-                elif is_forward(r.type) and isinstance(r.tokens[0].type, Group):
+                elif is_forward(r.type) and isinstance(forward_type(r), Group):
                     yield r
                 elif not isinstance(r.type, Group):
                     for mm in r:
@@ -187,14 +207,14 @@ class ParseResults(object):
                 self.type = new_type
                 return
             for i, t in enumerate(self.tokens):
+                if not isinstance(t, ParseResults):
+                    continue
                 name = t.name
                 if name == key:
                     new_type = t.type.copy()
                     new_type.token_name = None
                     t.type = new_type
                     return
-                elif not isinstance(t, ParseResults):
-                    pass
                 elif isinstance(t.type, (Group, Token)):
                     pass
                 else:

@@ -20,8 +20,17 @@ class ParseBaseException(Exception):
         self.pstr = string
         self.loc = loc
         self.parserElement = tokens
-        self.msg = "Expecting " + text(tokens)
-        self.args = (string, loc, self.msg)
+        self._msg = ""
+
+    @property
+    def msg(self):
+        if not self._msg:
+            self._msg = "Expecting " + text(self.parserElement)
+        return self._msg
+
+    @msg.setter
+    def msg(self, value):
+        self._msg = value
 
     def __getattr__(self, aname):
         """supported attributes by name are:

@@ -6,7 +6,9 @@ from datetime import datetime
 
 from mo_dots import listwrap
 from mo_future import text
+from mo_logs import Log
 
+from mo_parsing.core import add_reset_action
 from mo_parsing.engine import Engine
 from mo_parsing.enhancement import (
     Combine,
@@ -1034,7 +1036,17 @@ def infixNotation(baseExpr, spec, lpar=Suppress("("), rpar=Suppress(")")):
     return flat
 
 
-def indentedBlock(blockStatementExpr, indentStack, indent=True):
+_indent_stack = [(1, None, None)]
+
+
+def reset_stack():
+    global _indent_stack
+    _indent_stack = [(1, None, None)]
+
+add_reset_action(reset_stack)
+
+
+def indentedBlock(blockStatementExpr, indent=True):
     """Helper method for defining space-delimited indentation blocks,
     such as those used to define block statements in Python source code.
 
@@ -1050,124 +1062,82 @@ def indentedBlock(blockStatementExpr, indentStack, indent=True):
        statements (default= ``True``)
 
     A valid block must contain at least one ``blockStatement``.
-
-    Example::
-
-        data = '''
-        def A(z):
-          A1
-          B = 100
-          G = A2
-          A2
-          A3
-        B
-        def BB(a,b,c):
-          BB1
-          def BBA():
-            bba1
-            bba2
-            bba3
-        C
-        D
-        def spam(x,y):
-             def eggs(z):
-                 pass
-        '''
-
-
-        indentStack = [1]
-        stmt = Forward()
-
-        identifier = Word(alphas, alphanums)
-        funcDecl = ("def" + identifier + Group("(" + Optional(delimitedList(identifier)) + ")") + ":")
-        func_body = indentedBlock(stmt, indentStack)
-        funcDef = Group(funcDecl + func_body)
-
-        rvalue = Forward()
-        funcCall = Group(identifier + "(" + Optional(delimitedList(rvalue)) + ")")
-        rvalue << (funcCall | identifier | Word(nums))
-        assignment = Group(identifier + "=" + rvalue)
-        stmt << (funcDef | assignment | identifier)
-
-        module_body = OneOrMore(stmt)
-
-        parseTree = module_body.parseString(data)
-        print(parseTree)
-
-    prints::
-
-        [['def',
-          'A',
-          ['(', 'z', ')'],
-          ':',
-          [['A1'], [['B', '=', '100']], [['G', '=', 'A2']], ['A2'], ['A3']]],
-         'B',
-         ['def',
-          'BB',
-          ['(', 'a', 'b', 'c', ')'],
-          ':',
-          [['BB1'], [['def', 'BBA', ['(', ')'], ':', [['bba1'], ['bba2'], ['bba3']]]]]],
-         'C',
-         'D',
-         ['def',
-          'spam',
-          ['(', 'x', 'y', ')'],
-          ':',
-          [[['def', 'eggs', ['(', 'z', ')'], ':', [['pass']]]]]]]
     """
     blockStatementExpr.engine.add_ignore(_bslash + LineEnd())
 
-    backup_stack = indentStack[:]
+    PEER = Forward()
+    DEDENT = Forward()
 
-    def reset_stack():
-        indentStack[:] = backup_stack
+    def _reset_stack(p=None, l=None, s=None, ex=None):
+        oldCol, oldPeer, oldDedent = _indent_stack.pop()
+        PEER << oldPeer
+        DEDENT << oldDedent
+        Log.note("reset stack to {{stack}}", stack=[i for i, _, _ in _indent_stack])
 
-    def checkPeerIndent(t, l, s):
-        if l >= len(s):
-            return
+    def peer_stack(expectedCol):
+        def output(t, l, s):
+            if l >= len(s):
+                return
+            curCol = col(l, s)
+            if curCol != expectedCol:
+                if curCol > expectedCol:
+                    raise ParseException("illegal nesting", l, s)
+                raise ParseException("not a peer entry", l, s)
+        return output
+
+    def dedent_stack(expectedCol):
+        def output(t, l, s):
+            if l >= len(s):
+                return
+            curCol = col(l, s)
+            if curCol not in (i for i, _, _ in _indent_stack):
+                raise ParseException(s, l, "not an unindent")
+            if curCol < _indent_stack[-1][0]:
+                oldCol, oldPeer, oldDedent = _indent_stack.pop()
+                PEER << oldPeer
+                DEDENT << oldDedent
+            Log.note("pop stack to {{stack}}", stack=[i for i, _, _ in _indent_stack])
+        return output
+
+    def indent_stack(t, l, s):
         curCol = col(l, s)
-        if curCol != indentStack[-1]:
-            if curCol > indentStack[-1]:
-                raise ParseException(s, l, "illegal nesting")
-            raise ParseException(s, l, "not a peer entry")
-
-    def checkSubIndent(t, l, s):
-        curCol = col(l, s)
-        if curCol > indentStack[-1]:
-            indentStack.append(curCol)
+        if curCol > _indent_stack[-1][0]:
+            PEER << Empty().addParseAction(peer_stack(curCol))
+            DEDENT << Empty().addParseAction(dedent_stack(curCol))
+            _indent_stack.append((curCol, PEER, DEDENT))
+            Log.note("push stack to {{stack}}", stack=[i for i, _, _ in _indent_stack])
         else:
-            raise ParseException(s, l, "not a subentry")
+            raise ParseException("not a subentry", l, s)
 
-    def checkUnindent(t, l, s):
-        if l >= len(s):
-            return
+    def nodent_stack(t, l, s):
         curCol = col(l, s)
-        if not (indentStack and curCol in indentStack):
-            raise ParseException(s, l, "not an unindent")
-        if curCol < indentStack[-1]:
-            indentStack.pop()
+        if curCol == _indent_stack[-1][0]:
+            PEER << Empty().addParseAction(peer_stack(curCol))
+            DEDENT << Empty().addParseAction(dedent_stack(curCol))
+            _indent_stack.append((curCol, PEER, DEDENT))
+            Log.note("push stack to {{stack}}", stack=[i for i, _, _ in _indent_stack])
+        else:
+            raise ParseException("not a subentry", l, s)
 
     NL = OneOrMore(LineEnd().suppress())
-    INDENT = (
-        Empty() + Empty().addParseAction(checkSubIndent)
-    ).set_parser_name("INDENT")
-    PEER = Empty().addParseAction(checkPeerIndent).set_parser_name("")
-    UNDENT = Empty().addParseAction(checkUnindent).set_parser_name("UNINDENT")
+    INDENT = Empty().addParseAction(indent_stack)
+    NODENT = Empty().addParseAction(nodent_stack)
+
     if indent:
         smExpr = Group(
             Optional(NL)
             + INDENT
             + OneOrMore(PEER + Group(blockStatementExpr) + Optional(NL))
-            + UNDENT
+            + DEDENT
         )
     else:
         smExpr = Group(
             Optional(NL)
+            + NODENT
             + OneOrMore(PEER + Group(blockStatementExpr) + Optional(NL))
-            + UNDENT
+            + DEDENT
         )
-    smExpr = smExpr.setFailAction(lambda a, b, c, d: reset_stack())
-    return smExpr.set_parser_name("indented block")
+    return smExpr.setFailAction(_reset_stack).set_parser_name("indented block")
 
 
 alphas8bit = srange(r"[\0xc0-\0xd6\0xd8-\0xf6\0xf8-\0xff]")
@@ -1484,7 +1454,7 @@ def convertToDate(fmt="%Y-%m-%d"):
         try:
             return datetime.strptime(t[0], fmt).date()
         except ValueError as ve:
-            raise ParseException(s, l, str(ve))
+            raise ParseException(str(ve), l, s)
 
     return cvt_fn
 
@@ -1511,7 +1481,7 @@ def convertToDatetime(fmt="%Y-%m-%dT%H:%M:%S.%f"):
         try:
             return datetime.strptime(t[0], fmt)
         except ValueError as ve:
-            raise ParseException(s, l, str(ve))
+            raise ParseException(str(ve), l, s)
 
     return cvt_fn
 

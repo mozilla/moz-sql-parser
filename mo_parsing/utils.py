@@ -37,6 +37,16 @@ def is_forward(expr):
     return expr.__class__.__name__ == "Forward"
 
 
+def forward_type(expr):
+    """
+    :param expr:
+    :return:  Effective type of this Forward
+    """
+    while is_forward(expr.type):
+        expr = expr.tokens[0]
+    return expr.type
+
+
 def stack_depth():
     count=0
     f = sys._getframe()
@@ -164,6 +174,8 @@ def wrap_parse_action(func):
                 return ParseResults(token.type, result)
             else:
                 return ParseResults(token.type, [result])
+        except ParseException as pe:
+            raise pe
         except Exception as cause:
             Log.warning("parse action should not raise exception", cause=cause)
             f = ParseException(*args)

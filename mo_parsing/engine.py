@@ -146,9 +146,9 @@ class Engine:
 
 def _defaultStartDebugAction(expr, loc, string):
     print(
-        "  Attempt ["
-        + string[loc : loc + 10]
-        + "...] at loc "
+        "  Attempt "
+        + strings.quote(string[loc : loc + 10]+"...")
+        + " at loc "
         + text(loc)
         + "(%d,%d)" % (lineno(loc, string), col(loc, string))
         + " for "
@@ -159,9 +159,9 @@ def _defaultStartDebugAction(expr, loc, string):
 
 def _defaultSuccessDebugAction(expr, start, end, string, tokens):
     print(
-        "> Matched ["
-        + string[start:end]
-        + "] at loc "
+        "> Matched "
+        + strings.quote(string[start:end])
+        + " at loc "
         + text(start)
         + "(%d,%d)" % (lineno(start, string), col(start, string))
         + " for "
@@ -173,7 +173,7 @@ def _defaultSuccessDebugAction(expr, start, end, string, tokens):
 
 
 def _defaultExceptionDebugAction(expr, loc, string, cause):
-    print("Exception raised:" + text(cause))
+    print("  Except  " + strings.quote(text(cause)))
 
 
 def noop(*args):
