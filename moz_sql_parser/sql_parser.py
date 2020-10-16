@@ -253,12 +253,12 @@ def unquote(tokens):
     val = tokens[0]
     if val.startswith("'") and val.endswith("'"):
         val = "'" + val[1:-1].replace("''", "\\'") + "'"
-        # val = val.replace(".", "\\.")
     elif val.startswith('"') and val.endswith('"'):
         val = '"' + val[1:-1].replace('""', '\\"') + '"'
-        # val = val.replace(".", "\\.")
     elif val.startswith("`") and val.endswith("`"):
-        val = '"' + val[1:-1].replace("``", "`") + '"'
+        val = '"' + val[1:-1].replace("``", "`").replace('""', '\\"') + '"'
+    elif val.startswith("[") and val.endswith("]"):
+        val = '"' + val[1:-1].replace("]]", "]").replace('""', '\\"') + '"'
     elif val.startswith("+"):
         val = val[1:]
     un = ast.literal_eval(val)
@@ -276,13 +276,14 @@ realNum = Regex(r"[+-]?(\d+\.\d*|\.\d+)([eE][+-]?\d+)?").addParseAction(unquote)
 intNum = Regex(r"[+-]?\d+([eE]\+?\d+)?").addParseAction(unquote)
 
 # STRINGS, NUMBERS, VARIABLES
-sqlString = Regex(r"\'(\'\'|\\.|[^'])*\'").addParseAction(to_string)
-identString = Regex(r'\"(\"\"|\\.|[^"])*\"').addParseAction(unquote)
-mysqlidentString = Regex(r"\`(\`\`|\\.|[^`])*\`").addParseAction(unquote)
+sqlString = Regex(r"\'(\'\'|[^'])*\'").addParseAction(to_string)
+identString = Regex(r'\"(\"\"|[^"])*\"').addParseAction(unquote)
+mysql_ident = Regex(r"\`(\`\`|[^`])*\`").addParseAction(unquote)
+sqlserver_ident = Regex(r"\[(\]\]|[^\]])*\]").addParseAction(unquote)
 ident = Combine(
     ~RESERVED
     + (delimitedList(
-        Literal("*") | identString | mysqlidentString | Word(IDENT_CHAR),
+        Literal("*") | identString | mysql_ident | sqlserver_ident | Word(IDENT_CHAR),
         separator=".",
         combine=True,
     ))

@@ -882,7 +882,6 @@ class TestSimple(TestCase):
         expected = {"select": {"value": {"in": ["a", ["abc", 3, {"literal": 'def'}]]}}}
         self.assertEqual(result, expected)
 
-    @skipIf(IS_MASTER, "stack too deep")
     def test_issue_107_recursion(self):
         sql = (
             " SELECT city_name"
@@ -1020,3 +1019,32 @@ class TestSimple(TestCase):
         expected = {"select": {"value": {"decode": ["A", Null, {"literal": "b"}]}}}
         self.assertEqual(result, expected)
 
+    def test_issue143a(self):
+        sql = "Select [A] from dual"
+        result = parse(sql)
+        expected = {"select": {"value": "A"}, "from": "dual"}
+        self.assertEqual(result, expected)
+
+    def test_issue143b(self):
+        sql = "Select [A] from [dual]"
+        result = parse(sql)
+        expected = {"select": {"value": "A"}, "from": "dual"}
+        self.assertEqual(result, expected)
+
+    def test_issue143c(self):
+        sql = "Select [A] from dual [T1]"
+        result = parse(sql)
+        expected = {"select": {"value": "A"}, "from": {"value": "dual", "name": "T1"}}
+        self.assertEqual(result, expected)
+
+    def test_issue143d_quote(self):
+        sql = "Select [\"]"
+        result = parse(sql)
+        expected = {"select": {"value": "\""}}
+        self.assertEqual(result, expected)
+
+    def test_issue143e_close(self):
+        sql = "Select []]]"
+        result = parse(sql)
+        expected = {"select": {"value": "]"}}
+        self.assertEqual(result, expected)
