@@ -76,6 +76,8 @@ from moz_sql_parser.keywords import (
     NOCASE,
     TRUE,
     FALSE,
+    OVER,
+    PARTITION_BY,
 )
 
 engine = Engine().use()
@@ -256,9 +258,9 @@ def unquote(tokens):
     elif val.startswith('"') and val.endswith('"'):
         val = '"' + val[1:-1].replace('""', '\\"') + '"'
     elif val.startswith("`") and val.endswith("`"):
-        val = '"' + val[1:-1].replace("``", "`").replace('""', '\\"') + '"'
+        val = '"' + val[1:-1].replace("``", "`").replace('"', '\\"') + '"'
     elif val.startswith("[") and val.endswith("]"):
-        val = '"' + val[1:-1].replace("]]", "]").replace('""', '\\"') + '"'
+        val = '"' + val[1:-1].replace("]]", "]").replace('"', '\\"') + '"'
     elif val.startswith("+"):
         val = val[1:]
     un = ast.literal_eval(val)
@@ -367,9 +369,20 @@ expr << Group(
 )
 
 # SQL STATEMENT
+sortColumn = expr("value").set_parser_name("sort1") + Optional(
+    DESC("sort") | ASC("sort")
+) | expr("value").set_parser_name("sort2")
+
 selectColumn = (
     Group(
         Group(expr).set_parser_name("expression1")("value")
+        + Optional(
+            OVER
+            + Literal("(").suppress()
+            + Optional(PARTITION_BY + delimitedList(Group(expr))("partitionby"))
+            + Optional(ORDER_BY + delimitedList(Group(expr))("orderby"))
+            + Literal(")").suppress()
+        )("over")
         + Optional(Optional(AS) + ident("name").set_parser_name("column_name1"))
         | Literal("*")("value")
     )
@@ -406,10 +419,6 @@ join = (
     + Group(table_source)("join")
     + Optional((ON + expr("on")) | (USING + expr("using")))
 ).addParseAction(to_join_call)
-
-sortColumn = expr("value").set_parser_name("sort1") + Optional(
-    DESC("sort") | ASC("sort")
-) | expr("value").set_parser_name("sort2")
 
 unordered_sql = Group(
     SELECT
