@@ -4,8 +4,8 @@ python:
   - "3.7"
 
 install:
-  - "pip install -r tests/requirements.txt
-  - "pip install ."
+  - pip install -r tests/requirements.txt
+  - pip install .
 
 env:
   - PYTHONPATH=.
