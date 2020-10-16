@@ -156,6 +156,7 @@ def to_union_call(tokens):
             output = {"from": {op: sources}}
 
     output["orderby"] = tokens['orderby']
+    output["offset"] = tokens.get('offset')
     output["limit"] = tokens['limit']
     return [output]
 

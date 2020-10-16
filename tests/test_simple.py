@@ -955,3 +955,8 @@ class TestSimple(TestCase):
         expected = {"select": {"value": {"sub": [{"date": {"literal":"2020 01 25"}}, {"interval": [4, "second"]}]}}}
         self.assertEqual(result, expected)
 
+    def test_issue_141(self):
+        sql = "select name from table order by age limit 1 offset 3"
+        result = parse(sql)
+        expected = {"select": {"value": "name"}, "from": "table", "orderby": {"value": "age"}, "limit": 1, "offset": 3}
+        self.assertEqual(result, expected)
