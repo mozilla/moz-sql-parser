@@ -1,7 +1,11 @@
+from mo_dots import Null
+
 from mo_parsing import Keyword, Literal, ParserElement, Or, Group
 
 # SQL CONSTANTS
-NULL = Keyword("null", caseless=True)
+NULL = Keyword("null", caseless=True).addParseAction(lambda: [Null])
+TRUE = Keyword("true", caseless=True).addParseAction(lambda: [True])
+FALSE = Keyword("false", caseless=True).addParseAction(lambda: [False])
 NOCASE = Keyword("nocase", caseless=True)
 ASC = Keyword("asc", caseless=True)
 DESC = Keyword("desc", caseless=True)

@@ -12,7 +12,8 @@ from __future__ import absolute_import, division, unicode_literals
 import ast
 import sys
 
-from mo_future import is_text, text
+from mo_dots import is_data
+from mo_future import is_text, text, number_types
 from mo_math import is_number
 
 from mo_parsing import Combine, Forward, Group, Keyword, Literal, Optional, Regex, Word, ZeroOrMore, \
@@ -23,7 +24,7 @@ from moz_sql_parser.keywords import AS, ASC, CASE, CROSS_JOIN, DESC, ELSE, END, 
     FULL_JOIN, FULL_OUTER_JOIN, GROUP_BY, HAVING, INNER_JOIN, JOIN, LEFT_JOIN, LEFT_OUTER_JOIN, LIMIT, OFFSET, ON, \
     ORDER_BY, RIGHT_JOIN, RIGHT_OUTER_JOIN, SELECT, \
     THEN, UNION, UNION_ALL, USING, WHEN, WHERE, unary_ops, WITH, durations, NEG, NOT, KNOWN_OPS, RESERVED, BINARY_NOT, \
-    binary_ops, NULL, NOCASE
+    binary_ops, NULL, NOCASE, TRUE, FALSE
 
 engine = Engine().use()
 engine.set_debug_actions(*debug)
@@ -32,6 +33,15 @@ engine.set_debug_actions(*debug)
 sys.setrecursionlimit(3000)
 
 IDENT_CHAR = alphanums + "@_$"
+
+
+def scrub_literal(candidate):
+    # IF ALL MEMBERS OF A LIST ARE LITERALS, THEN MAKE THE LIST LITERAL
+    if all(isinstance(r, number_types) for r in candidate):
+        pass
+    elif all(isinstance(r, number_types) or (is_data(r) and "literal" in r.keys()) for r in candidate):
+        candidate = {"literal": [r['literal'] if is_data(r) else r for r in candidate]}
+    return candidate
 
 
 def to_json_operator(tokens):
@@ -50,46 +60,58 @@ def to_json_operator(tokens):
         op = op.type.parser_name
     op = binary_ops.get(op, op)
     if op == "eq":
-        if tokens[2] == "null":
+        if tokens[2] == None:
             return {"missing": tokens[0]}
         elif tokens[0] == "null":
             return {"missing": tokens[2]}
     elif op == "neq":
-        if tokens[2] == "null":
+        if tokens[2] == None:
             return {"exists": tokens[0]}
         elif tokens[0] == "null":
             return {"exists": tokens[2]}
     elif op == "is":
-        if tokens[2] == 'null':
+        if tokens[2] == None:
             return {"missing": tokens[0]}
         else:
             return {"exists": tokens[0]}
     elif op == "is_not":
-        if tokens[2] == 'null':
+        if tokens[2] == None:
             return {"exists": tokens[0]}
         else:
             return {"missing": tokens[0]}
 
     operands = [tokens[0], tokens[2]]
-    simple = {op: operands}
+    binary_op = {op: operands}
 
     if op in {"add", "mul", "and", "or"}:
-        operand0 = operands[0]
-        if isinstance(operand0, ParseResults):
-            prefix = operand0.tokens[0].get(op)
-            if prefix:
-                # ACCUMULATE SUBSEQUENT, IDENTICAL OPS
-                return {op: prefix + [operands[1]]}
-    return simple
+        # ASSOCIATIVE OPERATORS
+        acc = []
+        for operand in operands:
+            if isinstance(operand, ParseResults):
+                # if operand[0][0] and operand[0][0][0] and operand[0][0][0]['and']:
+                #     prefix = operand[0].get(op)
+                prefix = operand[0].get(op)
+                if prefix:
+                    acc.extend(prefix)
+                    continue
+            acc.append(operand)
+        return {op: acc}
+    return binary_op
+
+
+def to_tuple_call(tokens):
+    # IS THIS ONE VALUE IN (), OR MANY?
+    if tokens.length() == 1:
+        return tokens[0][0]
+    return scrub_literal([t[0] for t in tokens])
 
 
 def to_json_call(tokens):
     # ARRANGE INTO {op: params} FORMAT
-    tok = tokens
-    op = tok['op'].lower()
+    op = tokens['op'].lower()
     op = binary_ops.get(op, op)
 
-    params = tok['params']
+    params = tokens['params']
     if not params:
         params = {}
     elif isinstance(params, list) and len(params) == 1:
@@ -240,19 +262,21 @@ interval = (
 ).addParseAction(to_interval_call)
 
 compound = (
-    NULL |
-    NOCASE |
-    (Keyword("distinct", caseless=True)("op") + expr("params")).addParseAction(to_json_call) |
-    (Keyword("date", caseless=True)("op") + sqlString("params")).addParseAction(to_json_call) |
-    interval |
-    case |
-    (Literal("(").suppress() + ordered_sql + Literal(")").suppress()) |
-    (Literal("(").suppress() + Group(delimitedList(expr)) + Literal(")").suppress()) |
-    realNum.set_parser_name("float") |
-    intNum.set_parser_name("int") |
-    sqlString.set_parser_name("string") |
-    call_function |
-    ident
+        NULL |
+        TRUE |
+        FALSE |
+        NOCASE |
+        (Keyword("distinct", caseless=True)("op") + expr("params")).addParseAction(to_json_call) |
+        (Keyword("date", caseless=True)("op") + sqlString("params")).addParseAction(to_json_call) |
+        interval |
+        case |
+        (Literal("(").suppress() + ordered_sql + Literal(")").suppress()) |
+        (Literal("(").suppress() + Group(delimitedList(expr)).addParseAction(to_tuple_call) + Literal(")").suppress()) |
+        realNum.set_parser_name("float") |
+        intNum.set_parser_name("int") |
+        sqlString.set_parser_name("string") |
+        call_function |
+        ident
 )
 expr << Group(infixNotation(
     compound,

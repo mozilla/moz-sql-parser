@@ -13,11 +13,12 @@ import json
 from collections import Mapping
 from threading import Lock
 
+from mo_dots import NullType
 from mo_future import binary_type, number_types, text
 
 from mo_parsing import ParseException
 from moz_sql_parser.debugs import all_exceptions
-from moz_sql_parser.sql_parser import SQLParser
+from moz_sql_parser.sql_parser import SQLParser, scrub_literal
 
 
 def __deploy__():
@@ -60,7 +61,7 @@ def format(json, **kwargs):
 
 
 def _scrub(result):
-    if isinstance(result, text):
+    if isinstance(result, (text, NullType)):
         return result
     elif isinstance(result, binary_type):
         return result.decode('utf8')
@@ -73,7 +74,7 @@ def _scrub(result):
             rr
             for r in result
             for rr in [_scrub(r)]
-            if rr != None
+            if rr is not None
         ]
 
         if not output:
@@ -81,12 +82,7 @@ def _scrub(result):
         elif len(output) == 1:
             return output[0]
         else:
-            # IF ALL MEMBERS OF A LIST ARE LITERALS, THEN MAKE THE LIST LITERAL
-            if all(isinstance(r, number_types) for r in output):
-                pass
-            elif all(isinstance(r, number_types) or (isinstance(r, Mapping) and "literal" in r.keys()) for r in output):
-                output = {"literal": [r['literal'] if isinstance(r, Mapping) else r for r in output]}
-            return output
+            return scrub_literal(output)
     else:
         # ATTEMPT A DICT INTERPRETATION
         kv_pairs = list(result.items())
@@ -95,11 +91,10 @@ def _scrub(result):
             for k, v in kv_pairs
             if v is not None
             for vv in [_scrub(v)]
-            if vv != None
+            if vv is not None
         }
         if output:
             return output
-
         return _scrub(list(result))
 
 

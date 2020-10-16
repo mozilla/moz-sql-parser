@@ -109,7 +109,7 @@ class TestFormatAndParse(TestCase):
         self.verify_formatting(expected_sql, expected_json)
 
     def test_where_in_and_in(self):
-        expected_sql = "SELECT a FROM dual WHERE a in ('r', 'g', 'b') AND b in (10, 11, 12)"
+        expected_sql = "SELECT a FROM dual WHERE a IN ('r', 'g', 'b') AND b in (10, 11, 12)"
         expected_json = {'select': {'value': 'a'}, 'from': 'dual',
                          'where': {'and': [{'in': ['a', {'literal': ['r', 'g', 'b']}]}, {'in': ['b', [10, 11, 12]]}]}}
         self.verify_formatting(expected_sql, expected_json)
