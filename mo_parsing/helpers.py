@@ -1072,7 +1072,6 @@ def indentedBlock(blockStatementExpr, indent=True):
         oldCol, oldPeer, oldDedent = _indent_stack.pop()
         PEER << oldPeer
         DEDENT << oldDedent
-        Log.note("reset stack to {{stack}}", stack=[i for i, _, _ in _indent_stack])
 
     def peer_stack(expectedCol):
         def output(t, l, s):
@@ -1096,7 +1095,6 @@ def indentedBlock(blockStatementExpr, indent=True):
                 oldCol, oldPeer, oldDedent = _indent_stack.pop()
                 PEER << oldPeer
                 DEDENT << oldDedent
-            Log.note("pop stack to {{stack}}", stack=[i for i, _, _ in _indent_stack])
         return output
 
     def indent_stack(t, l, s):
@@ -1105,7 +1103,6 @@ def indentedBlock(blockStatementExpr, indent=True):
             PEER << Empty().addParseAction(peer_stack(curCol))
             DEDENT << Empty().addParseAction(dedent_stack(curCol))
             _indent_stack.append((curCol, PEER, DEDENT))
-            Log.note("push stack to {{stack}}", stack=[i for i, _, _ in _indent_stack])
         else:
             raise ParseException("not a subentry", l, s)
 
@@ -1115,7 +1112,6 @@ def indentedBlock(blockStatementExpr, indent=True):
             PEER << Empty().addParseAction(peer_stack(curCol))
             DEDENT << Empty().addParseAction(dedent_stack(curCol))
             _indent_stack.append((curCol, PEER, DEDENT))
-            Log.note("push stack to {{stack}}", stack=[i for i, _, _ in _indent_stack])
         else:
             raise ParseException("not a subentry", l, s)
 

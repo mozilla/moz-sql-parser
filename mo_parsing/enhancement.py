@@ -36,8 +36,6 @@ class ParseElementEnhance(ParserElement):
     """
 
     def __init__(self, expr):
-        if expr == None:
-            Log.error("expecting an expression")
         ParserElement.__init__(self)
         self.expr = expr = engine.CURRENT.normalize(expr)
         if is_forward(expr):

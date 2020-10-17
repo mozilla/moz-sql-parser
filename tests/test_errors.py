@@ -10,15 +10,10 @@
 from __future__ import absolute_import, division, unicode_literals
 
 import unittest
-from unittest import TestCase
 
 from mo_testing.fuzzytestcase import FuzzyTestCase
 
 from moz_sql_parser import parse, format
-try:
-    from tests.util import assertRaises
-except ImportError:
-    from .util import assertRaises  # RELATIVE IMPORT SO WE CAN RUN IN pyLibrary
 
 
 class TestErrors(FuzzyTestCase):
@@ -46,14 +41,9 @@ class TestErrors(FuzzyTestCase):
     def test_bad_join_name(self):
         bad_json = {'select': {'value': 't1.field1'},
                     'from': ['t1', {'left intro join': 't2', 'on': {'eq': ['t1.id', 't2.id']}}]}
-        assertRaises(
-            ["Fail to detect join type", 'left intro join'],
-            lambda: format(bad_json)
-        )
+        with self.assertRaises(["Fail to detect join type", 'left intro join']):
+            format(bad_json)
 
     def test_order_by_must_follow_union(self):
-        assertRaises(
-            ["(at char 27)"],
-            lambda: parse("select a from b order by a union select 2")
-        )
-
+        with self.assertRaises(["(at char 27)"]):
+            parse("select a from b order by a union select 2")

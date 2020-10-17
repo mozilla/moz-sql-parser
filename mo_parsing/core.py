@@ -2,7 +2,7 @@
 from threading import RLock
 
 from mo_dots import Data
-from mo_future import text, is_text
+from mo_future import text
 from mo_logs import Log
 
 from mo_parsing.cache import packrat_cache
@@ -16,7 +16,8 @@ from mo_parsing.exceptions import (
 from mo_parsing.results import ParseResults
 from mo_parsing.utils import (
     _MAX_INT,
-    wrap_parse_action, empty_tuple, is_forward,
+    wrap_parse_action,
+    empty_tuple,
 )
 
 # import later
@@ -48,6 +49,7 @@ DEBUG = False
 # TODO: Replace with a stack of parse state
 _reset_actions = []
 
+
 def add_reset_action(action):
     """
     ADD A FUNCTION THAT WILL RESET GLOBAL STATE THAT A PARSER MAY USE
@@ -57,6 +59,8 @@ def add_reset_action(action):
 
 
 locker = RLock()
+
+
 def entrypoint(func):
     def output(*args, **kwargs):
         with locker:
@@ -67,6 +71,7 @@ def entrypoint(func):
                     Log.error("reset action failed", cause=e)
 
             return func(*args, **kwargs)
+
     return output
 
 
@@ -83,7 +88,9 @@ class ParserElement(object):
 
         self.parser_config = Data()
         self.parser_config.failAction = None
-        self.parser_config.mayReturnEmpty = False  # used when checking for left-recursion
+        self.parser_config.mayReturnEmpty = (
+            False  # used when checking for left-recursion
+        )
         self.parser_config.mayIndexError = True  # used to optimize exception handling for subclasses that don't advance parse index
 
     def copy(self):
@@ -112,8 +119,8 @@ class ParserElement(object):
 
     def setBreak(self, breakFlag=True):
         """Method to invoke the Python pdb debugger when this element is
-           about to be parsed. Set ``breakFlag`` to True to enable, False to
-           disable.
+        about to be parsed. Set ``breakFlag`` to True to enable, False to
+        disable.
         """
         if breakFlag:
             _parseMethod = self._parse
@@ -153,7 +160,9 @@ class ParserElement(object):
         output.callDuringTry = self.callDuringTry or callDuringTry
         return output
 
-    def addCondition(self, *fns, message=None, fatal=False, callDuringTry=False, **kwargs):
+    def addCondition(
+        self, *fns, message=None, fatal=False, callDuringTry=False, **kwargs
+    ):
         """Add a boolean predicate function to expression's list of parse actions. See
         :class:`setParseAction` for function call signatures. Unlike ``setParseAction``,
         functions passed to ``addCondition`` need to return boolean success/fail of the condition.
@@ -173,23 +182,23 @@ class ParserElement(object):
         """
         output = self.copy()
         for fn in fns:
-            output.parseAction.append(
-                conditionAsParseAction(fn, message=message, fatal=fatal)
-            )
+            output.parseAction.append(conditionAsParseAction(
+                fn, message=message, fatal=fatal
+            ))
 
         output.callDuringTry = self.callDuringTry or callDuringTry
         return output
 
     def setFailAction(self, fn):
         """Define action to perform if parsing fails at this expression.
-           Fail acton fn is a callable function that takes the arguments
-           ``fn(s, loc, expr, err)`` where:
-           - expr = the parse expression that failed
-           - loc = location where expression match was attempted and failed
-           - s = string being parsed
-           - err = the exception thrown
-           The function returns no value.  It may throw :class:`ParseFatalException`
-           if it is desired to stop parsing immediately."""
+        Fail acton fn is a callable function that takes the arguments
+        ``fn(s, loc, expr, err)`` where:
+        - expr = the parse expression that failed
+        - loc = location where expression match was attempted and failed
+        - s = string being parsed
+        - err = the exception thrown
+        The function returns no value.  It may throw :class:`ParseFatalException`
+        if it is desired to stop parsing immediately."""
         self.parser_config.failAction = fn
         return self
 
@@ -213,11 +222,7 @@ class ParserElement(object):
                     loc, tokens = self.parseImpl(string, preloc, doActions)
                 except IndexError:
                     if self.parser_config.mayIndexError or preloc >= len(string):
-                        ex = ParseException(
-                            self,
-                            len(string),
-                            string,
-                        )
+                        ex = ParseException(self, len(string), string,)
                         packrat_cache.set(lookup, ex)
                         raise ex
                     raise
@@ -435,12 +440,11 @@ class ParserElement(object):
             scanned = [t for t, s, e in self.scanString(string, maxMatches)]
         else:
             g = Group(self)
-            scanned = [ParseResults(g, [t]) for t, s, e in self.scanString(string, maxMatches)]
+            scanned = [
+                ParseResults(g, [t]) for t, s, e in self.scanString(string, maxMatches)
+            ]
 
-        output = ParseResults(
-            ZeroOrMore(g),
-            scanned,
-        )
+        output = ParseResults(ZeroOrMore(g), scanned,)
         return output
 
     def split(self, string, maxsplit=_MAX_INT, includeSeparators=False):
@@ -559,14 +563,18 @@ class ParserElement(object):
 
         if maxElements == Ellipsis or maxElements == None:
             maxElements = _MAX_INT
-        elif not isinstance(maxElements, int) or maxElements < minElements or maxElements==0:
+        elif (
+            not isinstance(maxElements, int)
+            or maxElements < minElements
+            or maxElements == 0
+        ):
             raise TypeError(
                 "cannot multiply 'ParserElement' and ('%s', '%s') objects",
                 type(other[0]),
                 type(other[1]),
             )
 
-        ret = Many(self, min_match = minElements, max_match=maxElements).streamline()
+        ret = Many(self, min_match=minElements, max_match=maxElements).streamline()
         return ret
 
     def __rmul__(self, other):
