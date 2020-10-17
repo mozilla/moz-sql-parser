@@ -1090,3 +1090,10 @@ from benn.college_football_players
     def test_193(self):
         expected_sql = "SELECT id, CASE WHEN id < 13 THEN 'child' WHEN id < 20 THEN 'teenager' ELSE 'adult' END AS id_range FROM users"
         self.assertEqual(expected_sql, format(parse(expected_sql)))
+
+    def test_issue137(self):
+        # https: // www.sqlite.org / lang_expr.html  # operators
+        sql = "select * from t where ( 'here' <= `col_smallint_key_signed`) IS NULL ;"
+        result = format(parse(sql))
+        expected = "SELECT * FROM t WHERE 'here' <= col_smallint_key_signed IS NULL"
+        self.assertEqual(result, expected)

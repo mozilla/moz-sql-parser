@@ -182,9 +182,9 @@ class ParserElement(object):
         """
         output = self.copy()
         for fn in fns:
-        output.parseAction.append(conditionAsParseAction(
+            output.parseAction.append(conditionAsParseAction(
                 fn, message=message, fatal=fatal
-        ))
+            ))
 
         output.callDuringTry = self.callDuringTry or callDuringTry
         return output

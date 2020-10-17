@@ -10,7 +10,6 @@
 from __future__ import absolute_import, division, unicode_literals
 
 import json
-from collections import Mapping
 from threading import Lock
 
 from mo_dots import NullType
