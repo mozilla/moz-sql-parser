@@ -1842,3 +1842,17 @@ from benn.college_football_players
         result = format(parse(sql))
         expected = "SELECT * FROM t WHERE 'here' <= col_smallint_key_signed IS NULL"
         self.assertEqual(result, expected)
+
+    def test_issue122_deep_column_name(self):
+        # A FUNCTION CAN RETURN AN ARRAY OF TUPLES: `AS s(a)` WILL PROVIDE NAMES
+        # WE WILL PARSE THE DESCRUCTURING THAT IS HAPPENING HERE
+        # https://github.com/klahnakoski/ActiveData/blob/c1ef94f9aa4f043e1a62a2230ec60835b9feafdb/docs/jx_clause_select.md#destructuring-tuples
+
+        #               0         1         2         3         4
+        #               01234567890123456789012345678901234567890123456789
+        expected_sql = "SELECT s.a FROM generate_series(1,2) AS s(a)"
+        expected_json = {
+            "select": {"value": "s.a"},
+            "from": {"value": {"generate_series": [1, 2]}, "name": {"S": ["a", "b"]}},
+        }
+        self.verify_formatting(expected_sql, expected_json)

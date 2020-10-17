@@ -94,6 +94,8 @@ IS_NOT = Group(IS + NOT).set_parser_name("is_not")
 
 RESERVED = Or([v for k, v in locals().items() if isinstance(v, ParserElement) and not isinstance(v, Literal)])
 
+LB = Literal("(").suppress()
+RB = Literal(")").suppress()
 
 join_keywords = {
     "join",

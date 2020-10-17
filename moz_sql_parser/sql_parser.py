@@ -79,7 +79,7 @@ from moz_sql_parser.keywords import (
     OVER,
     PARTITION_BY,
     CAST,
-    SELECT_DISTINCT,
+    SELECT_DISTINCT, LB, RB,
 )
 
 engine = Engine().use()
@@ -212,6 +212,11 @@ def to_join_call(tokens):
     return output
 
 
+def to_alias(tokens):
+    if tokens['col']:
+        return {tokens['table_name']: tokens['col']}
+    return tokens['table_name']
+
 def to_select_call(tokens):
     if tokens["value"][0][0] == "*":
         return ["*"]
@@ -312,22 +317,14 @@ datatype = Word(IDENT_CHAR).addParseAction(lambda t: t[0].lower())
 
 # CAST
 cast = (
-    CAST("op")
-    + Literal("(").suppress()
-    + expr("params")
-    + AS
-    + datatype("params")
-    + Literal(")").suppress()
+    CAST("op") + LB + expr("params") + AS + datatype("params") + RB
 ).addParseAction(to_json_call)
 
 ordered_sql = Forward()
 
 
 call_function = (
-    ident("op")
-    + Literal("(").suppress()
-    + Optional(ordered_sql | Group(delimitedList(expr)))("params")
-    + Literal(")").suppress()
+    ident("op") + LB + Optional(ordered_sql | delimitedList(expr))("params") + RB
 ).addParseAction(to_json_call)
 
 
@@ -355,12 +352,8 @@ compound = (
     | interval
     | case
     | cast
-    | (Literal("(").suppress() + ordered_sql + Literal(")").suppress())
-    | (
-        Literal("(").suppress()
-        + Group(delimitedList(expr)).addParseAction(to_tuple_call)
-        + Literal(")").suppress()
-    )
+    | (LB + ordered_sql + RB)
+    | (LB + Group(delimitedList(expr)).addParseAction(to_tuple_call) + RB)
     | realNum.set_parser_name("float")
     | intNum.set_parser_name("int")
     | sqlString.set_parser_name("string")
@@ -383,6 +376,11 @@ expr << Group(
     ).set_parser_name("expression")
 )
 
+alias = (
+    ident("table_name") + Optional(LB + delimitedList(ident("col")) + RB)
+)("name").set_parser_name("alias").addParseAction(to_alias)
+
+
 # SQL STATEMENT
 sortColumn = expr("value").set_parser_name("sort1") + Optional(
     DESC("sort") | ASC("sort")
@@ -393,12 +391,12 @@ selectColumn = (
         Group(expr).set_parser_name("expression1")("value")
         + Optional(
             OVER
-            + Literal("(").suppress()
+            + LB
             + Optional(PARTITION_BY + delimitedList(Group(expr))("partitionby"))
             + Optional(ORDER_BY + delimitedList(Group(expr))("orderby"))
-            + Literal(")").suppress()
+            + RB
         )("over")
-        + Optional(Optional(AS) + ident("name").set_parser_name("column_name1"))
+        + Optional(Optional(AS) + alias)
         | Literal("*")("value")
     )
     .set_parser_name("column")
@@ -406,16 +404,9 @@ selectColumn = (
 )
 
 table_source = (
-    (
-        (Literal("(").suppress() + ordered_sql + Literal(")").suppress())
-        | call_function
-    )("value").set_parser_name("table source")
-    + Optional(Optional(AS) + ident("name").set_parser_name("table alias"))
-    | (
-        ident("value").set_parser_name("table name")
-        + Optional(AS)
-        + ident("name").set_parser_name("table alias")
-    )
+    ((LB + ordered_sql + RB) | call_function)("value").set_parser_name("table source")
+    + Optional(Optional(AS) + alias)
+    | (ident("value").set_parser_name("table name") + Optional(AS) + alias)
     | ident.set_parser_name("table name")
 )
 
@@ -463,11 +454,7 @@ statement = Group(
     Group(Optional(
         WITH
         + delimitedList(Group(
-            ident("name")
-            + AS
-            + Literal("(").suppress()
-            + ordered_sql("value")
-            + Literal(")").suppress()
+            ident("name") + AS + LB + ordered_sql("value") + Literal(")").suppress()
         ))
     ))("with")
     + ordered_sql("query")
