@@ -129,6 +129,7 @@ class Formatter:
     clauses = [
         'with_',
         'select',
+        'select_distinct',
         'from_',
         'where',
         'groupby',
@@ -180,6 +181,9 @@ class Formatter:
                 # Nested queries
                 return '({})'.format(self.format(json))
             elif 'select' in json:
+                # Nested queries
+                return '({})'.format(self.format(json))
+            elif 'select_distinct' in json:
                 # Nested queries
                 return '({})'.format(self.format(json))
             else:
@@ -339,6 +343,10 @@ class Formatter:
     def select(self, json):
         if 'select' in json:
             return 'SELECT {0}'.format(self.dispatch(json['select']))
+
+    def select_distinct(self, json):
+        if 'select_distinct' in json:
+            return 'SELECT DISTINCT {0}'.format(self.dispatch(json['select_distinct']))
 
     def from_(self, json):
         is_join = False

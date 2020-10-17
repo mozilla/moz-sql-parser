@@ -79,6 +79,7 @@ from moz_sql_parser.keywords import (
     OVER,
     PARTITION_BY,
     CAST,
+    SELECT_DISTINCT,
 )
 
 engine = Engine().use()
@@ -336,6 +337,7 @@ def _or(values):
         output |= v
     return output
 
+
 interval = (
     Keyword("interval", caseless=True).suppress()
     + (realNum | intNum)("count")
@@ -347,9 +349,6 @@ compound = (
     | TRUE
     | FALSE
     | NOCASE
-    | (
-        Keyword("distinct", caseless=True)("op") + expr("params")
-    ).addParseAction(to_json_call)
     | (
         Keyword("date", caseless=True)("op") + sqlString("params")
     ).addParseAction(to_json_call)
@@ -437,8 +436,10 @@ join = (
 ).addParseAction(to_join_call)
 
 unordered_sql = Group(
-    SELECT
-    + delimitedList(selectColumn)("select")
+    (
+        SELECT_DISTINCT + delimitedList(selectColumn)("select_distinct")
+        | SELECT + delimitedList(selectColumn)("select")
+    )
     + Optional(
         (FROM + delimitedList(Group(table_source)) + ZeroOrMore(join))("from")
         + Optional(WHERE + expr("where"))
