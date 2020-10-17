@@ -5,7 +5,6 @@ import inspect
 import string
 import sys
 import warnings
-from itertools import filterfalse
 from types import FunctionType
 
 from mo_future import text, unichr
@@ -303,7 +302,7 @@ class unicode_set(object):
     @_lazyclassproperty
     def printables(cls):
         "all non-whitespace characters in this range"
-        return "".join(filterfalse(text.isspace, cls._get_chars_for_ranges()))
+        return "".join(sorted(filter(lambda c: not c.isspace(), cls._get_chars_for_ranges())))
 
     @_lazyclassproperty
     def alphas(cls):
