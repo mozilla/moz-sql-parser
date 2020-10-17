@@ -10,10 +10,12 @@ NOCASE = Keyword("nocase", caseless=True)
 ASC = Keyword("asc", caseless=True)
 DESC = Keyword("desc", caseless=True)
 
+
 # SIMPLE KEYWORDS
 AS = Keyword("as", caseless=True).suppress()
 ALL = Keyword("all", caseless=True)
 BY = Keyword("by", caseless=True).suppress()
+CAST = Keyword("cast", caseless=True)
 CROSS = Keyword("cross", caseless=True).suppress()
 FROM = Keyword("from", caseless=True).suppress()
 FULL = Keyword("full", caseless=True).suppress()

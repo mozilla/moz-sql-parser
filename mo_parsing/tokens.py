@@ -141,7 +141,7 @@ class Keyword(Token):
         else:
             self.identChars = "".join(sorted(set(identChars)))
         self.match = matchString
-        self.token_name = matchString
+        # self.token_name = matchString
         self.parser_name = self.match
         self.parser_config.mayReturnEmpty = False
         self.parser_config.mayIndexError = False

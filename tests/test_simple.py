@@ -1061,3 +1061,9 @@ class TestSimple(TestCase):
             "from": "tab"
         }
         self.assertEqual(result, expected)
+
+    def test_issue119(self):
+        sql = 'SELECT 1 + CAST(1 AS INT) result'
+        result = parse(sql)
+        expected = {"select": {"value": {"add": [1, {"cast": [1, "int"]}]}, "name": "result"}}
+        self.assertEqual(result, expected)

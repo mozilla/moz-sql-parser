@@ -1097,3 +1097,4 @@ from benn.college_football_players
         result = format(parse(sql))
         expected = "SELECT * FROM t WHERE 'here' <= col_smallint_key_signed IS NULL"
         self.assertEqual(result, expected)
+

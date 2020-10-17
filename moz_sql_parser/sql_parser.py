@@ -78,6 +78,7 @@ from moz_sql_parser.keywords import (
     FALSE,
     OVER,
     PARTITION_BY,
+    CAST,
 )
 
 engine = Engine().use()
@@ -304,6 +305,20 @@ case = (
     + END
 ).addParseAction(to_case_call)
 
+
+# MAY BE TOO FLEXIBLE
+datatype = Word(IDENT_CHAR).addParseAction(lambda t: t[0].lower())
+
+# CAST
+cast = (
+    CAST("op")
+    + Literal("(").suppress()
+    + expr("params")
+    + AS
+    + datatype("params")
+    + Literal(")").suppress()
+).addParseAction(to_json_call)
+
 ordered_sql = Forward()
 
 
@@ -320,7 +335,6 @@ def _or(values):
     for v in values[1:]:
         output |= v
     return output
-
 
 interval = (
     Keyword("interval", caseless=True).suppress()
@@ -341,6 +355,7 @@ compound = (
     ).addParseAction(to_json_call)
     | interval
     | case
+    | cast
     | (Literal("(").suppress() + ordered_sql + Literal(")").suppress())
     | (
         Literal("(").suppress()
@@ -353,6 +368,7 @@ compound = (
     | call_function
     | ident
 )
+
 expr << Group(
     infixNotation(
         compound,
