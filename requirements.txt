@@ -1,2 +1,4 @@
-mo-future>=3
-pyparsing==2.3.1
+mo-future
+mo-dots
+mo-logs
+

@@ -15,10 +15,17 @@ import re
 
 from mo_future import string_types, text, first, long, is_text
 
-from moz_sql_parser.keywords import RESERVED, join_keywords, precedence, binary_ops
+from moz_sql_parser.keywords import join_keywords, precedence, binary_ops, RESERVED
 
 VALID = re.compile(r'^[a-zA-Z_]\w*$')
 
+
+def is_keyword(identifier):
+    try:
+        RESERVED.parseString(identifier)
+        return True
+    except Exception:
+        return False
 
 def should_quote(identifier):
     """
@@ -33,7 +40,9 @@ def should_quote(identifier):
     """
     return (
         identifier != '*' and (
-            not VALID.match(identifier) or identifier in RESERVED))
+            not VALID.match(identifier) or is_keyword(identifier)
+        )
+    )
 
 
 def split_field(field):
@@ -91,7 +100,12 @@ def Operator(op):
     def func(self, json):
         acc = []
 
-        for v in json:
+        if isinstance(json, dict):
+            # {VARIABLE: VALUE} FORM
+            k, v = first(json.items())
+            json = [k, {'literal': v}]
+
+        for v in json if isinstance(json, list) else [json]:
             sql = self.dispatch(v)
             if isinstance(v, (text, int, float, long)):
                 acc.append(sql)
@@ -101,18 +115,21 @@ def Operator(op):
             if p is None:
                 acc.append(sql)
                 continue
-            if p>=prec:
+            if p >= prec:
                 acc.append("(" + sql + ")")
             else:
                 acc.append(sql)
         return op.join(acc)
+
     return func
 
 
 class Formatter:
 
     clauses = [
+        'with_',
         'select',
+        'select_distinct',
         'from_',
         'where',
         'groupby',
@@ -166,6 +183,9 @@ class Formatter:
             elif 'select' in json:
                 # Nested queries
                 return '({})'.format(self.format(json))
+            elif 'select_distinct' in json:
+                # Nested queries
+                return '({})'.format(self.format(json))
             else:
                 return self.op(json)
         if isinstance(json, string_types):
@@ -184,7 +204,7 @@ class Formatter:
 
     def op(self, json):
         if 'on' in json:
-            return self._on(json)
+            return self._join_on(json)
 
         if len(json) > 1:
             raise Exception('Operators should have only one key!')
@@ -216,11 +236,14 @@ class Formatter:
     def _like(self, pair):
         return '{0} LIKE {1}'.format(self.dispatch(pair[0]), self.dispatch(pair[1]))
 
-    def _nlike(self, pair):
+    def _not_like(self, pair):
         return '{0} NOT LIKE {1}'.format(self.dispatch(pair[0]), self.dispatch(pair[1]))
 
     def _is(self, pair):
         return '{0} IS {1}'.format(self.dispatch(pair[0]), self.dispatch(pair[1]))
+
+    def _collate(self, pair):
+        return '{0} COLLATE {1}'.format(self.dispatch(pair[0]), self.dispatch(pair[1]))
 
     def _in(self, json):
         valid = self.dispatch(json[1])
@@ -242,10 +265,13 @@ class Formatter:
 
     def _case(self, checks):
         parts = ['CASE']
-        for check in checks:
+        for check in checks if isinstance(checks, list) else [checks]:
             if isinstance(check, dict):
-                parts.extend(['WHEN', self.dispatch(check['when'])])
-                parts.extend(['THEN', self.dispatch(check['then'])])
+                if 'when' in check and 'then' in check:
+                    parts.extend(['WHEN', self.dispatch(check['when'])])
+                    parts.extend(['THEN', self.dispatch(check['then'])])
+                else:
+                    parts.extend(['ELSE', self.dispatch(check)])
             else:
                 parts.extend(['ELSE', self.dispatch(check)])
         parts.append('END')
@@ -265,7 +291,7 @@ class Formatter:
     def _not_between(self, json):
         return '{0} NOT BETWEEN {1} AND {2}'.format(self.dispatch(json[0]), self.dispatch(json[1]), self.dispatch(json[2]))
 
-    def _on(self, json):
+    def _join_on(self, json):
         detected_join = join_keywords & set(json.keys())
         if len(detected_join) == 0:
             raise Exception(
@@ -277,9 +303,17 @@ class Formatter:
 
         join_keyword = detected_join.pop()
 
-        return '{0} {1} ON {2}'.format(
-            join_keyword.upper(), self.dispatch(json[join_keyword]), self.dispatch(json['on'])
-        )
+        acc = []
+        acc.append(join_keyword.upper())
+        acc.append(self.dispatch(json[join_keyword]))
+
+        if json.get('on'):
+            acc.append("ON")
+            acc.append(self.dispatch(json['on']))
+        if json.get('using'):
+            acc.append("USING")
+            acc.append(self.dispatch(json['using']))
+        return " ".join(acc)
 
     def union(self, json):
         return ' UNION '.join(self.query(query) for query in json)
@@ -295,9 +329,24 @@ class Formatter:
             if part
         )
 
+    def with_(self, json):
+        if 'with' in json:
+            with_ = json['with']
+            if not isinstance(with_, list):
+                with_ = [with_]
+            parts = ', '.join(
+                '{0} AS {1}'.format(part['name'], self.dispatch(part['value']))
+                for part in with_
+            )
+            return 'WITH {0}'.format(parts)
+
     def select(self, json):
         if 'select' in json:
             return 'SELECT {0}'.format(self.dispatch(json['select']))
+
+    def select_distinct(self, json):
+        if 'select_distinct' in json:
+            return 'SELECT DISTINCT {0}'.format(self.dispatch(json['select_distinct']))
 
     def from_(self, json):
         is_join = False
@@ -312,7 +361,9 @@ class Formatter:
             for token in from_:
                 if join_keywords & set(token):
                     is_join = True
-                parts.append(self.dispatch(token))
+                    parts.append(self._join_on(token))
+                else:
+                    parts.append(self.dispatch(token))
             joiner = ' ' if is_join else ', '
             rest = joiner.join(parts)
             return 'FROM {0}'.format(rest)

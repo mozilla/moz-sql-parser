@@ -6,13 +6,12 @@
         "Topic :: Software Development :: Libraries",
         "Topic :: Software Development :: Libraries :: Python Modules",
         "Programming Language :: SQL",
-        "Programming Language :: Python :: 2.7",
-        "Programming Language :: Python :: 3.6",
+        "Programming Language :: Python :: 3",
         "License :: OSI Approved :: Mozilla Public License 2.0 (MPL 2.0)"
     ],
     "description": "Extract Parse Tree from SQL",
     "include_package_data": true,
-    "install_requires": ["mo-future>=3.31.20024", "pyparsing==2.3.1"],
+    "install_requires": ["mo-dots>=3.93.20259", "mo-future>=3.89.20246", "mo-logs>=3.100.20292"],
     "license": "MPL 2.0",
     "long_description": {
         "$concat": [
@@ -23,8 +22,8 @@
             "",
             "|Branch      |Status   |",
             "|------------|---------|",
-            "|master      | [![Build Status](https://travis-ci.org/mozilla/moz-sql-parser.svg?branch=master)](https://travis-ci.org/mozilla/moz-sql-parser) |",
-            "|dev         | [![Build Status](https://travis-ci.org/mozilla/moz-sql-parser.svg?branch=dev)](https://travis-ci.org/mozilla/moz-sql-parser)    |",
+            "|master      | [![Build Status](https://travis-ci.org/klahnakoski/moz-sql-parser.svg?branch=master)](https://travis-ci.org/mozilla/moz-sql-parser) |",
+            "|dev         | [![Build Status](https://travis-ci.org/klahnakoski/moz-sql-parser.svg?branch=dev)](https://travis-ci.org/mozilla/moz-sql-parser)    |",
             "",
             "",
             "## Problem Statement",
@@ -125,8 +124,8 @@
     },
     "long_description_content_type": "text/markdown",
     "name": "moz-sql-parser",
-    "packages": ["moz_sql_parser"],
+    "packages": ["moz_sql_parser", "mo_parsing"],
     "url": "https://github.com/mozilla/moz-sql-parser",
-    "version": "3.32.20026",
+    "version": "3.101.20292",
     "zip_safe": true
 }

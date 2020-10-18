@@ -4,20 +4,20 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this file,
 # You can obtain one at http://mozilla.org/MPL/2.0/.
 #
-# Author: Kyle Lahnakoski (kyle@lahnakoski.com)
+# Contact: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
 
 from __future__ import absolute_import, division, unicode_literals
 
-from collections import Mapping
 import json
 from threading import Lock
 
-from mo_future import binary_type, items, number_types, text
-from pyparsing import ParseException, ParseResults
+from mo_dots import NullType
+from mo_future import binary_type, number_types, text
 
+from mo_parsing import ParseException
 from moz_sql_parser.debugs import all_exceptions
-from moz_sql_parser.sql_parser import SQLParser
+from moz_sql_parser.sql_parser import SQLParser, scrub_literal
 
 
 def __deploy__():
@@ -60,45 +60,44 @@ def format(json, **kwargs):
 
 
 def _scrub(result):
-    if isinstance(result, text):
+    if isinstance(result, (text, NullType)):
         return result
     elif isinstance(result, binary_type):
         return result.decode('utf8')
     elif isinstance(result, number_types):
         return result
-    elif not result:
-        return {}
-    elif isinstance(result, (list, ParseResults)):
-        if not result:
+    elif isinstance(result, dict) and not result:
+        return result
+    elif isinstance(result, list):
+        output = [
+            rr
+            for r in result
+            for rr in [_scrub(r)]
+            if rr is not None
+        ]
+
+        if not output:
             return None
-        elif len(result) == 1:
-            return _scrub(result[0])
+        elif len(output) == 1:
+            return output[0]
         else:
-            output = [
-                rr
-                for r in result
-                for rr in [_scrub(r)]
-                if rr != None
-            ]
-            # IF ALL MEMBERS OF A LIST ARE LITERALS, THEN MAKE THE LIST LITERAL
-            if all(isinstance(r, number_types) for r in output):
-                pass
-            elif all(isinstance(r, number_types) or (isinstance(r, Mapping) and "literal" in r.keys()) for r in output):
-                output = {"literal": [r['literal'] if isinstance(r, Mapping) else r for r in output]}
-            return output
-    elif not items(result):
-        return {}
+            return scrub_literal(output)
     else:
-        return {
+        # ATTEMPT A DICT INTERPRETATION
+        kv_pairs = list(result.items())
+        output = {
             k: vv
-            for k, v in result.items()
+            for k, v in kv_pairs
+            if v is not None
             for vv in [_scrub(v)]
-            if vv != None
+            if vv is not None
         }
+        if output:
+            return output
+        return _scrub(list(result))
 
 
 _ = json.dumps
-
 
 __all__ = [
     'parse',

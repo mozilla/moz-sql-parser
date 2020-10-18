@@ -4,7 +4,7 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this file,
 # You can obtain one at http://mozilla.org/MPL/2.0/.
 #
-# Author: Kyle Lahnakoski (kyle@lahnakoski.com)
+# Contact: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
 
 from __future__ import absolute_import, division, unicode_literals
@@ -12,365 +12,461 @@ from __future__ import absolute_import, division, unicode_literals
 import ast
 import sys
 
-from pyparsing import Combine, Forward, Group, Keyword, Literal, Optional, ParserElement, Regex, Word, ZeroOrMore, \
-    alphanums, alphas, delimitedList, infixNotation, opAssoc, restOfLine
+from mo_dots import is_data
+from mo_future import is_text, text, number_types
 
+from mo_parsing import (
+    Combine,
+    Forward,
+    Group,
+    Keyword,
+    Literal,
+    Optional,
+    Regex,
+    Word,
+    ZeroOrMore,
+    alphanums,
+    delimitedList,
+    infixNotation,
+    restOfLine,
+    RIGHT_ASSOC,
+    LEFT_ASSOC,
+    ParseResults,
+)
+from mo_parsing.engine import Engine
+from mo_parsing.utils import is_number
 from moz_sql_parser.debugs import debug
-from moz_sql_parser.keywords import AND, AS, ASC, BETWEEN, CASE, COLLATE_NOCASE, CROSS_JOIN, DESC, ELSE, END, FROM, \
-    FULL_JOIN, FULL_OUTER_JOIN, GROUP_BY, HAVING, IN, INNER_JOIN, IS, IS_NOT, JOIN, LEFT_JOIN, LEFT_OUTER_JOIN, LIKE, \
-    LIMIT, NOT_BETWEEN, NOT_IN, NOT_LIKE, OFFSET, ON, OR, ORDER_BY, RESERVED, RIGHT_JOIN, RIGHT_OUTER_JOIN, SELECT, \
-    THEN, UNION, UNION_ALL, USING, WHEN, WHERE, binary_ops, unary_ops, WITH
+from moz_sql_parser.keywords import (
+    AS,
+    ASC,
+    CASE,
+    CROSS_JOIN,
+    DESC,
+    ELSE,
+    END,
+    FROM,
+    FULL_JOIN,
+    FULL_OUTER_JOIN,
+    GROUP_BY,
+    HAVING,
+    INNER_JOIN,
+    JOIN,
+    LEFT_JOIN,
+    LEFT_OUTER_JOIN,
+    LIMIT,
+    OFFSET,
+    ON,
+    ORDER_BY,
+    RIGHT_JOIN,
+    RIGHT_OUTER_JOIN,
+    SELECT,
+    THEN,
+    UNION,
+    UNION_ALL,
+    USING,
+    WHEN,
+    WHERE,
+    unary_ops,
+    WITH,
+    durations,
+    KNOWN_OPS,
+    RESERVED,
+    binary_ops,
+    NULL,
+    NOCASE,
+    TRUE,
+    FALSE,
+    OVER,
+    PARTITION_BY,
+    CAST,
+    SELECT_DISTINCT, LB, RB,
+)
 
-ParserElement.enablePackrat()
+engine = Engine().use()
+engine.set_debug_actions(*debug)
 
 # PYPARSING USES A LOT OF STACK SPACE
-sys.setrecursionlimit(1500)
+sys.setrecursionlimit(3000)
 
 IDENT_CHAR = alphanums + "@_$"
 
-KNOWN_OPS = [
-    # https://www.sqlite.org/lang_expr.html
-    Literal("||").setName("concat").setDebugActions(*debug),
-    (
-        Literal("*").setName("mul") |
-        Literal("/").setName("div") |
-        Literal("%").setName("mod")
-    ).setDebugActions(*debug),
-    (
-        Literal("+").setName("add") |
-        Literal("-").setName("sub")
-    ).setDebugActions(*debug),
-    Literal("&").setName("binary_and").setDebugActions(*debug),
-    Literal("|").setName("binary_or").setDebugActions(*debug),
-    (
-        Literal(">=").setName("gte") |
-        Literal("<=").setName("lte") |
-        Literal("<").setName("lt") |
-        Literal(">").setName("gt")
-    ).setDebugActions(*debug),
-    (
-        Literal("==").setName("eq") |
-        Literal("!=").setName("neq") |
-        Literal("<>").setName("neq") |
-        Literal("=").setName("eq")
-    ).setDebugActions(*debug),
 
-    (BETWEEN.setName("between").setDebugActions(*debug), AND),
-    (NOT_BETWEEN.setName("not_between").setDebugActions(*debug), AND),
-    IN.setName("in").setDebugActions(*debug),
-    NOT_IN.setName("nin").setDebugActions(*debug),
-    IS_NOT.setName("neq").setDebugActions(*debug),
-    IS.setName("is").setDebugActions(*debug),
-    LIKE.setName("like").setDebugActions(*debug),
-    NOT_LIKE.setName("nlike").setDebugActions(*debug),
-    AND.setName("and").setDebugActions(*debug),
-    OR.setName("or").setDebugActions(*debug)
-]
+def scrub_literal(candidate):
+    # IF ALL MEMBERS OF A LIST ARE LITERALS, THEN MAKE THE LIST LITERAL
+    if all(isinstance(r, number_types) for r in candidate):
+        pass
+    elif all(
+        isinstance(r, number_types) or (is_data(r) and "literal" in r.keys())
+        for r in candidate
+    ):
+        candidate = {"literal": [r["literal"] if is_data(r) else r for r in candidate]}
+    return candidate
 
-def to_json_operator(instring, tokensStart, retTokens):
+
+def to_json_operator(tokens):
     # ARRANGE INTO {op: params} FORMAT
-    tok = retTokens[0]
-    op = tok[1]
-    clean_op = op.lower()
-    clean_op = binary_ops.get(clean_op, clean_op)
+    length = len(tokens.tokens)
+    if length == 2:
+        op = tokens.tokens[0].type.parser_name
+        if op == "neg" and is_number(tokens[1]):
+            return -tokens[1]
+        return {op: tokens[1]}
+    elif length == 5:
+        return {tokens.tokens[1].type.parser_name: [tokens[0], tokens[2], tokens[4]]}
 
-    for o in KNOWN_OPS:
-        if isinstance(o, tuple):
-            # TRINARY OPS
-            if o[0].matches(op):
-                return {clean_op: [tok[0], tok[2], tok[4]]}
-        elif o.matches(op):
-            break
-    else:
-        if op == COLLATE_NOCASE.match:
-            op = COLLATE_NOCASE.name
-            return {op: tok[0]}
+    op = tokens[1]
+    if not isinstance(op, text):
+        op = op.type.parser_name
+    op = binary_ops.get(op, op)
+    if op == "eq":
+        if tokens[2] == None:
+            return {"missing": tokens[0]}
+        elif tokens[0] == "null":
+            return {"missing": tokens[2]}
+    elif op == "neq":
+        if tokens[2] == None:
+            return {"exists": tokens[0]}
+        elif tokens[0] == "null":
+            return {"exists": tokens[2]}
+    elif op == "is":
+        if tokens[2] == None:
+            return {"missing": tokens[0]}
         else:
-            raise Exception("not found")
-
-    if clean_op == "eq":
-        if tok[2] == "null":
-            return {"missing": tok[0]}
-        elif tok[0] == "null":
-            return {"missing": tok[2]}
-    elif clean_op == "neq":
-        if tok[2] == "null":
-            return {"exists": tok[0]}
-        elif tok[0] == "null":
-            return {"exists": tok[2]}
-    elif clean_op == "is":
-        if tok[2] == 'null':
-            return {"missing": tok[0]}
+            return {"exists": tokens[0]}
+    elif op == "is_not":
+        if tokens[2] == None:
+            return {"exists": tokens[0]}
         else:
-            return {"exists": tok[0]}
+            return {"missing": tokens[0]}
+
+    operands = [tokens[0], tokens[2]]
+    binary_op = {op: operands}
+
+    if op in {"add", "mul", "and", "or"}:
+        # ASSOCIATIVE OPERATORS
+        acc = []
+        for operand in operands:
+            if isinstance(operand, ParseResults):
+                # if operand[0][0] and operand[0][0][0] and operand[0][0][0]['and']:
+                #     prefix = operand[0].get(op)
+                prefix = operand[0].get(op)
+                if prefix:
+                    acc.extend(prefix)
+                    continue
+            acc.append(operand)
+        return {op: acc}
+    return binary_op
 
 
-    operands = [tok[0], tok[2]]
-    simple = {clean_op: operands}
-    if len(tok) <= 3:
-        return simple
-
-    if clean_op in {"add", "mul", "and", "or"}:
-        # ACCUMULATE SUBSEQUENT, IDENTICAL OPS
-        for i in range(3, len(tok), 2):
-            if tok[i] != op:
-                return to_json_operator(None, None, [[simple] + tok[i:]])
-            else:
-                operands.append(tok[i+1])
-        return simple
-    else:
-        # SIMPLE BINARY
-        return to_json_operator(None, None, [[simple] + tok[3:]])
+def to_tuple_call(tokens):
+    # IS THIS ONE VALUE IN (), OR MANY?
+    if tokens.length() == 1:
+        return tokens[0][0]
+    return scrub_literal([t[0] for t in tokens])
 
 
-def to_json_call(instring, tokensStart, retTokens):
+def to_json_call(tokens):
     # ARRANGE INTO {op: params} FORMAT
-    tok = retTokens
-    op = tok.op.lower()
-    op = unary_ops.get(op, op)
+    op = tokens["op"].lower()
+    op = binary_ops.get(op, op)
 
-    params = tok.params
+    params = tokens["params"]
     if not params:
-        params = None
-    elif len(params) == 1:
+        params = {}
+    elif isinstance(params, list) and len(params) == 1:
         params = params[0]
+    elif isinstance(params, ParseResults) and params.length() == 1:
+        params = params[0]
+
     return {op: params}
 
 
-def to_case_call(instring, tokensStart, retTokens):
-    tok = retTokens
-    cases = list(tok.case)
-    elze = getattr(tok, "else", None)
+def to_case_call(tokens):
+    cases = list(tokens["case"])
+    elze = tokens["else"]
     if elze:
         cases.append(elze)
     return {"case": cases}
 
 
-def to_when_call(instring, tokensStart, retTokens):
-    tok = retTokens
-    return {"when": tok.when, "then":tok.then}
+def to_interval_call(tokens):
+    # ARRANGE INTO {interval: params} FORMAT
+    return {"interval": [tokens["count"], tokens["duration"][:-1]]}
 
 
-def to_join_call(instring, tokensStart, retTokens):
-    tok = retTokens
+def to_when_call(tokens):
+    tok = tokens
+    return {"when": tok["when"], "then": tok["then"]}
 
-    if tok.join.name:
-        output = {tok.op: {"name": tok.join.name, "value": tok.join.value}}
+
+def to_join_call(tokens):
+    tok = tokens
+    op = tok["op"].type.parser_name
+    if tok["join"]["name"]:
+        output = {op: {"name": tok["join"]["name"], "value": tok["join"]["value"]}}
     else:
-        output = {tok.op: tok.join}
+        output = {op: tok["join"]}
 
-    if tok.on:
-        output['on'] = tok.on
-
-    if tok.using:
-        output['using'] = tok.using
+    output["on"] = tok["on"]
+    output["using"] = tok["using"]
     return output
 
 
-def to_select_call(instring, tokensStart, retTokens):
-    tok = retTokens[0].asDict()
+def to_alias(tokens):
+    if tokens['col']:
+        return {tokens['table_name']: tokens['col']}
+    return tokens['table_name']
 
-    if tok.get('value')[0][0] == '*':
-        return '*'
-    else:
-        return tok
+def to_select_call(tokens):
+    if tokens["value"][0][0] == "*":
+        return ["*"]
 
 
-def to_union_call(instring, tokensStart, retTokens):
-    tok = retTokens[0].asDict()
-    unions = tok['from']['union']
+def to_union_call(tokens):
+    unions = list(tokens["from"]["union"])
     if len(unions) == 1:
         output = unions[0]
     else:
         sources = [unions[i] for i in range(0, len(unions), 2)]
         operators = [unions[i] for i in range(1, len(unions), 2)]
-        op = operators[0].lower().replace(" ", "_")
-        if any(o.lower().replace(" ", "_") != op for o in operators[1:]):
-            raise Exception("Expecting all \"union all\" or all \"union\", not some combination")
+        if is_text(operators[0]):
+            op = operators[0]
+        else:
+            op = operators[0].type.parser_name
+        if any(o.type.parser_name != op for o in operators[1:]):
+            raise Exception(
+                'Expecting all "union all" or all "union", not some combination'
+            )
 
-        if not tok.get('orderby') and not tok.get('limit'):
+        if not tokens["orderby"] and not tokens["limit"]:
             return {op: sources}
         else:
             output = {"from": {op: sources}}
 
-    if tok.get('orderby'):
-        output["orderby"] = tok.get('orderby')
-    if tok.get('limit'):
-        output["limit"] = tok.get('limit')
-    return output
+    output["orderby"] = tokens["orderby"]
+    output["offset"] = tokens.get("offset")
+    output["limit"] = tokens["limit"]
+    return [output]
 
 
-def to_with_clause(instring, tokensStart, retTokens):
-    tok = retTokens[0]
-    query = tok['query'][0]
-    if tok['with']:
-        assignments = [
-            {"name": w.name, "value": w.value[0]}
-            for w in tok['with']
-        ]
-        query['with'] = assignments
+def to_with_clause(tokens):
+    tok = tokens
+    query = tok["query"][0]
+    if tok["with"]:
+        assignments = [{"name": w["name"], "value": w["value"][0]} for w in tok["with"]]
+        query["with"] = assignments
     return query
 
 
-def unquote(instring, tokensStart, retTokens):
-    val = retTokens[0]
+def unquote(tokens):
+    val = tokens[0]
     if val.startswith("'") and val.endswith("'"):
-        val = "'"+val[1:-1].replace("''", "\\'")+"'"
-        # val = val.replace(".", "\\.")
+        val = "'" + val[1:-1].replace("''", "\\'") + "'"
     elif val.startswith('"') and val.endswith('"'):
-        val = '"'+val[1:-1].replace('""', '\\"')+'"'
-        # val = val.replace(".", "\\.")
-    elif val.startswith('`') and val.endswith('`'):
-        val = '"' + val[1:-1].replace("``","`") + '"'
+        val = '"' + val[1:-1].replace('""', '\\"') + '"'
+    elif val.startswith("`") and val.endswith("`"):
+        val = '"' + val[1:-1].replace("``", "`").replace('"', '\\"') + '"'
+    elif val.startswith("[") and val.endswith("]"):
+        val = '"' + val[1:-1].replace("]]", "]").replace('"', '\\"') + '"'
     elif val.startswith("+"):
         val = val[1:]
     un = ast.literal_eval(val)
     return un
 
 
-def to_string(instring, tokensStart, retTokens):
-    val = retTokens[0]
-    val = "'"+val[1:-1].replace("''", "\\'")+"'"
+def to_string(tokens):
+    val = tokens[0]
+    val = "'" + val[1:-1].replace("''", "\\'") + "'"
     return {"literal": ast.literal_eval(val)}
+
 
 # NUMBERS
 realNum = Regex(r"[+-]?(\d+\.\d*|\.\d+)([eE][+-]?\d+)?").addParseAction(unquote)
 intNum = Regex(r"[+-]?\d+([eE]\+?\d+)?").addParseAction(unquote)
 
 # STRINGS, NUMBERS, VARIABLES
-sqlString = Regex(r"\'(\'\'|\\.|[^'])*\'").addParseAction(to_string)
-identString = Regex(r'\"(\"\"|\\.|[^"])*\"').addParseAction(unquote)
-mysqlidentString = Regex(r'\`(\`\`|\\.|[^`])*\`').addParseAction(unquote)
-ident = Combine(~RESERVED + (delimitedList(Literal("*") | identString | mysqlidentString | Word(IDENT_CHAR), delim=".", combine=True))).setName("identifier")
+sqlString = Regex(r"\'(\'\'|[^'])*\'").addParseAction(to_string)
+identString = Regex(r'\"(\"\"|[^"])*\"').addParseAction(unquote)
+mysql_ident = Regex(r"\`(\`\`|[^`])*\`").addParseAction(unquote)
+sqlserver_ident = Regex(r"\[(\]\]|[^\]])*\]").addParseAction(unquote)
+ident = Combine(
+    ~RESERVED
+    + (delimitedList(
+        Literal("*") | identString | mysql_ident | sqlserver_ident | Word(IDENT_CHAR),
+        separator=".",
+        combine=True,
+    ))
+).set_parser_name("identifier")
 
 # EXPRESSIONS
 expr = Forward()
 
 # CASE
 case = (
-    CASE +
-    Group(ZeroOrMore((WHEN + expr("when") + THEN + expr("then")).addParseAction(to_when_call)))("case") +
-    Optional(ELSE + expr("else")) +
-    END
+    CASE
+    + Group(ZeroOrMore(
+        (WHEN + expr("when") + THEN + expr("then")).addParseAction(to_when_call)
+    ))("case")
+    + Optional(ELSE + expr("else"))
+    + END
 ).addParseAction(to_case_call)
+
+
+# MAY BE TOO FLEXIBLE
+datatype = Word(IDENT_CHAR).addParseAction(lambda t: t[0].lower())
+
+# CAST
+cast = (
+    CAST("op") + LB + expr("params") + AS + datatype("params") + RB
+).addParseAction(to_json_call)
 
 ordered_sql = Forward()
 
 
 call_function = (
-        ident.copy()("op").setName("function name").setDebugActions(*debug) +
-        Literal("(").suppress() +
-        Optional(ordered_sql | Group(delimitedList(expr)))("params") +
-        Literal(")").suppress()
-).addParseAction(to_json_call).setDebugActions(*debug)
+    ident("op") + LB + Optional(ordered_sql | delimitedList(expr))("params") + RB
+).addParseAction(to_json_call)
+
+
+def _or(values):
+    output = values[0]
+    for v in values[1:]:
+        output |= v
+    return output
+
+
+interval = (
+    Keyword("interval", caseless=True).suppress()
+    + (realNum | intNum)("count")
+    + _or([Keyword(d, caseless=True)("duration") for d in durations])
+).addParseAction(to_interval_call)
 
 compound = (
-    (Keyword("not", caseless=True)("op").setDebugActions(*debug) + expr("params")).addParseAction(to_json_call) |
-    (Keyword("distinct", caseless=True)("op").setDebugActions(*debug) + expr("params")).addParseAction(to_json_call) |
-    Keyword("null", caseless=True).setName("null").setDebugActions(*debug) |
-    case |
-    (Literal("(").suppress() + ordered_sql + Literal(")").suppress()) |
-    (Literal("(").suppress() + Group(delimitedList(expr)) + Literal(")").suppress()) |
-    realNum.setName("float").setDebugActions(*debug) |
-    intNum.setName("int").setDebugActions(*debug) |
-    (Literal("~")("op").setDebugActions(*debug) + expr("params")).addParseAction(to_json_call) |
-    (Literal("-")("op").setDebugActions(*debug) + expr("params")).addParseAction(to_json_call) |
-    sqlString.setName("string").setDebugActions(*debug) |
-    call_function |
-    ident.copy().setName("variable").setDebugActions(*debug)
+    NULL
+    | TRUE
+    | FALSE
+    | NOCASE
+    | (
+        Keyword("date", caseless=True)("op") + sqlString("params")
+    ).addParseAction(to_json_call)
+    | interval
+    | case
+    | cast
+    | (LB + ordered_sql + RB)
+    | (LB + Group(delimitedList(expr)).addParseAction(to_tuple_call) + RB)
+    | realNum.set_parser_name("float")
+    | intNum.set_parser_name("int")
+    | sqlString.set_parser_name("string")
+    | call_function
+    | ident
 )
-expr << Group(infixNotation(
-    compound,
-    [
-        (
-            o,
-            3 if isinstance(o, tuple) else 2,
-            opAssoc.LEFT,
-            to_json_operator
-        )
-        for o in KNOWN_OPS
-    ]+[
-        (
-            COLLATE_NOCASE,
-            1,
-            opAssoc.LEFT,
-            to_json_operator
-        )
-    ]
-).setName("expression").setDebugActions(*debug))
+
+expr << Group(
+    infixNotation(
+        compound,
+        [
+            (
+                o,
+                1 if o in unary_ops else (3 if isinstance(o, tuple) else 2),
+                RIGHT_ASSOC if o in unary_ops else LEFT_ASSOC,
+                to_json_operator,
+            )
+            for o in KNOWN_OPS
+        ],
+    ).set_parser_name("expression")
+)
+
+alias = (
+    ident("table_name") + Optional(LB + delimitedList(ident("col")) + RB)
+)("name").set_parser_name("alias").addParseAction(to_alias)
+
 
 # SQL STATEMENT
-selectColumn = Group(
-    Group(expr).setName("expression1")("value").setDebugActions(*debug) + Optional(Optional(AS) + ident.copy().setName("column_name1")("name").setDebugActions(*debug)) |
-    Literal('*')("value").setDebugActions(*debug)
-).setName("column").addParseAction(to_select_call)
+sortColumn = expr("value").set_parser_name("sort1") + Optional(
+    DESC("sort") | ASC("sort")
+) | expr("value").set_parser_name("sort2")
+
+selectColumn = (
+    Group(
+        Group(expr).set_parser_name("expression1")("value")
+        + Optional(
+            OVER
+            + LB
+            + Optional(PARTITION_BY + delimitedList(Group(expr))("partitionby"))
+            + Optional(ORDER_BY + delimitedList(Group(expr))("orderby"))
+            + RB
+        )("over")
+        + Optional(Optional(AS) + alias)
+        | Literal("*")("value")
+    )
+    .set_parser_name("column")
+    .addParseAction(to_select_call)
+)
 
 table_source = (
-    (
-        (Literal("(").suppress() + ordered_sql + Literal(")").suppress()).setDebugActions(*debug) |
-        call_function
-    )("value").setName("table source").setDebugActions(*debug) +
-    Optional(
-        Optional(AS) +
-        ident("name").setName("table alias").setDebugActions(*debug)
-    )
-    |
-    (
-        ident("value").setName("table name").setDebugActions(*debug) +
-        Optional(AS) +
-        ident("name").setName("table alias").setDebugActions(*debug)
-    )
-    |
-    ident.setName("table name").setDebugActions(*debug)
+    ((LB + ordered_sql + RB) | call_function)("value").set_parser_name("table source")
+    + Optional(Optional(AS) + alias)
+    | (ident("value").set_parser_name("table name") + Optional(AS) + alias)
+    | ident.set_parser_name("table name")
 )
 
 join = (
-    (CROSS_JOIN | FULL_JOIN | FULL_OUTER_JOIN | INNER_JOIN | JOIN | LEFT_JOIN | LEFT_OUTER_JOIN | RIGHT_JOIN | RIGHT_OUTER_JOIN)("op") +
-    Group(table_source)("join") +
-    Optional((ON + expr("on")) | (USING + expr("using")))
+    (
+        CROSS_JOIN
+        | FULL_JOIN
+        | FULL_OUTER_JOIN
+        | INNER_JOIN
+        | JOIN
+        | LEFT_JOIN
+        | LEFT_OUTER_JOIN
+        | RIGHT_JOIN
+        | RIGHT_OUTER_JOIN
+    )("op")
+    + Group(table_source)("join")
+    + Optional((ON + expr("on")) | (USING + expr("using")))
 ).addParseAction(to_join_call)
 
-sortColumn = expr("value").setName("sort1").setDebugActions(*debug) + Optional(DESC("sort") | ASC("sort")) | \
-             expr("value").setName("sort2").setDebugActions(*debug)
-
 unordered_sql = Group(
-    SELECT.suppress().setDebugActions(*debug) + delimitedList(selectColumn)("select") +
-    Optional(
-        (FROM.suppress().setDebugActions(*debug) + delimitedList(Group(table_source)) + ZeroOrMore(join))("from") +
-        Optional(WHERE.suppress().setDebugActions(*debug) + expr.setName("where"))("where") +
-        Optional(GROUP_BY.suppress().setDebugActions(*debug) + delimitedList(Group(selectColumn))("groupby").setName("groupby")) +
-        Optional(HAVING.suppress().setDebugActions(*debug) + expr("having").setName("having")) +
-        Optional(LIMIT.suppress().setDebugActions(*debug) + expr("limit")) +
-        Optional(OFFSET.suppress().setDebugActions(*debug) + expr("offset"))
+    (
+        SELECT_DISTINCT + delimitedList(selectColumn)("select_distinct")
+        | SELECT + delimitedList(selectColumn)("select")
+    )
+    + Optional(
+        (FROM + delimitedList(Group(table_source)) + ZeroOrMore(join))("from")
+        + Optional(WHERE + expr("where"))
+        + Optional(GROUP_BY + delimitedList(Group(selectColumn))("groupby"))
+        + Optional(HAVING + expr("having"))
+        + Optional(LIMIT + expr("limit"))
+        + Optional(OFFSET + expr("offset"))
     )
 )
 
 ordered_sql << Group(
     Group(Group(
-        unordered_sql +
-        ZeroOrMore((UNION_ALL | UNION) + unordered_sql)
-    )("union"))("from") +
-    Optional(ORDER_BY.suppress().setDebugActions(*debug) + delimitedList(Group(sortColumn))("orderby").setName("orderby")) +
-    Optional(LIMIT.suppress().setDebugActions(*debug) + expr("limit")) +
-    Optional(OFFSET.suppress().setDebugActions(*debug) + expr("offset"))
+        unordered_sql + ZeroOrMore((UNION_ALL | UNION) + unordered_sql)
+    )("union"))("from")
+    + Optional(ORDER_BY + delimitedList(Group(sortColumn))("orderby"))
+    + Optional(LIMIT + expr("limit"))
+    + Optional(OFFSET + expr("offset"))
 ).addParseAction(to_union_call)
 
-statement = Group(Group(Optional(
-    WITH.suppress().setDebugActions(*debug) +
-    delimitedList(
-        Group(
-            ident("name").setDebugActions(*debug) +
-            AS.suppress().setDebugActions(*debug) +
-            Literal("(").suppress().setDebugActions(*debug) +
-            ordered_sql("value").setDebugActions(*debug) +
-            Literal(")").suppress().setDebugActions(*debug)
-        )
-    )
-))("with") + ordered_sql("query")).addParseAction(to_with_clause)
+statement = Group(
+    Group(Optional(
+        WITH
+        + delimitedList(Group(
+            ident("name") + AS + LB + ordered_sql("value") + Literal(")").suppress()
+        ))
+    ))("with")
+    + ordered_sql("query")
+).addParseAction(to_with_clause)
 
 SQLParser = statement
 
 # IGNORE SOME COMMENTS
 oracleSqlComment = Literal("--") + restOfLine
 mySqlComment = Literal("#") + restOfLine
-SQLParser.ignore(oracleSqlComment | mySqlComment)
+
+engine.add_ignore(oracleSqlComment)
+engine.add_ignore(mySqlComment)
+
+engine.release()
