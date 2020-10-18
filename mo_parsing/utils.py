@@ -7,6 +7,7 @@ import string
 import sys
 import warnings
 from json.encoder import encode_basestring
+from math import isnan
 from types import FunctionType
 
 from mo_future import unichr, text, generator_types, is_text
@@ -35,7 +36,7 @@ empty_tuple = tuple()
 many_types = (list, tuple, set) + generator_types
 
 
-def indent(value, prefix=u"\t", indent=None):
+def indent(value, prefix="\t", indent=None):
     """
     indent given string, using prefix * indent as prefix for each line
     :param value:
@@ -54,7 +55,7 @@ def indent(value, prefix=u"\t", indent=None):
         return prefix + (CR + prefix).join(lines) + suffix
     except Exception as e:
         raise Exception(
-            u"Problem with indent of value (" + e.message + u")\n" + text(toString(value))
+            "Problem with indent of value (" + e.message + ")\n" + text(toString(value))
         )
 
 
@@ -72,6 +73,16 @@ def quote(value):
         output = json.dumps(value)
     return output
 
+
+def is_number(s):
+    if s is True or s is False or s == None:
+        return False
+
+    try:
+        s = float(s)
+        return not isnan(s)
+    except Exception:
+        return False
 
 
 def listwrap(value):

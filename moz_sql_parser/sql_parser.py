@@ -14,7 +14,6 @@ import sys
 
 from mo_dots import is_data
 from mo_future import is_text, text, number_types
-from mo_math import is_number
 
 from mo_parsing import (
     Combine,
@@ -35,6 +34,7 @@ from mo_parsing import (
     ParseResults,
 )
 from mo_parsing.engine import Engine
+from mo_parsing.utils import is_number
 from moz_sql_parser.debugs import debug
 from moz_sql_parser.keywords import (
     AS,
