@@ -4,11 +4,9 @@ from collections import namedtuple
 
 from mo_dots import Null
 from mo_future import is_text, text
-from mo_logs import strings
-
-from mo_parsing.utils import Log
 
 from mo_parsing.exceptions import ParseException
+from mo_parsing.utils import Log, indent, quote
 from mo_parsing.utils import lineno, col, alphanums, stack_depth
 
 ParserElement, Literal, Token = [None] * 3
@@ -141,7 +139,7 @@ class Engine:
         output = ["{"]
         for k, v in self.__dict__.items():
             value = str(v)
-            output.append(strings.indent(strings.quote(k) + ":" + value))
+            output.append(indent(quote(k) + ":" + value))
         output.append("}")
         return "\n".join(output)
 
@@ -149,7 +147,7 @@ class Engine:
 def _defaultStartDebugAction(expr, loc, string):
     print(
         "  Attempt "
-        + strings.quote(string[loc : loc + 10] + "...")
+        + quote(string[loc : loc + 10] + "...")
         + " at loc "
         + text(loc)
         + "(%d,%d)" % (lineno(loc, string), col(loc, string))
@@ -162,7 +160,7 @@ def _defaultStartDebugAction(expr, loc, string):
 def _defaultSuccessDebugAction(expr, start, end, string, tokens):
     print(
         "> Matched "
-        + strings.quote(string[start:end])
+        + quote(string[start:end])
         + " at loc "
         + text(start)
         + "(%d,%d)" % (lineno(start, string), col(start, string))
@@ -175,7 +173,7 @@ def _defaultSuccessDebugAction(expr, start, end, string, tokens):
 
 
 def _defaultExceptionDebugAction(expr, loc, string, cause):
-    print("  Except  " + strings.quote(text(cause)))
+    print("  Except  " + quote(text(cause)))
 
 
 def noop(*args):
