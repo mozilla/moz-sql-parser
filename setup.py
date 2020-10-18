@@ -15,6 +15,6 @@ setup(
     name='moz-sql-parser',
     packages=["moz_sql_parser","mo_parsing"],
     url='https://github.com/mozilla/moz-sql-parser',
-    version='3.100.20292',
+    version='3.101.20292',
     zip_safe=True
 )
