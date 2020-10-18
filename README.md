@@ -96,8 +96,3 @@ and you can see this pattern in the previous example:
 
     {"gt": ["a","b"]}
 
-
-### Notes
-
-* Uses the glorious `pyparsing` library (see https://github.com/pyparsing/pyparsing) to define the grammar, and define the shape of the tokens it generates. 
-* [sqlparse](https://pypi.python.org/pypi/sqlparse) does not provide a tree, rather a list of tokens. 
