@@ -83,9 +83,6 @@ class Engine:
         )
         return self
 
-    def set_recursion_limit(self, limit):
-        sys.setrecursionlimit(limit)
-
     def set_literal(self, literal):
         self.literal = literal
 

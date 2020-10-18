@@ -20,18 +20,6 @@ from moz_sql_parser.debugs import all_exceptions
 from moz_sql_parser.sql_parser import SQLParser, scrub_literal
 
 
-def __deploy__():
-    # ONLY MEANT TO BE RUN FOR DEPLOYMENT
-    from mo_files import File
-    source_file = File("moz_sql_parser/sql_parser.py")
-    lines = source_file.read().split("\n")
-    lines = [
-        "sys.setrecursionlimit(1500)" if line.startswith("sys.setrecursionlimit") else line
-        for line in lines
-    ]
-    source_file.write("\n".join(lines))
-
-
 parseLocker = Lock()  # ENSURE ONLY ONE PARSING AT A TIME
 
 

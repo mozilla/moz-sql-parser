@@ -125,7 +125,7 @@
     "long_description_content_type": "text/markdown",
     "name": "moz-sql-parser",
     "packages": ["moz_sql_parser", "mo_parsing"],
-    "url": "https://github.com/mozilla/moz-sql-parser",
+    "url": "https://github.com/klahnakoski/moz-sql-parser",
     "version": "3.101.20292",
     "zip_safe": true
 }

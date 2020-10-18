@@ -50,7 +50,7 @@ The `SELECT` clause is an array of objects containing `name` and `value` propert
 
 ### Recursion Limit 
 
-**WARNING!** There is a recursion limit of `1500`. This prevents parsing of complex expressions or deeply nested nested queries. You can increase the recursion limit *after* you have imported `moz_sql_parser`, and before you `parse`:
+Python's default recursion limit (1000) is not hit when parsing the test suite, but this may not be the case for large SQL. You can increase the recursion limit before you `parse`:
 
     >>> from moz_sql_parser import parse
     >>> sys.setrecursionlimit(3000)

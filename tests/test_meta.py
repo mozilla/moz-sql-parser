@@ -27,7 +27,7 @@ class TestSimple(TestCase):
     def test_recursion_limit(self):
         if os.environ.get('TRAVIS_BRANCH') == 'master':
             limit = sys.getrecursionlimit()
-            self.assertEqual(limit, 1500)
+            self.assertLess(limit, 1500)
 
     def test_debug_is_off(self):
         self.assertFalse(DEBUG, "Turn off debugging")
