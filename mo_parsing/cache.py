@@ -66,29 +66,29 @@ def resetCache():
 
 def enablePackrat(cache_size_limit=128):
     """Enables "packrat" parsing, which adds memoizing to the parsing logic.
-       Repeated parse attempts at the same string location (which happens
-       often in many complex grammars) can immediately return a cached value,
-       instead of re-executing parsing/validating code.  Memoizing is done of
-       both valid results and parsing exceptions.
+    Repeated parse attempts at the same string location (which happens
+    often in many complex grammars) can immediately return a cached value,
+    instead of re-executing parsing/validating code.  Memoizing is done of
+    both valid results and parsing exceptions.
 
-       Parameters:
+    Parameters:
 
-       - cache_size_limit - (default= ``128``) - if an integer value is provided
-         will limit the size of the packrat cache; if None is passed, then
-         the cache size will be unbounded; if 0 is passed, the cache will
-         be effectively disabled.
+    - cache_size_limit - (default= ``128``) - if an integer value is provided
+      will limit the size of the packrat cache; if None is passed, then
+      the cache size will be unbounded; if 0 is passed, the cache will
+      be effectively disabled.
 
-       This speedup may break existing programs that use parse actions that
-       have side-effects.  For this reason, packrat parsing is disabled when
-       you first import mo_parsing.  To activate the packrat feature, your
-       program must call the class method :class:`enablePackrat`.
-       For best results, call ``enablePackrat()`` immediately after
-       importing mo_parsing.
+    This speedup may break existing programs that use parse actions that
+    have side-effects.  For this reason, packrat parsing is disabled when
+    you first import mo_parsing.  To activate the packrat feature, your
+    program must call the class method :class:`enablePackrat`.
+    For best results, call ``enablePackrat()`` immediately after
+    importing mo_parsing.
 
-       Example::
+    Example::
 
-           import mo_parsing
-           mo_parsing.enablePackrat()
+        import mo_parsing
+        mo_parsing.enablePackrat()
     """
     global packrat_cache
     if cache_size_limit is None:

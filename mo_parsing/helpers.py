@@ -1,4 +1,5 @@
 # encoding: utf-8
+import ast
 import re
 import warnings
 from collections import Iterable
@@ -6,7 +7,7 @@ from datetime import datetime
 
 from mo_dots import listwrap
 from mo_future import text
-from mo_logs import Log
+from mo_parsing.utils import Log
 
 from mo_parsing.core import add_reset_action
 from mo_parsing.engine import Engine
@@ -20,7 +21,8 @@ from mo_parsing.enhancement import (
     SkipTo,
     Suppress,
     TokenConverter,
-    ZeroOrMore, OpenDict,
+    ZeroOrMore,
+    OpenDict,
 )
 from mo_parsing.exceptions import ParseException
 from mo_parsing.results import ParseResults, Annotation, NO_PARSER
@@ -384,10 +386,7 @@ def originalTextFor(expr, asString=True):
 def extractText(tokens, loc, string):
     start, d, end = tokens
     content = string[start:end]
-    annotations = [
-        Annotation(k, v)
-        for k, v in d.items()
-    ]
+    annotations = [Annotation(k, v) for k, v in d.items()]
     return ParseResults(d.type, [content] + annotations)
 
 
@@ -465,6 +464,7 @@ def nestedExpr(opener="(", closer=")", content=None, ignoreExpr=quotedString):
 
         ignore_chars = engine.CURRENT.white_chars
         with Engine(""):
+
             def scrub(t):
                 return t[0].strip()
 
@@ -515,8 +515,8 @@ _escapedPunc = Word(
     _bslash, r"\[]-*.$+^?()~ ", exact=2
 ).addParseAction(lambda t, l, s: t[0][1])
 _escapedHexChar = (
-    Regex(r"\\0?[xX][0-9a-fA-F]+").addParseAction(lambda t, l, s: unichr(int(
-        t[0].lstrip(r"\0x"), 16
+    Regex(r"\\0?[xX][0-9a-fA-F]+").addParseAction(lambda t: unichr(int(
+        t[0].lstrip('\\').lstrip('0').lstrip('xX'), 16
     )))
 )
 _escapedOctChar = Regex(r"\\0[0-7]+").addParseAction(lambda t, l, s: unichr(int(
@@ -566,8 +566,10 @@ def srange(s):
         else "".join(unichr(c) for c in range(ord(p[0]), ord(p[1]) + 1))
     )
     try:
-        return "".join(_expanded(part) for part in _reBracketExpr.parseString(s)['body'])
-    except Exception:
+        return "".join(
+            _expanded(part) for part in _reBracketExpr.parseString(s)["body"]
+        )
+    except Exception as cause:
         return ""
 
 
@@ -583,21 +585,15 @@ def matchOnlyAtCol(n):
     return verifyCol
 
 
-def replaceWith(replStr):
+def replaceWith(value):
     """Helper method for common parse actions that simply return
     a literal value.  Especially useful when used with
     :class:`transformString<ParserElement.transformString>` ().
-
-    Example::
-
-        num = Word(nums).addParseAction(lambda toks: int(toks[0]))
-        na = oneOf("N/A NA").addParseAction(replaceWith(math.nan))
-        term = na | num
-
-        OneOrMore(term).parseString("324 234 N/A 234") # -> [324, 234, nan, 234]
     """
-    def replacer(t, l, s):
-        return [replStr]
+
+    def replacer():
+        return [value]
+
     return replacer
 
 
@@ -847,6 +843,7 @@ def infixNotation(baseExpr, spec, lpar=Suppress("("), rpar=Suppress(")")):
     """
 
     all_op = {}
+
     def norm(op):
         output = all_op.get(id(op))
         if output:
@@ -921,6 +918,7 @@ def infixNotation(baseExpr, spec, lpar=Suppress("("), rpar=Suppress(")")):
     def record_op(op):
         def output(tokens):
             return ParseResults(NO_PARSER, [(tokens, op)])
+
         return output
 
     prefix_ops = MatchFirst([
@@ -1043,6 +1041,7 @@ def reset_stack():
     global _indent_stack
     _indent_stack = [(1, None, None)]
 
+
 add_reset_action(reset_stack)
 
 
@@ -1082,6 +1081,7 @@ def indentedBlock(blockStatementExpr, indent=True):
                 if curCol > expectedCol:
                     raise ParseException("illegal nesting", l, s)
                 raise ParseException("not a peer entry", l, s)
+
         return output
 
     def dedent_stack(expectedCol):
@@ -1095,6 +1095,7 @@ def indentedBlock(blockStatementExpr, indent=True):
                 oldCol, oldPeer, oldDedent = _indent_stack.pop()
                 PEER << oldPeer
                 DEDENT << oldDedent
+
         return output
 
     def indent_stack(t, l, s):
@@ -1540,4 +1541,3 @@ from mo_parsing import core, engine
 core._flatten = _flatten
 core.replaceWith = replaceWith
 core.quotedString = quotedString
-

@@ -2,7 +2,6 @@
 from operator import itemgetter
 
 from mo_future import Iterable, text, generator_types
-from mo_logs import Log
 
 from mo_parsing.core import ParserElement, _PendingSkip, is_decorated
 from mo_parsing.engine import Engine
@@ -52,12 +51,10 @@ class ParseExpression(ParserElement):
     def leaveWhitespace(self):
         """Extends ``leaveWhitespace`` defined in base class, and also invokes ``leaveWhitespace`` on
         all contained expressions."""
-        output = self.copy()
-        if self.engine.white_chars:
-            Log.error("do not know how to handle")
-
-        output.exprs = [e.leaveWhitespace() for e in self.exprs]
-        return output
+        with Engine(""):
+            output = self.copy()
+            output.exprs = [e.leaveWhitespace() for e in self.exprs]
+            return output
 
     def streamline(self):
         if self.streamlined:
@@ -185,15 +182,15 @@ class And(ParseExpression):
         # pre-parsed the string as part of our And pre-parsing
         encountered_error_stop = False
         acc = []
-        for e in self.exprs:
-            if isinstance(e, And._ErrorStop):
+        for expr in self.exprs:
+            if isinstance(expr, And._ErrorStop):
                 encountered_error_stop = True
                 continue
             try:
-                loc, exprtokens = e._parse(string, loc, doActions)
+                loc, exprtokens = expr._parse(string, loc, doActions)
                 acc.append(exprtokens)
-            except ParseSyntaxException as e:
-                raise e
+            except ParseSyntaxException as cause:
+                raise cause
             except ParseBaseException as pe:
                 if encountered_error_stop:
                     raise ParseSyntaxException(pe.parserElement, pe.loc, pe.pstr)
@@ -313,9 +310,7 @@ class Or(ParseExpression):
             maxException.msg = "Expecting " + text(self)
             raise maxException
         else:
-            raise ParseException(
-                string, loc, "no defined alternatives to match", self
-            )
+            raise ParseException(string, loc, "no defined alternatives to match", self)
 
     def __str__(self):
         if self.parser_name:
@@ -405,8 +400,12 @@ class Each(ParseExpression):
         :param mins: list of integers indincating any minimums
         """
         super(Each, self).__init__(exprs)
-        self.parser_config.min_match = [e.min_match if isinstance(e, Many) else 1 for e in exprs]
-        self.parser_config.max_match = [e.max_match if isinstance(e, Many) else 1 for e in exprs]
+        self.parser_config.min_match = [
+            e.min_match if isinstance(e, Many) else 1 for e in exprs
+        ]
+        self.parser_config.max_match = [
+            e.max_match if isinstance(e, Many) else 1 for e in exprs
+        ]
 
         self.parser_config.mayReturnEmpty = all(
             e.parser_config.mayReturnEmpty for e in self.exprs
@@ -427,9 +426,7 @@ class Each(ParseExpression):
         end_loc = loc
         matchOrder = []
         todo = list(zip(
-            self.exprs,
-            self.parser_config.min_match,
-            self.parser_config.max_match
+            self.exprs, self.parser_config.min_match, self.parser_config.max_match
         ))
         count = [0] * len(self.exprs)
 

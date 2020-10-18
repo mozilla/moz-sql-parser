@@ -4,7 +4,7 @@ from collections import MutableMapping
 
 from mo_dots import is_many
 from mo_future import is_text, text, PY3, NEXT, zip_longest
-from mo_logs import Log
+from mo_parsing.utils import Log
 
 from mo_parsing import engine
 from mo_parsing.utils import is_forward, forward_type
@@ -52,7 +52,7 @@ class ParseResults(object):
                     yield f
 
     def __getitem__(self, item):
-        if is_forward(self):
+        if is_forward(self.type):
             return self.tokens[0][item]
 
         if isinstance(item, int):
@@ -76,6 +76,9 @@ class ParseResults(object):
         if isinstance(k, (slice, int)):
             Log.error("not supported")
 
+        if v is None:
+            v = NO_RESULTS
+
         if is_forward(self):
             self.tokens[0][k] = v
             return
@@ -84,7 +87,7 @@ class ParseResults(object):
             if isinstance(tok, ParseResults):
                 if tok.name == k:
                     self.tokens[i] = v
-                    v = None  # ERASE ALL OTHERS
+                    v = NO_RESULTS  # ERASE ALL OTHERS
                 elif isinstance(tok.type, Group):
                     continue
                 elif is_forward(tok.type) and isinstance(tok.tokens[0].type, Group):
@@ -92,12 +95,13 @@ class ParseResults(object):
                 elif tok.name:
                     continue
 
-                tok.__setitem__(k, None)  # ERASE ALL CHILDREN
+                tok.__setitem__(k, NO_RESULTS)  # ERASE ALL CHILDREN
 
-        if v is not None:
+        if v is not NO_RESULTS:
             self.tokens.append(Annotation(k, [v]))
 
     if USE_ATTRIBUTE_ACCESS:
+
         def __getattribute__(self, item):
             try:
                 return object.__getattribute__(self, item)
@@ -201,24 +205,7 @@ class ParseResults(object):
         if isinstance(key, (int, slice)):
             Log.error("not allowed")
         else:
-            if key == self.name:
-                new_type = self.type.copy()
-                new_type.token_name = None
-                self.type = new_type
-                return
-            for i, t in enumerate(self.tokens):
-                if not isinstance(t, ParseResults):
-                    continue
-                name = t.name
-                if name == key:
-                    new_type = t.type.copy()
-                    new_type.token_name = None
-                    t.type = new_type
-                    return
-                elif isinstance(t.type, (Group, Token)):
-                    pass
-                else:
-                    del t[key]
+            self[key] = NO_RESULTS
 
     def __reversed__(self):
         return reversed(self.tokens)

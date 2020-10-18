@@ -4,7 +4,7 @@ import sys
 
 from mo_dots import coalesce
 from mo_future import text
-from mo_logs import Log
+from mo_parsing.utils import Log
 
 from mo_parsing.utils import wrap_parse_action, col, line, lineno
 
@@ -34,9 +34,9 @@ class ParseBaseException(Exception):
 
     def __getattr__(self, aname):
         """supported attributes by name are:
-           - lineno - returns the line number of the exception text
-           - col - returns the column number of the exception text
-           - line - returns the line containing the exception text
+        - lineno - returns the line number of the exception text
+        - col - returns the column number of the exception text
+        - line - returns the line containing the exception text
         """
         if aname == "lineno":
             return lineno(self.loc, self.pstr)
@@ -70,14 +70,16 @@ class ParseBaseException(Exception):
 
     def markInputline(self, markerString=">!<"):
         """Extracts the exception line from the input string, and marks
-           the location of the exception with a special symbol.
+        the location of the exception with a special symbol.
         """
         line_str = self.line
         line_column = self.column - 1
         if markerString:
-            line_str = "".join(
-                (line_str[:line_column], markerString, line_str[line_column:])
-            )
+            line_str = "".join((
+                line_str[:line_column],
+                markerString,
+                line_str[line_column:],
+            ))
         return line_str.strip()
 
     def __dir__(self):
@@ -157,16 +159,14 @@ class ParseException(ParseBaseException):
                     seen.add(f_self)
 
                     self_type = type(f_self)
-                    ret.append(
-                        "{0}.{1} - {2}".format(
-                            self_type.__module__, self_type.__name__, f_self
-                        )
-                    )
+                    ret.append("{0}.{1} - {2}".format(
+                        self_type.__module__, self_type.__name__, f_self
+                    ))
                 elif f_self is not None:
                     self_type = type(f_self)
-                    ret.append(
-                        "{0}.{1}".format(self_type.__module__, self_type.__name__)
-                    )
+                    ret.append("{0}.{1}".format(
+                        self_type.__module__, self_type.__name__
+                    ))
                 else:
                     code = frm.f_code
                     if code.co_name in ("wrapper", "<module>"):
@@ -183,7 +183,7 @@ class ParseException(ParseBaseException):
 
 class ParseFatalException(ParseBaseException):
     """user-throwable exception thrown when inconsistent parse content
-       is found; stops all parsing immediately"""
+    is found; stops all parsing immediately"""
 
     pass
 
@@ -225,8 +225,7 @@ class RecursiveGrammarException(Exception):
 
 
 class OnlyOnce(object):
-    """Wrapper for parse actions, to ensure they are only called once.
-    """
+    """Wrapper for parse actions, to ensure they are only called once."""
 
     def __init__(self, methodCall):
         self.callable = wrap_parse_action(methodCall)

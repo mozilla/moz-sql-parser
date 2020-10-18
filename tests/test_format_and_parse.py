@@ -10,7 +10,6 @@
 from __future__ import absolute_import, division, unicode_literals
 
 import re
-from pprint import pformat
 from unittest import skip, TestCase
 
 from mo_logs import Log

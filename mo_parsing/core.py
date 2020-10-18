@@ -3,10 +3,10 @@ from threading import RLock
 
 from mo_dots import Data
 from mo_future import text
-from mo_logs import Log
+from mo_parsing.utils import Log
 
 from mo_parsing.cache import packrat_cache
-from mo_parsing.engine import PLAIN_ENGINE
+from mo_parsing.engine import PLAIN_ENGINE, Engine
 from mo_parsing.exceptions import (
     ParseBaseException,
     ParseException,
@@ -629,6 +629,8 @@ class ParserElement(object):
         raise NotImplemented()
 
     def __getitem__(self, key):
+        if isinstance(key, slice):
+            return self*(key.start, key.stop)
         return self * key
 
     def __call__(self, name):
@@ -665,7 +667,7 @@ class ParserElement(object):
         :class:`ParserElement`'s defined pattern.  This is normally only used internally by
         the mo_parsing module, but may be needed in some whitespace-sensitive grammars.
         """
-        with PLAIN_ENGINE:
+        with Engine(""):
             output = self.copy()
         return output
 
@@ -767,7 +769,7 @@ from mo_parsing import cache, engine, results
 engine.ParserElement = ParserElement
 results.ParserElement = ParserElement
 
-NO_PARSER = ParserElement()  # USE THIS WHEN YOU DO NOT CARE ABOUT THE PARSER TYPE
+NO_PARSER = ParserElement().set_parser_name("<nothing>")  # USE THIS WHEN YOU DO NOT CARE ABOUT THE PARSER TYPE
 NO_RESULTS = ParseResults(NO_PARSER, [])
 
 results.NO_RESULTS = NO_RESULTS

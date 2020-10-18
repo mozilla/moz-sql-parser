@@ -4,7 +4,9 @@ from collections import namedtuple
 
 from mo_dots import Null
 from mo_future import is_text, text
-from mo_logs import Log, strings
+from mo_logs import strings
+
+from mo_parsing.utils import Log
 
 from mo_parsing.exceptions import ParseException
 from mo_parsing.utils import lineno, col, alphanums, stack_depth
@@ -147,7 +149,7 @@ class Engine:
 def _defaultStartDebugAction(expr, loc, string):
     print(
         "  Attempt "
-        + strings.quote(string[loc : loc + 10]+"...")
+        + strings.quote(string[loc : loc + 10] + "...")
         + " at loc "
         + text(loc)
         + "(%d,%d)" % (lineno(loc, string), col(loc, string))
