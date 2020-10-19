@@ -85,9 +85,6 @@ from moz_sql_parser.keywords import (
 engine = Engine().use()
 engine.set_debug_actions(*debug)
 
-# PYPARSING USES A LOT OF STACK SPACE
-sys.setrecursionlimit(3000)
-
 IDENT_CHAR = alphanums + "@_$"
 
 

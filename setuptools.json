@@ -11,7 +11,7 @@
     ],
     "description": "Extract Parse Tree from SQL",
     "include_package_data": true,
-    "install_requires": ["mo-dots>=3.93.20259", "mo-future>=3.89.20246", "mo-logs>=3.100.20292"],
+    "install_requires": ["mo-dots>=3.93.20259", "mo-future>=3.89.20246", "mo-logs>=3.118.20293"],
     "license": "MPL 2.0",
     "long_description": {
         "$concat": [
@@ -67,7 +67,7 @@
             "",
             "### Recursion Limit ",
             "",
-            "**WARNING!** There is a recursion limit of `1500`. This prevents parsing of complex expressions or deeply nested nested queries. You can increase the recursion limit *after* you have imported `moz_sql_parser`, and before you `parse`:",
+            "Python's default recursion limit (1000) is not hit when parsing the test suite, but this may not be the case for large SQL. You can increase the recursion limit before you `parse`:",
             "",
             "    >>> from moz_sql_parser import parse",
             "    >>> sys.setrecursionlimit(3000)",
@@ -113,11 +113,6 @@
             "",
             "    {\"gt\": [\"a\",\"b\"]}",
             "",
-            "",
-            "### Notes",
-            "",
-            "* Uses the glorious `pyparsing` library (see https://github.com/pyparsing/pyparsing) to define the grammar, and define the shape of the tokens it generates. ",
-            "* [sqlparse](https://pypi.python.org/pypi/sqlparse) does not provide a tree, rather a list of tokens. ",
             ""
         ],
         "separator": "\n"
@@ -125,7 +120,7 @@
     "long_description_content_type": "text/markdown",
     "name": "moz-sql-parser",
     "packages": ["moz_sql_parser", "mo_parsing"],
-    "url": "https://github.com/mozilla/moz-sql-parser",
-    "version": "3.101.20292",
+    "url": "https://github.com/klahnakoski/moz-sql-parser",
+    "version": "3.125.20293",
     "zip_safe": true
 }
