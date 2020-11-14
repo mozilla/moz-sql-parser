@@ -905,7 +905,7 @@ from benn.college_football_players
 
     def test_086(self):
         expected_sql = (
-            "SELECT a FROM t6 WHERE b IN (SELECT b FROM t6 WHERE a<='b' UNION SELECT"
+            "SELECT a FROM t6 WHERE b IN (SELECT b FROM t6 WHERE a <= 'b' UNION SELECT"
             " '3' AS x ORDER BY 1 LIMIT 1)"
         )
         expected_json = {

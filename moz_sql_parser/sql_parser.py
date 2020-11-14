@@ -432,8 +432,6 @@ unordered_sql = Group(
         + Optional(WHERE + expr("where"))
         + Optional(GROUP_BY + delimitedList(Group(selectColumn))("groupby"))
         + Optional(HAVING + expr("having"))
-        + Optional(LIMIT + expr("limit"))
-        + Optional(OFFSET + expr("offset"))
     )
 )
 
