@@ -103,7 +103,7 @@ class TestSimple(TestCase):
             parse("Select &&& FROM dual")
 
     def test_bad_from(self):
-        assertRaises("(at char 20)", lambda: parse("select A, B, C frum dual"))
+        assertRaises("(at char 20", lambda: parse("select A, B, C frum dual"))
 
     def test_incomplete1(self):
         with self.assertRaises(Exception):

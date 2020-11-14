@@ -2,7 +2,7 @@
 import inspect
 from collections import MutableMapping
 
-from mo_dots import is_many
+from mo_dots import is_many, is_null
 from mo_future import is_text, text, PY3, NEXT, zip_longest
 from mo_parsing.utils import Log
 
@@ -15,17 +15,16 @@ Suppress, ParserElement, NO_PARSER, NO_RESULTS, Group, Dict, Token, Empty = [Non
 
 
 class ParseResults(object):
-    __slots__ = [
-        "type",
-        "tokens",
-    ]
+    __slots__ = ["type", "start", "end", "tokens", "timing"]
 
     @property
     def name(self):
         return self.type.token_name
 
-    def __init__(self, result_type, tokens=None):
+    def __init__(self, result_type, start, end, tokens):
         self.type = result_type
+        self.start = start
+        self.end = end
         self.tokens = tokens
 
     def _get_item_by_name(self, name):
@@ -39,8 +38,12 @@ class ParseResults(object):
                     elif is_forward(tok.type) and isinstance(tok.tokens[0].type, Group):
                         yield tok
                     else:
-                        for t in tok.tokens:
-                            yield t
+                        if any(isinstance(t, ParseResults) and t.name for t in tok.tokens):
+                            for t in tok.tokens:
+                                yield t
+                        else:
+                            for t in tok:
+                                yield t
                     continue
                 elif isinstance(tok.type, Group):
                     continue
@@ -70,7 +73,7 @@ class ParseResults(object):
             if len(values) == 1:
                 return values[0]
             # ENCAPSULATE IN A ParseResults FOR FURTHER NAVIGATION
-            return ParseResults(NO_PARSER, values)
+            return ParseResults(NO_PARSER, -1, -1, values)
 
     def __setitem__(self, k, v):
         if isinstance(k, (slice, int)):
@@ -98,7 +101,7 @@ class ParseResults(object):
                 tok.__setitem__(k, NO_RESULTS)  # ERASE ALL CHILDREN
 
         if v is not NO_RESULTS:
-            self.tokens.append(Annotation(k, [v]))
+            self.tokens.append(Annotation(k, -1, -1, [v]))
 
     if USE_ATTRIBUTE_ACCESS:
 
@@ -123,7 +126,7 @@ class ParseResults(object):
         return sum(1 for _ in self)
 
     def __eq__(self, other):
-        if other == None:
+        if is_null(other):
             return not self.__bool__()
         elif is_text(other):
             try:
@@ -188,7 +191,9 @@ class ParseResults(object):
                     name = t.name
                     if name:
                         if not isinstance(t.type, Annotation):
-                            self.tokens.append(Annotation(name, t.tokens))
+                            self.tokens.append(Annotation(
+                                name, t.start, t.end, t.tokens
+                            ))
                     return
                 else:
                     index -= 1
@@ -288,7 +293,12 @@ class ParseResults(object):
         return bool(self[item])
 
     def __add__(self, other):
-        return ParseResults(Group(self.type + other.type), self.tokens + other.tokens)
+        return ParseResults(
+            Group(self.type + other.type),
+            self.start,
+            other.end,
+            self.tokens + other.tokens,
+        )
 
     def __radd__(self, other):
         if not other:  # happens when using sum() on parsers
@@ -372,9 +382,9 @@ class ParseResults(object):
 
     def __copy__(self):
         """
-        Returns a new copy of a :class:`ParseResults` object.
+        Returns a new copy of a `ParseResults` object.
         """
-        ret = ParseResults(self.type, list(self.tokens))
+        ret = ParseResults(self.type, self.start, self.end, list(self.tokens))
         return ret
 
     def getName(self):
@@ -448,12 +458,12 @@ class Annotation(ParseResults):
 
     __slots__ = []
 
-    def __init__(self, name, value):
+    def __init__(self, name, start, end, value):
         if not name:
             Log.error("expecting a name")
         if not isinstance(value, list):
             Log.error("expecting a list")
-        ParseResults.__init__(self, Empty()(name), value)
+        ParseResults.__init__(self, Empty()(name), start, end, value)
 
     def __str__(self):
         return "{" + text(self.name) + ": " + text(self.tokens) + "}"

@@ -83,7 +83,6 @@ from moz_sql_parser.keywords import (
 )
 
 engine = Engine().use()
-engine.set_debug_actions(*debug)
 
 IDENT_CHAR = alphanums + "@_$"
 
@@ -248,7 +247,7 @@ def to_union_call(tokens):
 
 def to_with_clause(tokens):
     tok = tokens
-    query = tok["query"][0]
+    query = tok["query"]
     if tok["with"]:
         assignments = [{"name": w["name"], "value": w["value"][0]} for w in tok["with"]]
         query["with"] = assignments

@@ -16,6 +16,7 @@ from mo_dots import NullType
 from mo_future import binary_type, number_types, text
 
 from mo_parsing import ParseException
+from mo_parsing.debug import Debugger
 from moz_sql_parser.debugs import all_exceptions
 from moz_sql_parser.sql_parser import SQLParser, scrub_literal
 
@@ -28,7 +29,8 @@ def parse(sql):
         try:
             all_exceptions.clear()
             sql = sql.rstrip().rstrip(";")
-            parse_result = SQLParser.parseString(sql, parseAll=True)
+            with Debugger():
+                parse_result = SQLParser.parseString(sql, parseAll=True)
             return _scrub(parse_result)
         except Exception as e:
             if isinstance(e, ParseException) and e.msg == "Expected end of text":

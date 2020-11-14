@@ -45,5 +45,5 @@ class TestErrors(FuzzyTestCase):
             format(bad_json)
 
     def test_order_by_must_follow_union(self):
-        with self.assertRaises(["(at char 27)"]):
+        with self.assertRaises(["(at char 27"]):
             parse("select a from b order by a union select 2")
