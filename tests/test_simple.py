@@ -1078,4 +1078,7 @@ class TestSimple(TestCase):
         }
         self.assertEqual(result, expected)
 
-
+    def test_issue1_of_fork(self):
+        sql = 'SELECT * FROM jobs LIMIT 10'
+        result = parse(sql)
+        self.assertEqual(result, {"select": "*", "from": "jobs", "limit": 10})
