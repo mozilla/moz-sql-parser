@@ -10,10 +10,9 @@
 from __future__ import absolute_import, division, unicode_literals
 
 import ast
-import sys
 
-from mo_dots import is_data
-from mo_future import is_text, text, number_types
+from mo_dots import is_data, NullType
+from mo_future import is_text, text, number_types, binary_type
 
 from mo_parsing import (
     Combine,
@@ -32,10 +31,10 @@ from mo_parsing import (
     RIGHT_ASSOC,
     LEFT_ASSOC,
     ParseResults,
+    Dict,
 )
 from mo_parsing.engine import Engine
 from mo_parsing.utils import is_number
-from moz_sql_parser.debugs import debug
 from moz_sql_parser.keywords import (
     AS,
     ASC,
@@ -79,12 +78,49 @@ from moz_sql_parser.keywords import (
     OVER,
     PARTITION_BY,
     CAST,
-    SELECT_DISTINCT, LB, RB,
+    SELECT_DISTINCT,
+    LB,
+    RB,
+    DATE,
+    INTERVAL,
 )
 
 engine = Engine().use()
 
 IDENT_CHAR = alphanums + "@_$"
+
+
+def scrub(result):
+    if isinstance(result, (text, NullType)):
+        return result
+    elif isinstance(result, binary_type):
+        return result.decode("utf8")
+    elif isinstance(result, number_types):
+        return result
+    elif isinstance(result, dict) and not result:
+        return result
+    elif isinstance(result, list):
+        output = [rr for r in result for rr in [scrub(r)] if rr is not None]
+
+        if not output:
+            return None
+        elif len(output) == 1:
+            return output[0]
+        else:
+            return scrub_literal(output)
+    else:
+        # ATTEMPT A DICT INTERPRETATION
+        kv_pairs = list(result.items())
+        output = {
+            k: vv
+            for k, v in kv_pairs
+            if v is not None
+            for vv in [scrub(v)]
+            if vv is not None
+        }
+        if output:
+            return output
+        return scrub(list(result))
 
 
 def scrub_literal(candidate):
@@ -103,11 +139,13 @@ def to_json_operator(tokens):
     # ARRANGE INTO {op: params} FORMAT
     length = len(tokens.tokens)
     if length == 2:
+        # UNARY OPERATOR
         op = tokens.tokens[0].type.parser_name
         if op == "neg" and is_number(tokens[1]):
             return -tokens[1]
         return {op: tokens[1]}
     elif length == 5:
+        # TRINARY OPERATOR
         return {tokens.tokens[1].type.parser_name: [tokens[0], tokens[2], tokens[4]]}
 
     op = tokens[1]
@@ -145,13 +183,16 @@ def to_json_operator(tokens):
             if isinstance(operand, ParseResults):
                 # if operand[0][0] and operand[0][0][0] and operand[0][0][0]['and']:
                 #     prefix = operand[0].get(op)
-                prefix = operand[0].get(op)
+                prefix = operand.get(op)
                 if prefix:
                     acc.extend(prefix)
                     continue
-            acc.append(operand)
-        return {op: acc}
-    return binary_op
+                else:
+                    acc.append(operand)
+            else:
+                acc.append(operand)
+        binary_op = {op: acc}
+    return ParseResults(tokens.type, tokens.start, tokens.end, [binary_op])
 
 
 def to_tuple_call(tokens):
@@ -166,15 +207,15 @@ def to_json_call(tokens):
     op = tokens["op"].lower()
     op = binary_ops.get(op, op)
 
-    params = tokens["params"]
+    params = scrub(tokens["params"])
     if not params:
         params = {}
-    elif isinstance(params, list) and len(params) == 1:
-        params = params[0]
-    elif isinstance(params, ParseResults) and params.length() == 1:
-        params = params[0]
+    # elif isinstance(params, list) and len(params) == 1:
+    #     params = params[0]
+    # elif isinstance(params, ParseResults) and params.length() == 1:
+    #     params = params[0]
 
-    return {op: params}
+    return ParseResults(tokens.type, tokens.start, tokens.end, [{op: params}])
 
 
 def to_case_call(tokens):
@@ -185,33 +226,31 @@ def to_case_call(tokens):
     return {"case": cases}
 
 
-def to_interval_call(tokens):
-    # ARRANGE INTO {interval: params} FORMAT
-    return {"interval": [tokens["count"], tokens["duration"][:-1]]}
-
-
 def to_when_call(tokens):
     tok = tokens
     return {"when": tok["when"], "then": tok["then"]}
 
 
 def to_join_call(tokens):
-    tok = tokens
-    op = tok["op"].type.parser_name
-    if tok["join"]["name"]:
-        output = {op: {"name": tok["join"]["name"], "value": tok["join"]["value"]}}
+    op = tokens["op"].type.parser_name
+    if tokens["join"]["name"]:
+        output = {op: {
+            "name": tokens["join"]["name"],
+            "value": tokens["join"]["value"],
+        }}
     else:
-        output = {op: tok["join"]}
+        output = {op: tokens["join"]}
 
-    output["on"] = tok["on"]
-    output["using"] = tok["using"]
+    output["on"] = tokens["on"]
+    output["using"] = tokens["using"]
     return output
 
 
 def to_alias(tokens):
-    if tokens['col']:
-        return {tokens['table_name']: tokens['col']}
-    return tokens['table_name']
+    if tokens["col"]:
+        return {tokens["table_name"]: tokens["col"]}
+    return tokens["table_name"]
+
 
 def to_select_call(tokens):
     if tokens["value"][0][0] == "*":
@@ -219,9 +258,9 @@ def to_select_call(tokens):
 
 
 def to_union_call(tokens):
-    unions = list(tokens["from"]["union"])
+    unions = list(tokens["union"])
     if len(unions) == 1:
-        output = unions[0]
+        output = unions[0].tokens[0]  # REMOVE THE Group()
     else:
         sources = [unions[i] for i in range(0, len(unions), 2)]
         operators = [unions[i] for i in range(1, len(unions), 2)]
@@ -234,24 +273,15 @@ def to_union_call(tokens):
                 'Expecting all "union all" or all "union", not some combination'
             )
 
-        if not tokens["orderby"] and not tokens["limit"]:
+        if not tokens["orderby"] and not tokens['offset'] and not tokens["limit"]:
             return {op: sources}
         else:
             output = {"from": {op: sources}}
 
     output["orderby"] = tokens["orderby"]
-    output["offset"] = tokens.get("offset")
+    output["offset"] = tokens["offset"]
     output["limit"] = tokens["limit"]
     return [output]
-
-
-def to_with_clause(tokens):
-    tok = tokens
-    query = tok["query"]
-    if tok["with"]:
-        assignments = [{"name": w["name"], "value": w["value"][0]} for w in tok["with"]]
-        query["with"] = assignments
-    return query
 
 
 def unquote(tokens):
@@ -308,11 +338,11 @@ case = (
 ).addParseAction(to_case_call)
 
 
-# MAY BE TOO FLEXIBLE
+# MAYBE TOO FLEXIBLE?
 datatype = Word(IDENT_CHAR).addParseAction(lambda t: t[0].lower())
 
 # CAST
-cast = (
+cast = Group(
     CAST("op") + LB + expr("params") + AS + datatype("params") + RB
 ).addParseAction(to_json_call)
 
@@ -320,7 +350,7 @@ ordered_sql = Forward()
 
 
 call_function = (
-    ident("op") + LB + Optional(ordered_sql | delimitedList(expr))("params") + RB
+    ident("op") + LB + Optional(Group(ordered_sql) | delimitedList(expr))("params") + RB
 ).addParseAction(to_json_call)
 
 
@@ -332,23 +362,24 @@ def _or(values):
 
 
 interval = (
-    Keyword("interval", caseless=True).suppress()
-    + (realNum | intNum)("count")
-    + _or([Keyword(d, caseless=True)("duration") for d in durations])
-).addParseAction(to_interval_call)
+    INTERVAL("op")
+    + (realNum | intNum)("params")
+    + _or([
+        Keyword(d, caseless=True).addParseAction(lambda t: t.lower()[:-1])
+        for d in durations
+    ])("params")
+).addParseAction(to_json_call)
 
 compound = (
     NULL
     | TRUE
     | FALSE
     | NOCASE
-    | (
-        Keyword("date", caseless=True)("op") + sqlString("params")
-    ).addParseAction(to_json_call)
+    | (DATE("op") + sqlString("params")).addParseAction(to_json_call)
     | interval
     | case
     | cast
-    | (LB + ordered_sql + RB)
+    | (LB + Group(ordered_sql) + RB)
     | (LB + Group(delimitedList(expr)).addParseAction(to_tuple_call) + RB)
     | realNum.set_parser_name("float")
     | intNum.set_parser_name("int")
@@ -373,8 +404,10 @@ expr << Group(
 )
 
 alias = (
-    ident("table_name") + Optional(LB + delimitedList(ident("col")) + RB)
-)("name").set_parser_name("alias").addParseAction(to_alias)
+    (ident + Optional(LB + delimitedList(ident("col")) + RB))("name")
+    .set_parser_name("alias")
+    .addParseAction(to_alias)
+)
 
 
 # SQL STATEMENT
@@ -422,7 +455,7 @@ join = (
     + Optional((ON + expr("on")) | (USING + expr("using")))
 ).addParseAction(to_join_call)
 
-unordered_sql = Group(
+unordered_sql = (
     (
         SELECT_DISTINCT + delimitedList(selectColumn)("select_distinct")
         | SELECT + delimitedList(selectColumn)("select")
@@ -433,26 +466,23 @@ unordered_sql = Group(
         + Optional(GROUP_BY + delimitedList(Group(selectColumn))("groupby"))
         + Optional(HAVING + expr("having"))
     )
-)
+).set_parser_name("unordered sql")
 
-ordered_sql << Group(
-    Group(Group(
-        unordered_sql + ZeroOrMore((UNION_ALL | UNION) + unordered_sql)
-    )("union"))("from")
+ordered_sql << (
+    (
+        Group(unordered_sql) + ZeroOrMore((UNION_ALL | UNION) + Group(unordered_sql))
+    )("union")
     + Optional(ORDER_BY + delimitedList(Group(sortColumn))("orderby"))
     + Optional(LIMIT + expr("limit"))
     + Optional(OFFSET + expr("offset"))
-).addParseAction(to_union_call)
+).set_parser_name("ordered sql").addParseAction(to_union_call)
 
-statement = Group(
-    Group(Optional(
-        WITH
-        + delimitedList(Group(
-            ident("name") + AS + LB + ordered_sql("value") + Literal(")").suppress()
-        ))
-    ))("with")
-    + ordered_sql("query")
-).addParseAction(to_with_clause)
+statement = (
+    Optional(
+        WITH + delimitedList(Group(ident("name") + AS + LB + Group(ordered_sql)("value") + RB))
+    )("with")
+    + ordered_sql
+)
 
 SQLParser = statement
 
@@ -464,3 +494,4 @@ engine.add_ignore(oracleSqlComment)
 engine.add_ignore(mySqlComment)
 
 engine.release()
+

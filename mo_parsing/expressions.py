@@ -209,9 +209,9 @@ class And(ParseExpression):
                 encountered_error_stop = True
                 continue
             try:
-                exprtokens = expr._parse(string, end, doActions)
-                end = exprtokens.end
-                acc.append(exprtokens)
+                tokens = expr._parse(string, end, doActions)
+                end = tokens.end
+                acc.append(tokens)
             except ParseException as pe:
                 if encountered_error_stop:
                     raise ParseSyntaxException(pe.expr, pe.loc, pe.string)

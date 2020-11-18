@@ -65,7 +65,6 @@ You may also generate SQL from the a given JSON document. This is done by the fo
     >>> format({"from":"test", "select":["a.b", "c"]})
     'SELECT a.b, c FROM test'
 
-
 ## Contributing
 
 In the event that the parser is not working for you, you can help make this better but simply pasting your sql (or JSON) into a new issue. Extra points if you describe the problem. Even more points if you submit a PR with a test.  If you also submit a fix, then you also have my gratitude. 

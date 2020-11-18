@@ -92,7 +92,7 @@ class ParserElement(object):
     def __init__(self):
         self.parseAction = list()
         self.parser_name = ""
-        self.token_name = None
+        self.token_name = ""
         self.engine = engine.CURRENT
         self.streamlined = False
         self.min_cache = -1
@@ -694,7 +694,7 @@ results.ParserElement = ParserElement
 NO_PARSER = (
     ParserElement().set_parser_name("<nothing>")
 )  # USE THIS WHEN YOU DO NOT CARE ABOUT THE PARSER TYPE
-NO_RESULTS = ParseResults(NO_PARSER, -1, -1, [])
+NO_RESULTS = ParseResults(NO_PARSER, -1, 0, [])
 
 results.NO_PARSER = NO_PARSER
 results.NO_RESULTS = NO_RESULTS
