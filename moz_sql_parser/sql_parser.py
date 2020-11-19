@@ -34,7 +34,7 @@ from mo_parsing import (
     Dict,
 )
 from mo_parsing.engine import Engine
-from mo_parsing.utils import is_number
+from mo_parsing.utils import is_number, listwrap
 from moz_sql_parser.keywords import (
     AS,
     ASC,
@@ -181,8 +181,8 @@ def to_json_operator(tokens):
         acc = []
         for operand in operands:
             if isinstance(operand, ParseResults):
-                # if operand[0][0] and operand[0][0][0] and operand[0][0][0]['and']:
-                #     prefix = operand[0].get(op)
+                operand = operand[0]
+
                 prefix = operand.get(op)
                 if prefix:
                     acc.extend(prefix)
@@ -192,7 +192,7 @@ def to_json_operator(tokens):
             else:
                 acc.append(operand)
         binary_op = {op: acc}
-    return ParseResults(tokens.type, tokens.start, tokens.end, [binary_op])
+    return binary_op
 
 
 def to_tuple_call(tokens):
@@ -232,7 +232,7 @@ def to_when_call(tokens):
 
 
 def to_join_call(tokens):
-    op = tokens["op"][0].type.parser_name
+    op = " ".join(listwrap(scrub(tokens["op"])))
     if tokens["join"]["name"]:
         output = {op: {
             "name": tokens["join"]["name"],
