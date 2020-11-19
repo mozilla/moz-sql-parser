@@ -46,7 +46,7 @@ class ParseResults(object):
                             typ = typ.expr
                         if typ.token_name:
                             typ = typ.copy()
-                        typ.token_name = None
+                            typ.token_name = None
                         yield ParseResults(typ, tok.start, tok.end, tok.tokens)
 
                         # for t in tok.tokens:

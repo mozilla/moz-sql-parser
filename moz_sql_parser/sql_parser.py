@@ -232,7 +232,7 @@ def to_when_call(tokens):
 
 
 def to_join_call(tokens):
-    op = tokens["op"].type.parser_name
+    op = tokens["op"][0].type.parser_name
     if tokens["join"]["name"]:
         output = {op: {
             "name": tokens["join"]["name"],
