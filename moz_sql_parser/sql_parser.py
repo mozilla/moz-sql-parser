@@ -260,20 +260,13 @@ def to_select_call(tokens):
 def to_union_call(tokens):
     unions = list(tokens["union"])
     if len(unions) == 1:
-        output = unions[0].tokens[0]  # REMOVE THE Group()
+        output = scrub(unions[0].tokens)  # REMOVE THE Group()
     else:
-        sources = [unions[i] for i in range(0, len(unions), 2)]
+        sources = scrub([unions[i] for i in range(0, len(unions), 2)])
         operators = [unions[i] for i in range(1, len(unions), 2)]
-        if is_text(operators[0]):
-            op = operators[0]
-        else:
-            op = operators[0].type.parser_name
-        if any(o.type.parser_name != op for o in operators[1:]):
-            raise Exception(
-                'Expecting all "union all" or all "union", not some combination'
-            )
+        op = operators[0].type.parser_name
 
-        if not tokens["orderby"] and not tokens['offset'] and not tokens["limit"]:
+        if not tokens["orderby"] and not tokens["offset"] and not tokens["limit"]:
             return {op: sources}
         else:
             output = {"from": {op: sources}}
@@ -281,7 +274,13 @@ def to_union_call(tokens):
     output["orderby"] = tokens["orderby"]
     output["offset"] = tokens["offset"]
     output["limit"] = tokens["limit"]
-    return [output]
+    return output
+
+
+def to_statement(tokens):
+    output = scrub(tokens["query"])
+    output["with"] = scrub(tokens["with"])
+    return output
 
 
 def unquote(tokens):
@@ -470,19 +469,27 @@ unordered_sql = (
 
 ordered_sql << (
     (
-        Group(unordered_sql) + ZeroOrMore((UNION_ALL | UNION) + Group(unordered_sql))
+        Group(unordered_sql)
+        + (
+            ZeroOrMore(UNION_ALL + Group(unordered_sql))
+            | ZeroOrMore(UNION + Group(unordered_sql))
+        )
     )("union")
     + Optional(ORDER_BY + delimitedList(Group(sortColumn))("orderby"))
     + Optional(LIMIT + expr("limit"))
     + Optional(OFFSET + expr("offset"))
 ).set_parser_name("ordered sql").addParseAction(to_union_call)
 
+
 statement = (
     Optional(
-        WITH + delimitedList(Group(ident("name") + AS + LB + Group(ordered_sql)("value") + RB))
+        WITH
+        + delimitedList(Group(
+            ident("name") + AS + LB + Group(ordered_sql)("value") + RB
+        ))
     )("with")
-    + ordered_sql
-)
+    + Group(ordered_sql)("query")
+).addParseAction(to_statement)
 
 SQLParser = statement
 
@@ -494,4 +501,3 @@ engine.add_ignore(oracleSqlComment)
 engine.add_ignore(mySqlComment)
 
 engine.release()
-
