@@ -51,7 +51,7 @@ def scrub(result):
     elif isinstance(result, dict) and not result:
         return result
     elif isinstance(result, list):
-        output = [rr for r in result for rr in [scrub(r)] if rr is not None]
+        output = [rr for r in result for rr in [scrub(r)]]
 
         if not output:
             return None
