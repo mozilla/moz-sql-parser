@@ -12,7 +12,7 @@ from __future__ import absolute_import, division, unicode_literals
 import ast
 
 from mo_dots import is_data, NullType
-from mo_future import is_text, text, number_types, binary_type
+from mo_future import text, number_types, binary_type
 
 from mo_parsing import (
     Combine,
@@ -24,6 +24,7 @@ from mo_parsing import (
     Regex,
     Word,
     ZeroOrMore,
+    OneOrMore,
     alphanums,
     delimitedList,
     infixNotation,
@@ -31,7 +32,6 @@ from mo_parsing import (
     RIGHT_ASSOC,
     LEFT_ASSOC,
     ParseResults,
-    Dict,
 )
 from mo_parsing.engine import Engine
 from mo_parsing.utils import is_number, listwrap
@@ -264,7 +264,7 @@ def to_union_call(tokens):
     else:
         sources = scrub([unions[i] for i in range(0, len(unions), 2)])
         operators = [unions[i] for i in range(1, len(unions), 2)]
-        op = operators[0].type.parser_name
+        op = " ".join(listwrap(scrub(operators)))
 
         if not tokens["orderby"] and not tokens["offset"] and not tokens["limit"]:
             return {op: sources}
@@ -471,8 +471,8 @@ ordered_sql << (
     (
         Group(unordered_sql)
         + (
-            ZeroOrMore(UNION_ALL + Group(unordered_sql))
-            | ZeroOrMore(UNION + Group(unordered_sql))
+            OneOrMore(UNION_ALL + Group(unordered_sql))
+            | ZeroOrMore(Group(UNION) + Group(unordered_sql))
         )
     )("union")
     + Optional(ORDER_BY + delimitedList(Group(sortColumn))("orderby"))
