@@ -12,9 +12,6 @@ from __future__ import absolute_import, division, unicode_literals
 import json
 from threading import Lock
 
-from mo_dots import NullType
-from mo_future import binary_type, number_types, text
-
 from mo_parsing import ParseException
 from moz_sql_parser.debugs import all_exceptions
 from moz_sql_parser.sql_parser import SQLParser, scrub_literal, scrub

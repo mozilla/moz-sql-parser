@@ -12,7 +12,7 @@ from __future__ import absolute_import, division, unicode_literals
 import ast
 
 from mo_dots import is_data, NullType
-from mo_future import text, number_types, binary_type
+from mo_future import text, number_types, binary_type, none_type
 
 from mo_parsing import (
     Combine,
@@ -91,7 +91,9 @@ IDENT_CHAR = alphanums + "@_$"
 
 
 def scrub(result):
-    if isinstance(result, (text, NullType)):
+    if result == None:
+        return None
+    elif isinstance(result, text):
         return result
     elif isinstance(result, binary_type):
         return result.decode("utf8")
@@ -114,13 +116,13 @@ def scrub(result):
         output = {
             k: vv
             for k, v in kv_pairs
-            if v is not None
             for vv in [scrub(v)]
-            if vv is not None
+            if vv != None
         }
         if output:
             return output
-        return scrub(list(result))
+        temp = list(result)
+        return scrub(temp)
 
 
 def scrub_literal(candidate):
@@ -247,9 +249,11 @@ def to_join_call(tokens):
 
 
 def to_alias(tokens):
-    if tokens["col"]:
-        return {tokens["table_name"]: tokens["col"]}
-    return tokens["table_name"]
+    cols = scrub(tokens['col'])
+    name = scrub(tokens[0])
+    if cols:
+        return {name: cols}
+    return name
 
 
 def to_select_call(tokens):
@@ -403,7 +407,7 @@ expr << Group(
 )
 
 alias = (
-    (ident + Optional(LB + delimitedList(ident("col")) + RB))("name")
+    (Group(ident) + Optional(LB + delimitedList(ident("col")) + RB))("name")
     .set_parser_name("alias")
     .addParseAction(to_alias)
 )
