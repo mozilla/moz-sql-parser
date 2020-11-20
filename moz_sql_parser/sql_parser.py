@@ -150,7 +150,7 @@ def to_tuple_call(tokens):
     # IS THIS ONE VALUE IN (), OR MANY?
     if tokens.length() == 1:
         return tokens[0][0]
-    return scrub_literal([t[0] for t in tokens])
+    return scrub_literal(scrub(tokens))
 
 
 def to_json_call(tokens):

@@ -57,8 +57,8 @@ class ParseElementEnhance(ParserElement):
         return self.expr.min_length()
 
     def parseImpl(self, string, start, doActions=True):
-        output = self.expr._parse(string, start, doActions)
-        return ParseResults(self, output.start, output.end, [output])
+        result = self.expr._parse(string, start, doActions)
+        return ParseResults(self, result.start, result.end, [result])
 
     def leaveWhitespace(self):
         with Engine(""):
@@ -222,10 +222,10 @@ class Many(ParseElementEnhance):
                             raise ParseException(
                                 self, end, string, msg="found stopper too soon"
                             )
-                tokens = self.expr._parse(string, end, doActions)
-                end = tokens.end
-                if tokens:
-                    acc.append(tokens)
+                result = self.expr._parse(string, end, doActions)
+                end = result.end
+                if result:
+                    acc.append(result)
                     count += 1
         except ParseException:
             if self.parser_config.min_match <= count <= max:

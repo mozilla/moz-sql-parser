@@ -209,9 +209,9 @@ class And(ParseExpression):
                 encountered_error_stop = True
                 continue
             try:
-                tokens = expr._parse(string, end, doActions)
-                end = tokens.end
-                acc.append(tokens)
+                result = expr._parse(string, end, doActions)
+                end = result.end
+                acc.append(result)
             except ParseException as pe:
                 if encountered_error_stop:
                     raise ParseSyntaxException(pe.expr, pe.loc, pe.string)
@@ -354,8 +354,8 @@ class MatchFirst(ParseExpression):
 
         for e in self.exprs:
             try:
-                ret = e._parse(string, start, doActions)
-                return ParseResults(self, ret.start, ret.end, [ret])
+                result = e._parse(string, start, doActions)
+                return ParseResults(self, result.start, result.end, [result])
             except ParseException as cause:
                 causes.append(cause)
 
