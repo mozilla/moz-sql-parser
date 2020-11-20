@@ -11,15 +11,12 @@ from __future__ import absolute_import, division, unicode_literals
 
 import ast
 
-from mo_dots import is_data, NullType
-from mo_future import text, number_types, binary_type, none_type
+from mo_dots import is_data
+from mo_future import text, number_types, binary_type
 
 from mo_parsing import (
     Combine,
     Forward,
-    Group,
-    Keyword,
-    Literal,
     Optional,
     Regex,
     Word,
@@ -35,55 +32,7 @@ from mo_parsing import (
 )
 from mo_parsing.engine import Engine
 from mo_parsing.utils import is_number, listwrap
-from moz_sql_parser.keywords import (
-    AS,
-    ASC,
-    CASE,
-    CROSS_JOIN,
-    DESC,
-    ELSE,
-    END,
-    FROM,
-    FULL_JOIN,
-    FULL_OUTER_JOIN,
-    GROUP_BY,
-    HAVING,
-    INNER_JOIN,
-    JOIN,
-    LEFT_JOIN,
-    LEFT_OUTER_JOIN,
-    LIMIT,
-    OFFSET,
-    ON,
-    ORDER_BY,
-    RIGHT_JOIN,
-    RIGHT_OUTER_JOIN,
-    SELECT,
-    THEN,
-    UNION,
-    UNION_ALL,
-    USING,
-    WHEN,
-    WHERE,
-    unary_ops,
-    WITH,
-    durations,
-    KNOWN_OPS,
-    RESERVED,
-    binary_ops,
-    NULL,
-    NOCASE,
-    TRUE,
-    FALSE,
-    OVER,
-    PARTITION_BY,
-    CAST,
-    SELECT_DISTINCT,
-    LB,
-    RB,
-    DATE,
-    INTERVAL,
-)
+from moz_sql_parser.keywords import *
 
 engine = Engine().use()
 
@@ -268,7 +217,7 @@ def to_union_call(tokens):
     else:
         sources = scrub([unions[i] for i in range(0, len(unions), 2)])
         operators = [unions[i] for i in range(1, len(unions), 2)]
-        op = " ".join(listwrap(scrub(operators)))
+        op = "_".join(listwrap(scrub(operators)))
 
         if not tokens["orderby"] and not tokens["offset"] and not tokens["limit"]:
             return {op: sources}

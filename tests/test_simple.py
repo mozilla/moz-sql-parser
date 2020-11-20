@@ -10,12 +10,11 @@
 from __future__ import absolute_import, division, unicode_literals
 
 import json
-from unittest import TestCase, skipIf
+from unittest import TestCase
 
 from mo_dots import Null
 
 from moz_sql_parser import parse
-from test_resources import IS_MASTER
 
 try:
     from tests.util import assertRaises
