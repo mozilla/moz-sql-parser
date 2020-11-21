@@ -1093,3 +1093,9 @@ class TestSimple(TestCase):
         sql = 'SELECT * FROM jobs LIMIT 10'
         result = parse(sql)
         self.assertEqual(result, {"select": "*", "from": "jobs", "limit": 10})
+
+
+    def test_issue2_of_fork(self):
+        sql = "SELECT COUNT(DISTINCT Y) FROM A "
+        result = parse(sql)
+        self.assertEqual(result, {"from": "A", "select_distinct_count": {"value": "Y"}})

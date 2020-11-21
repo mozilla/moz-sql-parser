@@ -13,7 +13,6 @@ import ast
 
 from mo_dots import is_data
 from mo_future import text, number_types, binary_type
-from mo_testing.fuzzytestcase import assertAlmostEqual
 
 from mo_parsing import (
     Combine,
@@ -63,12 +62,7 @@ def scrub(result):
     else:
         # ATTEMPT A DICT INTERPRETATION
         kv_pairs = list(result.items())
-        output = {
-            k: vv
-            for k, v in kv_pairs
-            for vv in [scrub(v)]
-            if vv != None
-        }
+        output = {k: vv for k, v in kv_pairs for vv in [scrub(v)] if vv != None}
         if output:
             return output
         temp = list(result)
@@ -201,7 +195,7 @@ def to_join_call(tokens):
 
 
 def to_alias(tokens):
-    cols = scrub(tokens['col'])
+    cols = scrub(tokens["col"])
     name = scrub(tokens[0])
     if cols:
         return {name: cols}
@@ -412,7 +406,13 @@ join = (
 
 unordered_sql = (
     (
-        SELECT_DISTINCT + delimitedList(selectColumn)("select_distinct")
+        SELECT
+        + Keyword("count", caseless=True).suppress()
+        + LB
+        + DISTINCT
+        + delimitedList(selectColumn)("select_distinct_count")
+        + RB
+        | SELECT_DISTINCT + delimitedList(selectColumn)("select_distinct")
         | SELECT + delimitedList(selectColumn)("select")
     )
     + Optional(
