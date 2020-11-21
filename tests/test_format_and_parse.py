@@ -62,7 +62,6 @@ class TestFormatAndParse(TestCase):
         expected_json = {"select": "*", "from": "SYS.XYZZY"}
         self.verify_formatting(expected_sql, expected_json)
 
-    @skip("Not sure why")
     def select_one_column(self):
         expected_sql = "Select A from dual"
         expected_json = {"select": [{"value": "A"}], "from": ["dual"]}
@@ -102,7 +101,6 @@ class TestFormatAndParse(TestCase):
         expected_json = {"select": {"value": "a.b.c._d"}, "from": "dual"}
         self.verify_formatting(expected_sql, expected_json)
 
-    @skip("Not sure why")
     def select_many_column(self):
         expected_sql = "Select a, b, c from dual"
         expected_json = {

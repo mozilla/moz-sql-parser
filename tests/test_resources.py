@@ -749,7 +749,6 @@ class TestResources(TestCase):
         }
         self.assertEqual(result, expected)
 
-    @skipIf(IS_MASTER, "does not work on master, not enough stack space")
     def test_096(self):
         #      01234567890123456789012345678901234567890123456789012345678901 234567890123456789
         sql = (
@@ -780,7 +779,6 @@ class TestResources(TestCase):
         }
         self.assertEqual(result, expected)
 
-    @skipIf(IS_MASTER, "does not work on master, not enough stack space")
     def test_098(self):
         sql = (
             "SELECT"
