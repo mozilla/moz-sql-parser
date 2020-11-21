@@ -2,9 +2,9 @@
 import inspect
 from collections import MutableMapping
 
-from mo_dots import is_many
+from mo_dots import is_many, is_null
 from mo_future import is_text, text, PY3, NEXT, zip_longest
-from mo_parsing.utils import Log
+from mo_parsing.utils import Log, listwrap
 
 from mo_parsing import engine
 from mo_parsing.utils import is_forward, forward_type
@@ -15,17 +15,18 @@ Suppress, ParserElement, NO_PARSER, NO_RESULTS, Group, Dict, Token, Empty = [Non
 
 
 class ParseResults(object):
-    __slots__ = [
-        "type",
-        "tokens",
-    ]
+    __slots__ = ["type", "start", "end", "tokens", "timing"]
 
     @property
     def name(self):
         return self.type.token_name
 
-    def __init__(self, result_type, tokens=None):
+    def __init__(self, result_type, start, end, tokens):
+        if end==-1:
+            Log.error("not allowed")
         self.type = result_type
+        self.start = start
+        self.end = end
         self.tokens = tokens
 
     def _get_item_by_name(self, name):
@@ -39,8 +40,15 @@ class ParseResults(object):
                     elif is_forward(tok.type) and isinstance(tok.tokens[0].type, Group):
                         yield tok
                     else:
-                        for t in tok.tokens:
-                            yield t
+                        # STRIP NAME OFF
+                        typ = tok.type
+                        while is_forward(typ):
+                            typ = typ.expr
+                        if typ.token_name:
+                            typ = typ.copy()
+                            typ.token_name = None
+                        yield ParseResults(typ, tok.start, tok.end, tok.tokens)
+
                     continue
                 elif isinstance(tok.type, Group):
                     continue
@@ -66,11 +74,14 @@ class ParseResults(object):
         else:
             values = list(self._get_item_by_name(item))
             if len(values) == 0:
-                return NO_RESULTS
+                return None
             if len(values) == 1:
                 return values[0]
             # ENCAPSULATE IN A ParseResults FOR FURTHER NAVIGATION
-            return ParseResults(NO_PARSER, values)
+            try:
+                return ParseResults(NO_PARSER, values[0].start, values[-1].end, values)
+            except Exception as e:
+                return ParseResults(NO_PARSER, values[0].start, values[-1].end, values)
 
     def __setitem__(self, k, v):
         if isinstance(k, (slice, int)):
@@ -79,7 +90,7 @@ class ParseResults(object):
         if v is None:
             v = NO_RESULTS
 
-        if is_forward(self):
+        if is_forward(self.type):
             self.tokens[0][k] = v
             return
 
@@ -98,7 +109,13 @@ class ParseResults(object):
                 tok.__setitem__(k, NO_RESULTS)  # ERASE ALL CHILDREN
 
         if v is not NO_RESULTS:
-            self.tokens.append(Annotation(k, [v]))
+            tokens = self.tokens
+            if is_forward(self.type):
+                tokens = tokens[0].tokens
+            if isinstance(v, ParseResults):
+                tokens.append(Annotation(k, v.start, v.end, v.tokens))
+            else:
+                tokens.append(Annotation(k, -1, 0, listwrap(v)))
 
     if USE_ATTRIBUTE_ACCESS:
 
@@ -123,7 +140,7 @@ class ParseResults(object):
         return sum(1 for _ in self)
 
     def __eq__(self, other):
-        if other == None:
+        if is_null(other):
             return not self.__bool__()
         elif is_text(other):
             try:
@@ -141,7 +158,7 @@ class ParseResults(object):
 
     def __bool__(self):
         try:
-            NEXT(self.iteritems())()
+            NEXT(self.items())()
             return True
         except Exception:
             pass
@@ -188,7 +205,9 @@ class ParseResults(object):
                     name = t.name
                     if name:
                         if not isinstance(t.type, Annotation):
-                            self.tokens.append(Annotation(name, t.tokens))
+                            self.tokens.append(Annotation(
+                                name, t.start, t.end, t.tokens
+                            ))
                     return
                 else:
                     index -= 1
@@ -210,17 +229,34 @@ class ParseResults(object):
     def __reversed__(self):
         return reversed(self.tokens)
 
-    def iterkeys(self):
-        for k, _ in self.iteritems():
+    def __getattr__(self, item):
+        """
+        IF THERE IS ONLY ONE VALUE, THEN DEFER TO IT
+        """
+        iter = self.__iter__()
+        try:
+            v1 = iter.__next__()
+            try:
+                iter.__next__()
+                raise Log.error("No attribute {{item}} for mutiple tokens", item=item)
+            except Exception:
+                return getattr(v1, item)
+        except Exception:
+            raise Log.error("No attribute {{item}}", item=item)
+
+    def keys(self):
+        for k, _ in self.items():
             yield k
 
-    def itervalues(self):
-        for _, v in self.iteritems():
+    def values(self):
+        for _, v in self.items():
             yield v
 
-    def iteritems(self):
+    def items(self):
         if is_forward(self.type):
-            return self.tokens[0].iteritems()
+            for k, v in self.tokens[0].items():
+                yield k, v
+            return
 
         output = {}
         for tok in self.tokens:
@@ -232,25 +268,10 @@ class ParseResults(object):
                     continue
                 if is_forward(tok.type) and isinstance(tok.tokens[0].type, Group):
                     continue
-                for k, v in tok.iteritems():
+                for k, v in tok.items():
                     add(output, k, v)
         for k, v in output.items():
             yield k, v
-
-    if PY3:
-        keys = iterkeys
-        values = itervalues
-        items = iteritems
-    else:
-
-        def keys(self):
-            return list(self.iterkeys())
-
-        def values(self):
-            return list(self.itervalues())
-
-        def items(self):
-            return list(self.iteritems())
 
     def haskeys(self):
         """Since keys() returns an iterator, this method is helpful in bypassing
@@ -288,7 +309,12 @@ class ParseResults(object):
         return bool(self[item])
 
     def __add__(self, other):
-        return ParseResults(Group(self.type + other.type), self.tokens + other.tokens)
+        return ParseResults(
+            Group(self.type + other.type),
+            self.start,
+            other.end,
+            self.tokens + other.tokens,
+        )
 
     def __radd__(self, other):
         if not other:  # happens when using sum() on parsers
@@ -372,9 +398,9 @@ class ParseResults(object):
 
     def __copy__(self):
         """
-        Returns a new copy of a :class:`ParseResults` object.
+        Returns a new copy of a `ParseResults` object.
         """
-        ret = ParseResults(self.type, list(self.tokens))
+        ret = ParseResults(self.type, self.start, self.end, list(self.tokens))
         return ret
 
     def getName(self):
@@ -448,12 +474,12 @@ class Annotation(ParseResults):
 
     __slots__ = []
 
-    def __init__(self, name, value):
+    def __init__(self, name, start, end, value):
         if not name:
             Log.error("expecting a name")
         if not isinstance(value, list):
             Log.error("expecting a list")
-        ParseResults.__init__(self, Empty()(name), value)
+        ParseResults.__init__(self, Empty()(name), start, end, value)
 
     def __str__(self):
         return "{" + text(self.name) + ": " + text(self.tokens) + "}"

@@ -3,17 +3,28 @@ from __future__ import absolute_import, division, unicode_literals
 
 import inspect
 import json
+import re
 import string
 import sys
 import warnings
-from json.encoder import encode_basestring
+from collections import namedtuple
 from math import isnan
 from types import FunctionType
 
-from mo_future import unichr, text, generator_types, is_text
+from mo_dots import is_null, Null
+from mo_future import unichr, text, generator_types, get_function_name
+from mo_imports import delay_import
+
+ParseException = delay_import("mo_parsing.exceptions.ParseException")
+
+
+def append_config(base, *slots):
+    fields = base.Config._fields + slots
+    return namedtuple("Config", fields)
+
 
 try:
-    from mo_parsing.utils import Log
+    from mo_logs import Log
 except Exception:
 
     class Log(object):
@@ -26,14 +37,108 @@ except Exception:
             pass
 
         @classmethod
+        def alert(cls, template, cause=None, **params):
+            print
+
+        @classmethod
         def error(cls, template, cause=None, **params):
-            raise Exception(template) from cause
+            raise ParseException(Null, -1, -1, msg=template, cause=cause)
 
 
-_MAX_INT = sys.maxsize
+MAX_INT = sys.maxsize
 empty_list = []
 empty_tuple = tuple()
 many_types = (list, tuple, set) + generator_types
+
+
+def extend(cls):
+    """
+    DECORATOR TO ADD METHODS TO CLASSES
+    :param cls: THE CLASS TO ADD THE METHOD TO
+    :return:
+    """
+
+    def extender(func):
+        setattr(cls, get_function_name(func), func)
+        return func
+
+    return extender
+
+
+_prec = {"|": 0, "+": 1, "*": 2}
+
+
+def regex_compile(pattern):
+    """REGEX COMPILE WITHOUT THE ON-A-SINGLE-LINE ASSUMPTION"""
+    return re.compile(pattern, re.MULTILINE | re.DOTALL)
+
+
+regex_type = type(regex_compile("[A-Z]"))
+
+
+def regex_iso(curr_prec, expr, new_prec):
+    """
+    RETURN NON-CAPTURING GROUP (TO ENSURE ORDER OF OPERATIONS)
+    """
+    if _prec[curr_prec] < _prec[new_prec]:
+        return f"(?:{expr})"
+    else:
+        return expr
+
+
+def regex_caseless(literal):
+    """
+    RETURN REGEX FOR CASELESS VERSION OF GIVEN LITERAL (SO WE DO NOT NEED CASELESS MODE)
+    """
+    lower = literal.lower()
+    upper = literal.upper()
+    return "".join(
+        f"[{re.escape(l)}{re.escape(u)}]" if l != u else re.escape(u)
+        for l, u in zip(lower, upper)
+    )
+
+
+_escapes = {
+    "\\": "\\\\",
+    "^": "\\^",
+    "-": "\\-",
+    "]": "\\]",
+    "\n": "\\n",
+    "\r": "\\r",
+    "\t": "\\t",
+}
+
+
+def regex_range(s):
+    def esc(s):
+        return _escapes.get(s, s)
+
+    if not s:
+        return ""
+    if len(s) == 1:
+        return re.escape(s)
+
+    start = None
+    prev = None
+    acc = ["["]
+    for c in list(sorted(set(s))) + ["\a"]:
+        if prev and ord(prev) == ord(c) - 1:
+            if not start:
+                start = prev
+        elif start:
+            if start == prev:
+                acc.append(esc(prev))
+            else:
+                acc.append(esc(start))
+                acc.append("-")
+                acc.append(esc(prev))
+            start = None
+        elif prev:
+            acc.append(esc(prev))
+        prev = c
+    acc.append("]")
+
+    return "".join(acc)
 
 
 def indent(value, prefix="\t", indent=None):
@@ -47,15 +152,15 @@ def indent(value, prefix="\t", indent=None):
     if indent != None:
         prefix = prefix * indent
 
-    value = toString(value)
+    value = text(value)
     try:
         content = value.rstrip()
         suffix = value[len(content) :]
         lines = content.splitlines()
-        return prefix + (CR + prefix).join(lines) + suffix
+        return prefix + ("\n" + prefix).join(lines) + suffix
     except Exception as e:
         raise Exception(
-            "Problem with indent of value (" + e.message + ")\n" + text(toString(value))
+            "Problem with indent of value (" + e.message + ")\n" + text(value)
         )
 
 
@@ -65,17 +170,15 @@ def quote(value):
     :param value:
     :return:
     """
-    if value == None:
+    if is_null(value):
         output = ""
-    elif is_text(value):
-        output = encode_basestring(value)
     else:
         output = json.dumps(value)
     return output
 
 
 def is_number(s):
-    if s is True or s is False or s == None:
+    if s is True or s is False or is_null(s):
         return False
 
     try:
@@ -92,7 +195,7 @@ def listwrap(value):
     value -> [value]
     [...] -> [...]  (unchanged list)
     """
-    if value == None:
+    if is_null(value):
         return []
     elif isinstance(value, many_types):
         return value
@@ -184,7 +287,6 @@ alphas = string.ascii_uppercase + string.ascii_lowercase
 nums = "0123456789"
 hexnums = nums + "ABCDEFabcdef"
 alphanums = alphas + nums
-_bslash = chr(92)
 printables = "".join(c for c in string.printable if c not in string.whitespace)
 
 
@@ -194,7 +296,7 @@ def col(loc, string):
 
     Note: the default parsing behavior is to expand tabs in the input string
     before starting the parsing process.  See
-    :class:`ParserElement.parseString` for more
+    `ParserElement.parseString` for more
     information on parsing strings containing ``<TAB>`` s, and suggested
     methods to maintain a consistent view of the parsed string, the parse
     location, and line and column positions within the parsed string.
@@ -208,7 +310,7 @@ def lineno(loc, string):
     The first line is number 1.
 
     Note - the default parsing behavior is to expand tabs in the input string
-    before starting the parsing process.  See :class:`ParserElement.parseString`
+    before starting the parsing process.  See `ParserElement.parseString`
     for more information on parsing strings containing ``<TAB>`` s, and
     suggested methods to maintain a consistent view of the parsed string, the
     parse location, and line and column positions within the parsed string.
@@ -256,25 +358,25 @@ def wrap_parse_action(func):
         num_args = len(spec.args)
 
     def wrapper(*args):
+        token, index, string = args
         try:
-            token, index, string = args
             result = func(*args[:num_args])
             if result is None:
                 return token
             elif isinstance(result, ParseResults):
+                if (result.start < token.start) or (token.end < result.end):
+                    Log.error("Tokens must be ordered")
                 return result
 
             if isinstance(result, (list, tuple)):
-                return ParseResults(token.type, result)
+                return ParseResults(token.type, token.start, token.end, result)
             else:
-                return ParseResults(token.type, [result])
+                return ParseResults(token.type, token.start, token.end, [result])
         except ParseException as pe:
             raise pe
         except Exception as cause:
             Log.warning("parse action should not raise exception", cause=cause)
-            f = ParseException(*args)
-            f.__cause__ = cause
-            raise f
+            raise ParseException(token.type, token.start, string, cause=cause)
 
     # copy func name to wrapper for sensible debug output
     try:

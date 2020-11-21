@@ -6,12 +6,12 @@
         "Topic :: Software Development :: Libraries",
         "Topic :: Software Development :: Libraries :: Python Modules",
         "Programming Language :: SQL",
-        "Programming Language :: Python :: 3",
+        "Programming Language :: Python :: 3.7",
         "License :: OSI Approved :: Mozilla Public License 2.0 (MPL 2.0)"
     ],
     "description": "Extract Parse Tree from SQL",
     "include_package_data": true,
-    "install_requires": ["mo-dots>=3.93.20259", "mo-future>=3.89.20246", "mo-logs>=3.118.20293"],
+    "install_requires": ["mo-dots==3.141.20326", "mo-future==3.136.20306", "mo-logs==3.143.20326"],
     "license": "MPL 2.0",
     "long_description": {
         "$concat": [
@@ -82,7 +82,6 @@
             "    >>> format({\"from\":\"test\", \"select\":[\"a.b\", \"c\"]})",
             "    'SELECT a.b, c FROM test'",
             "",
-            "",
             "## Contributing",
             "",
             "In the event that the parser is not working for you, you can help make this better but simply pasting your sql (or JSON) into a new issue. Extra points if you describe the problem. Even more points if you submit a PR with a test.  If you also submit a fix, then you also have my gratitude. ",
@@ -121,6 +120,6 @@
     "name": "moz-sql-parser",
     "packages": ["moz_sql_parser", "mo_parsing"],
     "url": "https://github.com/klahnakoski/moz-sql-parser",
-    "version": "3.125.20293",
+    "version": "3.144.20326",
     "zip_safe": true
 }

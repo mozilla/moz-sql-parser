@@ -35,10 +35,10 @@ module provides a library of classes that you use to construct the
 grammar directly in Python.
 
 Here is a program to parse "Hello, World!" (or any greeting of the form
-``"<salutation>, <addressee>!"``), built up using :class:`Word`,
-:class:`Literal`, and :class:`And` elements
-(the :class:`'+'<ParserElement.__add__>` operators create :class:`And` expressions,
-and the strings are auto-converted to :class:`Literal` expressions)::
+``"<salutation>, <addressee>!"``), built up using `Word`,
+`Literal`, and `And` elements
+(the `'+'<ParserElement.__add__>` operators create `And` expressions,
+and the strings are auto-converted to `Literal` expressions)::
 
     from mo_parsing import Word, alphas
 
@@ -55,8 +55,8 @@ The program outputs the following::
 The Python representation of the grammar is quite readable, owing to the
 self-explanatory class names, and the use of '+', '|' and '^' operators.
 
-The :class:`ParseResults` object returned from
-:class:`ParserElement.parseString` can be
+The `ParseResults` object returned from
+`ParserElement.parseString` can be
 accessed as a nested list, a dictionary, or an object with named
 attributes.
 
@@ -71,26 +71,26 @@ vexing when writing text parsers:
 
 Getting Started -
 -----------------
-Visit the classes :class:`ParserElement` and :class:`ParseResults` to
+Visit the classes `ParserElement` and `ParseResults` to
 see the base classes that most other mo_parsing
 classes inherit from. Use the docstrings for examples of how to:
 
- - construct literal match expressions from :class:`Literal` and
-   :class:`CaselessLiteral` classes
- - construct character word-group expressions using the :class:`Word`
+ - construct literal match expressions from `Literal` and
+   `CaselessLiteral` classes
+ - construct character word-group expressions using the `Word`
    class
- - see how to create repetitive expressions using :class:`ZeroOrMore`
-   and :class:`OneOrMore` classes
- - use :class:`'+'<And>`, :class:`'|'<MatchFirst>`, :class:`'^'<Or>`,
-   and :class:`'&'<Each>` operators to combine simple expressions into
+ - see how to create repetitive expressions using `ZeroOrMore`
+   and `OneOrMore` classes
+ - use `'+'<And>`, `'|'<MatchFirst>`, `'^'<Or>`,
+   and `'&'<Each>` operators to combine simple expressions into
    more complex ones
  - associate names with your parsed results using
-   :class:`ParserElement.set_token_name`
- - access the parsed data, which is returned as a :class:`ParseResults`
+   `ParserElement.set_token_name`
+ - access the parsed data, which is returned as a `ParseResults`
    object
- - find some helpful expression short-cuts like :class:`delimitedList`
-   and :class:`oneOf`
- - find more useful common expressions in the :class:`parsing_common`
+ - find some helpful expression short-cuts like `delimitedList`
+   and `oneOf`
+ - find more useful common expressions in the `parsing_common`
    namespace class
 """
 
@@ -112,8 +112,7 @@ from mo_parsing.enhancement import (
     ZeroOrMore,
 )
 from mo_parsing.exceptions import (
-    OnlyOnce,
-    ParseBaseException,
+    ParseException,
     ParseException,
     ParseFatalException,
     ParseSyntaxException,
@@ -135,20 +134,11 @@ from mo_parsing.helpers import (
     delimitedList,
     dictOf,
     downcaseTokens,
-    downcaseTokens,
-    empty,
-    empty,
     hexnums,
-    htmlComment,
     htmlComment,
     indentedBlock,
     infixNotation,
     javaStyleComment,
-    javaStyleComment,
-    lineEnd,
-    lineEnd,
-    lineStart,
-    lineStart,
     locatedExpr,
     makeHTMLTags,
     matchOnlyAtCol,
@@ -162,30 +152,17 @@ from mo_parsing.helpers import (
     originalTextFor,
     printables,
     punc8bit,
-    punc8bit,
     pythonStyleComment,
-    pythonStyleComment,
-    quotedString,
     quotedString,
     removeQuotes,
     replaceHTMLEntity,
     replaceWith,
-    replaceWith,
     restOfLine,
-    restOfLine,
-    sglQuotedString,
     sglQuotedString,
     srange,
-    stringEnd,
-    stringEnd,
-    stringStart,
-    stringStart,
     ungroup,
     unicodeString,
-    unicodeString,
     upcaseTokens,
-    upcaseTokens,
-    withAttribute,
     withAttribute,
     withClass,
     commaSeparatedList,
@@ -215,7 +192,7 @@ from mo_parsing.tokens import (
     Token,
 )
 from mo_parsing.utils import (
-    _MAX_INT,
+    MAX_INT,
     wrap_parse_action,
     alphanums,
     alphas,
@@ -253,10 +230,9 @@ __all__ = [
     "NoMatch",
     "NotAny",
     "OneOrMore",
-    "OnlyOnce",
     "Optional",
     "Or",
-    "ParseBaseException",
+    "ParseException",
     "ParseElementEnhance",
     "ParseException",
     "ParseExpression",
@@ -295,13 +271,10 @@ __all__ = [
     "delimitedList",
     "dictOf",
     "downcaseTokens",
-    "empty",
     "hexnums",
     "htmlComment",
     "javaStyleComment",
     "line",
-    "lineEnd",
-    "lineStart",
     "lineno",
     "makeHTMLTags",
     "matchOnlyAtCol",
@@ -322,8 +295,6 @@ __all__ = [
     "restOfLine",
     "sglQuotedString",
     "srange",
-    "stringEnd",
-    "stringStart",
     "traceParseAction",
     "unicodeString",
     "upcaseTokens",
