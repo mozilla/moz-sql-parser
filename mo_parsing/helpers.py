@@ -997,7 +997,9 @@ def infixNotation(baseExpr, spec, lpar=Suppress("("), rpar=Suppress(")")):
             flat_tokens[i : i + offset] = [(result, (expr,))]
             op_index = 0
 
-        return flat_tokens[0][0]
+        result = flat_tokens[0][0]
+        result.end = tokens.end
+        return result
 
     flat = Forward()
     iso = lpar.suppress() + flat + rpar.suppress()
