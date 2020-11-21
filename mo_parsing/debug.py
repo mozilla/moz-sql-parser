@@ -77,10 +77,8 @@ def match(expr, start, end, string, tokens):
     print(
         "> Matched "
         + quote(string[start:end])
-        + " at loc "
-        + text(start)
-        + "(%d,%d)" % (lineno(start, string), col(start, string))
-        + " for "
+        + "between "
+        + f"[{start}, {end}] for"
         + " " * stack_depth()
         + text(expr)
         + " -> "

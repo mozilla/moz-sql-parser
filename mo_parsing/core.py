@@ -251,7 +251,10 @@ class ParserElement(object):
 
             if self.parseAction and (doActions or self.parser_config.callDuringTry):
                 for fn in self.parseAction:
-                    result = fn(result, index, string)
+                    next_result = fn(result, index, string)
+                    if next_result.end < result.end:
+                        Log.error("parse action not allowed to roll back the end of parsing")
+                    result = next_result
         except ParseException as cause:
             packrat_cache.set(lookup, cause)
             raise

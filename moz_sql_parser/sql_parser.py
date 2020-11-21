@@ -13,6 +13,7 @@ import ast
 
 from mo_dots import is_data
 from mo_future import text, number_types, binary_type
+from mo_testing.fuzzytestcase import assertAlmostEqual
 
 from mo_parsing import (
     Combine,
@@ -133,7 +134,9 @@ def to_json_operator(tokens):
         for operand in operands:
             if isinstance(operand, ParseResults):
                 operand = operand[0]
-
+                if isinstance(operand, list):
+                    acc.append(operand)
+                    continue
                 prefix = operand.get(op)
                 if prefix:
                     acc.extend(prefix)
@@ -149,8 +152,8 @@ def to_json_operator(tokens):
 def to_tuple_call(tokens):
     # IS THIS ONE VALUE IN (), OR MANY?
     if tokens.length() == 1:
-        return tokens[0][0]
-    return scrub_literal(scrub(tokens))
+        return [scrub(tokens)]
+    return [scrub_literal(scrub(tokens))]
 
 
 def to_json_call(tokens):

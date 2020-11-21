@@ -49,17 +49,6 @@ class ParseResults(object):
                             typ.token_name = None
                         yield ParseResults(typ, tok.start, tok.end, tok.tokens)
 
-                        # for t in tok.tokens:
-                        #     yield t
-
-                        # yield ParseResults(NO_PARSER, tok.start, tok.end, tok.tokens)
-                        # yield tok
-                        # if any(isinstance(t, ParseResults) and t.name for t in tok.tokens):
-                        #     for t in tok.tokens:
-                        #         yield t
-                        # else:
-                        #     for t in tok:
-                        #         yield t
                     continue
                 elif isinstance(tok.type, Group):
                     continue
