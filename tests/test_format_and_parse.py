@@ -903,9 +903,10 @@ from benn.college_football_players
 
     def test_086(self):
         expected_sql = (
-            #0         1         2         3         4         5         6         7         8         9         0
-            #0123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012
-            "SELECT a FROM t6 WHERE b IN (SELECT b FROM t6 WHERE a <= 'b' UNION SELECT '3' AS x ORDER BY 1 LIMIT 1)"
+            # 0         1         2         3         4         5         6         7         8         9         0
+            # 0123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012
+            "SELECT a FROM t6 WHERE b IN (SELECT b FROM t6 WHERE a <= 'b' UNION SELECT"
+            " '3' AS x ORDER BY 1 LIMIT 1)"
         )
         expected_json = {
             "from": "t6",

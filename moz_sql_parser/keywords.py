@@ -94,7 +94,11 @@ NOT_LIKE = Group(NOT + LIKE).set_parser_name("not_like")
 NOT_IN = Group(NOT + IN).set_parser_name("nin")
 IS_NOT = Group(IS + NOT).set_parser_name("is_not")
 
-RESERVED = Or([v for k, v in locals().items() if isinstance(v, ParserElement) and not isinstance(v, Literal)])
+RESERVED = Or([
+    v
+    for k, v in locals().items()
+    if isinstance(v, ParserElement) and not isinstance(v, Literal)
+])
 
 LB = Literal("(").suppress()
 RB = Literal(")").suppress()

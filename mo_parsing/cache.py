@@ -3,6 +3,8 @@ from collections import OrderedDict
 
 from mo_parsing.utils import Log
 
+DEBUG = False
+
 
 class FiFoCache(object):
     def __init__(self, size):
@@ -48,7 +50,7 @@ class UnboundedCache(object):
         self.cache[key] = value
 
     def clear(self):
-        if self.hit + self.miss > 100:
+        if DEBUG and self.hit + self.miss > 100:
             Log.note(
                 "Hit Rate: {{rate|round(places=2)|percent}} (hits={{hits}},"
                 " misses={{misses}})",

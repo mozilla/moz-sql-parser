@@ -1,4 +1,3 @@
-
 # encoding: utf-8
 #
 # This Source Code Form is subject to the terms of the Mozilla Public
@@ -25,10 +24,9 @@ class TestSimple(TestCase):
     """
 
     def test_recursion_limit(self):
-        if os.environ.get('TRAVIS_BRANCH') == 'master':
+        if os.environ.get("TRAVIS_BRANCH") == "master":
             limit = sys.getrecursionlimit()
             self.assertLess(limit, 1500)
 
     def test_debug_is_off(self):
         self.assertFalse(DEBUG, "Turn off debugging")
-

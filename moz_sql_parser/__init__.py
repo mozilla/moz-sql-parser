@@ -27,23 +27,34 @@ def parse(sql):
             parse_result = SQLParser.parseString(sql, parseAll=True)
             return scrub(parse_result)
         except Exception as cause:
-            if isinstance(cause, ParseException) and cause.msg == "Expected end of text":
+            if (
+                isinstance(cause, ParseException)
+                and cause.msg == "Expected end of text"
+            ):
                 problems = all_exceptions.get(cause.loc, [])
                 expecting = [
                     f
-                    for f in (set(p.msg.lstrip("Expected").strip() for p in problems)-{"Found unwanted token"})
+                    for f in (
+                        set(p.msg.lstrip("Expected").strip() for p in problems)
+                        - {"Found unwanted token"}
+                    )
                     if not f.startswith("{")
                 ]
-                raise ParseException(sql, cause.loc, "Expecting one of (" + (", ".join(expecting)) + ")", cause=cause)
+                raise ParseException(
+                    sql,
+                    cause.loc,
+                    "Expecting one of (" + ", ".join(expecting) + ")",
+                    cause=cause,
+                )
             raise
+
 
 def format(json, **kwargs):
     from moz_sql_parser.formatting import Formatter
+
     return Formatter(**kwargs).format(json)
+
 
 _ = json.dumps
 
-__all__ = [
-    'parse',
-    'format'
-]
+__all__ = ["parse", "format"]
