@@ -17,7 +17,6 @@ from moz_sql_parser import parse, format
 
 
 class TestErrors(FuzzyTestCase):
-
     @unittest.skip("too specific")
     def test_dash_in_tablename(self):
         with self.assertRaises(["group by", "order by", "having", "limit", "where"]):
@@ -39,9 +38,11 @@ class TestErrors(FuzzyTestCase):
             parse("SELECT * FROM t1 JOIN t2 ON t1.id=t2.id USING (id)")
 
     def test_bad_join_name(self):
-        bad_json = {'select': {'value': 't1.field1'},
-                    'from': ['t1', {'left intro join': 't2', 'on': {'eq': ['t1.id', 't2.id']}}]}
-        with self.assertRaises(["Fail to detect join type", 'left intro join']):
+        bad_json = {
+            "select": {"value": "t1.field1"},
+            "from": ["t1", {"left intro join": "t2", "on": {"eq": ["t1.id", "t2.id"]}}],
+        }
+        with self.assertRaises(["Fail to detect join type", "left intro join"]):
             format(bad_json)
 
     def test_order_by_must_follow_union(self):
