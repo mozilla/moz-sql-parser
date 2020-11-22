@@ -11,7 +11,7 @@
     ],
     "description": "Extract Parse Tree from SQL",
     "include_package_data": true,
-    "install_requires": ["mo-dots==3.149.20327", "mo-future==3.147.20327", "mo-logs==3.143.20326"],
+    "install_requires": ["mo-dots==3.149.20327", "mo-future==3.147.20327", "mo-logs==3.151.20327"],
     "license": "MPL 2.0",
     "long_description": {
         "$concat": [
@@ -120,6 +120,6 @@
     "name": "moz-sql-parser",
     "packages": ["moz_sql_parser", "mo_parsing"],
     "url": "https://github.com/klahnakoski/moz-sql-parser",
-    "version": "3.150.20327",
+    "version": "3.151.20327",
     "zip_safe": true
 }
