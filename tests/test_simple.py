@@ -1082,7 +1082,10 @@ class TestSimple(TestCase):
         sql = "SELECT DISTINCT Country, City FROM Customers"
         result = parse(sql)
         expected = {
-            "select_distinct": [{"value": "Country"}, {"value": "City"}],
+            "select": {"value": {"distinct": [
+                {"value": "Country"},
+                {"value": "City"},
+            ]}},
             "from": "Customers",
         }
         self.assertEqual(result, expected)
@@ -1094,7 +1097,29 @@ class TestSimple(TestCase):
         result = parse(sql)
         self.assertEqual(result, {"select": "*", "from": "jobs", "limit": 10})
 
-    def test_issue2_of_fork(self):
+    def test_issue2a_of_fork(self):
         sql = "SELECT COUNT(DISTINCT Y) FROM A "
         result = parse(sql)
-        self.assertEqual(result, {"from": "A", "select_distinct_count": {"value": "Y"}})
+        self.assertEqual(
+            result,
+            {"from": "A", "select": {"value": {"count": {"distinct": {"value": "Y"}}}}},
+        )
+
+    def test_issue2b_of_fork(self):
+        sql = "SELECT COUNT( DISTINCT B, E), A FROM C WHERE D= X GROUP BY A"
+        result = parse(sql)
+        self.assertEqual(
+            result,
+            {
+                "from": "C",
+                "select": [
+                    {"value": {"count": {"distinct": [
+                        {"value": "B"},
+                        {"value": "E"},
+                    ]}}},
+                    {"value": "A"},
+                ],
+                "where": {"eq": ["D", "X"]},
+                "groupby": {"value": "A"},
+            },
+        )

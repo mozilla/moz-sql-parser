@@ -319,6 +319,16 @@ interval = (
     ])("params")
 ).addParseAction(to_json_call)
 
+namedColumn = Group(
+    Group(expr)("value") + Optional(Optional(AS) + Group(ident))("name")
+)
+
+
+distinct = (
+    DISTINCT("op") + delimitedList(namedColumn)("params")
+).addParseAction(to_json_call)
+
+
 compound = (
     NULL
     | TRUE
@@ -328,6 +338,7 @@ compound = (
     | interval
     | case
     | cast
+    | distinct
     | (LB + Group(ordered_sql) + RB)
     | (LB + Group(delimitedList(expr)).addParseAction(to_tuple_call) + RB)
     | realNum.set_parser_name("float")
@@ -358,7 +369,6 @@ alias = (
     .addParseAction(to_alias)
 )
 
-
 # SQL STATEMENT
 sortColumn = expr("value").set_parser_name("sort1") + Optional(
     DESC("sort") | ASC("sort")
@@ -380,6 +390,7 @@ selectColumn = (
     .set_parser_name("column")
     .addParseAction(to_select_call)
 )
+
 
 table_source = (
     ((LB + ordered_sql + RB) | call_function)("value").set_parser_name("table source")
@@ -405,20 +416,12 @@ join = (
 ).addParseAction(to_join_call)
 
 unordered_sql = (
-    (
-        SELECT
-        + Keyword("count", caseless=True).suppress()
-        + LB
-        + DISTINCT
-        + delimitedList(selectColumn)("select_distinct_count")
-        + RB
-        | SELECT_DISTINCT + delimitedList(selectColumn)("select_distinct")
-        | SELECT + delimitedList(selectColumn)("select")
-    )
+    SELECT
+    + delimitedList(selectColumn)("select")
     + Optional(
         (FROM + delimitedList(Group(table_source)) + ZeroOrMore(join))("from")
         + Optional(WHERE + expr("where"))
-        + Optional(GROUP_BY + delimitedList(Group(selectColumn))("groupby"))
+        + Optional(GROUP_BY + delimitedList(Group(namedColumn))("groupby"))
         + Optional(HAVING + expr("having"))
     )
 ).set_parser_name("unordered sql")
