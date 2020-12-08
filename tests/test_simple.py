@@ -1063,7 +1063,7 @@ class TestSimple(TestCase):
         expected = {
             "select": {
                 "value": {"rank": "*"},
-                "over": {"partitionby": "a", "orderby": ["b", "c"]},
+                "over": {"partitionby": "a", "orderby": [{'value': 'b'}, {'value': 'c'}]},
             },
             "from": "tab",
         }
@@ -1121,5 +1121,22 @@ class TestSimple(TestCase):
                 ],
                 "where": {"eq": ["D", "X"]},
                 "groupby": {"value": "A"},
+            },
+        )
+
+    def test_orderby_in_window_function(self):
+        sql = "select rank(*) over (partition by a order by b, c desc) from tab"
+        result = parse(sql)
+        self.assertEqual(
+            result,
+            {
+                "from": "tab",
+                "select": {
+                    "over": {
+                        "orderby": [{"value": "b"}, {"sort": "desc", "value": "c"}],
+                        "partitionby": "a",
+                    },
+                    "value": {"rank": "*"},
+                },
             },
         )

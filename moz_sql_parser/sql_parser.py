@@ -381,7 +381,7 @@ selectColumn = (
             OVER
             + LB
             + Optional(PARTITION_BY + delimitedList(Group(expr))("partitionby"))
-            + Optional(ORDER_BY + delimitedList(Group(expr))("orderby"))
+            + Optional(ORDER_BY + delimitedList(Group(sortColumn))("orderby"))
             + RB
         )("over")
         + Optional(Optional(AS) + alias)
