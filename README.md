@@ -5,8 +5,8 @@ Let's make a SQL parser so we can provide a familiar interface to non-sql datast
 
 |Branch      |Status   |
 |------------|---------|
-|master      | [![Build Status](https://travis-ci.org/klahnakoski/moz-sql-parser.svg?branch=master)](https://travis-ci.org/mozilla/moz-sql-parser) |
-|dev         | [![Build Status](https://travis-ci.org/klahnakoski/moz-sql-parser.svg?branch=dev)](https://travis-ci.org/mozilla/moz-sql-parser)    |
+|master      | [![Build Status](https://travis-ci.org/klahnakoski/moz-sql-parser.svg?branch=master)](https://travis-ci.org/klahnakoski/moz-sql-parser) |
+|dev         | [![Build Status](https://travis-ci.org/klahnakoski/moz-sql-parser.svg?branch=dev)](https://travis-ci.org/klahnakoski/moz-sql-parser)    |
 
 
 ## Problem Statement
