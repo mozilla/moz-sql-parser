@@ -305,6 +305,59 @@ class TestSimple(TestCase):
         }
         self.assertEqual(result, expected)
 
+
+    def test_rlike_in_where(self):
+        result = parse("select a from table1 where A rlike '.*20.*'")
+        expected = {
+            "from": "table1",
+            "where": {"rlike": ["A", {"literal": ".*20.*"}]},
+            "select": {"value": "a"},
+        }
+        self.assertEqual(result, expected)
+
+    def test_not_rlike_in_where(self):
+        result = parse("select a from table1 where A not rlike '.*20.*'")
+        expected = {
+            "from": "table1",
+            "where": {"not_rlike": ["A", {"literal": ".*20.*"}]},
+            "select": {"value": "a"},
+        }
+        self.assertEqual(result, expected)
+
+    def test_rlike_in_select(self):
+        #               0         1         2         3         4         5         6
+        #               0123456789012345678901234567890123456789012345678901234567890123456789
+        result = parse(
+            "select case when A rlike 'bb.*' then 1 else 0 end as bb from table1"
+        )
+        expected = {
+            "from": "table1",
+            "select": {
+                "name": "bb",
+                "value": {"case": [
+                    {"when": {"rlike": ["A", {"literal": "bb.*"}]}, "then": 1},
+                    0,
+                ]},
+            },
+        }
+        self.assertEqual(result, expected)
+
+    def test_not_rlike_in_select(self):
+        result = parse(
+            "select case when A not rlike 'bb.*' then 1 else 0 end as bb from table1"
+        )
+        expected = {
+            "from": "table1",
+            "select": {
+                "name": "bb",
+                "value": {"case": [
+                    {"when": {"not_rlike": ["A", {"literal": "bb.*"}]}, "then": 1},
+                    0,
+                ]},
+            },
+        }
+        self.assertEqual(result, expected)
+
     def test_in_expression(self):
         result = parse(
             "select * from task where repo.branch.name in ('try', 'mozilla-central')"

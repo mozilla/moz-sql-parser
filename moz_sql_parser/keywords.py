@@ -36,6 +36,7 @@ OUTER = Keyword("outer", caseless=True)
 OVER = Keyword("over", caseless=True).suppress()
 PARTITION = Keyword("partition", caseless=True).suppress()
 RIGHT = Keyword("right", caseless=True)
+RLIKE = Keyword("rlike", caseless=True)
 SELECT = Keyword("select", caseless=True).suppress()
 THEN = Keyword("then", caseless=True).suppress()
 UNION = Keyword("union", caseless=True)
@@ -91,6 +92,7 @@ UNION_ALL = Group(UNION + ALL).set_parser_name("union_all")
 # COMPOUND OPERATORS
 NOT_BETWEEN = Group(NOT + BETWEEN).set_parser_name("not_between")
 NOT_LIKE = Group(NOT + LIKE).set_parser_name("not_like")
+NOT_RLIKE = Group(NOT + RLIKE).set_parser_name("not_rlike")
 NOT_IN = Group(NOT + IN).set_parser_name("nin")
 IS_NOT = Group(IS + NOT).set_parser_name("is_not")
 
@@ -139,6 +141,7 @@ binary_ops = {
     "is not": "neq",
     "is": "eq",
     "not like": "not_like",
+    "not rlike": "not_rlike",
     "or": "or",
     "and": "and",
 }
@@ -169,6 +172,8 @@ precedence = {
     "is": 8,
     "like": 8,
     "not_like": 8,
+    "rlike": 8,
+    "not_rlike": 8,
     "and": 10,
     "or": 11,
 }
@@ -193,6 +198,8 @@ KNOWN_OPS = [
     IS,
     LIKE,
     NOT_LIKE,
+    RLIKE,
+    NOT_RLIKE,
     NOT,
     AND,
     OR,
