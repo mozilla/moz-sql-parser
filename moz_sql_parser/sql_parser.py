@@ -174,6 +174,18 @@ def to_case_call(tokens):
     return {"case": cases}
 
 
+def to_switch_call(tokens):
+    # CONVERT TO CLASSIC CASE STATEMENT
+    value = tokens["value"]
+    cases = list(tokens["case"])
+    for c in cases:
+        c.when = {"eq": [value, c.when]}
+    elze = tokens["else"]
+    if elze:
+        cases.append(elze)
+    return {"case": cases}
+
+
 def to_when_call(tokens):
     tok = tokens
     return {"when": tok["when"], "then": tok["then"]}
@@ -286,6 +298,17 @@ case = (
     + END
 ).addParseAction(to_case_call)
 
+# SWITCH
+case = (
+    CASE
+    + expr("value")
+    + Group(ZeroOrMore(
+        (WHEN + expr("when") + THEN + expr("then")).addParseAction(to_when_call)
+    ))("case")
+    + Optional(ELSE + expr("else"))
+    + END
+).addParseAction(to_switch_call)
+
 
 # MAYBE TOO FLEXIBLE?
 datatype = Word(IDENT_CHAR).addParseAction(lambda t: t[0].lower())
@@ -310,19 +333,18 @@ def _or(values):
     return output
 
 
+duration = (realNum | intNum)("params") + _or([
+    Keyword(d, caseless=True).addParseAction(lambda t: durations[t.lower()])
+    for d in durations.keys()
+])("params")
+
 interval = (
-    INTERVAL("op")
-    + (realNum | intNum)("params")
-    + _or([
-        Keyword(d, caseless=True).addParseAction(lambda t: t.lower()[:-1])
-        for d in durations
-    ])("params")
+    INTERVAL("op") + ("'" + duration + "'" | duration)
 ).addParseAction(to_json_call)
 
 namedColumn = Group(
     Group(expr)("value") + Optional(Optional(AS) + Group(ident))("name")
 )
-
 
 distinct = (
     DISTINCT("op") + delimitedList(namedColumn)("params")

@@ -199,13 +199,26 @@ KNOWN_OPS = [
 ]
 
 
-durations = [
-    "milliseconds",
-    "seconds",
-    "minutes",
-    "hours",
-    "days",
-    "weeks",
-    "months",
-    "years",
-]
+durations = {
+    "milliseconds": "millisecond",
+    "millisecond": "millisecond",
+    "seconds": "second",
+    "second": "second",
+    "s": "second",
+    "minutes": "minute",
+    "minute": "minute",
+    "m": "minute",
+    "hours": "hour",
+    "hour": "hour",
+    "h": "hour",
+    "days": "day",
+    "day": "day",
+    "d": "day",
+    "weeks": "week",
+    "week": "week",
+    "w": "week",
+    "months": "month",
+    "month": "month",
+    "years": "year",
+    "year": "year",
+}
