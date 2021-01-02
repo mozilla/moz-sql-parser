@@ -11,7 +11,6 @@ from __future__ import absolute_import, division, unicode_literals
 
 import ast
 
-from jx_python import jx
 from mo_dots import is_data
 from mo_future import text, number_types, binary_type
 
@@ -181,7 +180,7 @@ def to_interval_call(tokens):
         tokens.type,
         tokens.start,
         tokens.end,
-        [{"add": [{"interval": p} for _, p in jx.chunk(params, size=2)]}],
+        [{"add": [{"interval": p} for p in _chunk(params, size=2)]}],
     )
 
 
@@ -347,6 +346,16 @@ call_function = (
     ident("op") + LB + Optional(Group(ordered_sql) | delimitedList(expr))("params") + RB
 ).addParseAction(to_json_call)
 
+
+def _chunk(values, size):
+    acc = []
+    for v in values:
+        acc.append(v)
+        if len(acc)==size:
+            yield acc
+            acc=[]
+    if acc:
+        yield acc
 
 def _or(values):
     output = values[0]
