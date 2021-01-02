@@ -10,7 +10,6 @@ from __future__ import absolute_import, division, unicode_literals
 
 from unittest import TestCase
 
-from mo_parsing.debug import Debugger
 from moz_sql_parser import parse
 
 

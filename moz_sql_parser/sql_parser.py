@@ -116,11 +116,11 @@ compound = (
     | distinct
     | (LB + Group(ordered_sql) + RB)
     | (LB + Group(delimitedList(expr)).addParseAction(to_tuple_call) + RB)
-    | realNum.set_parser_name("float")
-    | intNum.set_parser_name("int")
     | sqlString.set_parser_name("string")
     | call_function
     | known_types
+    | realNum.set_parser_name("float")
+    | intNum.set_parser_name("int")
     | ident
 )
 
