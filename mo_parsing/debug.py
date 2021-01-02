@@ -88,8 +88,6 @@ def match(expr, start, end, string, tokens):
 
 def fail(expr, start, string, cause):
     quoted = plain_quote(text(cause))
-    if "any tag" in quoted:
-        print("found")
     print("  Except  " + quoted)
 
 
