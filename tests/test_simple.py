@@ -323,8 +323,6 @@ class TestSimple(TestCase):
         self.assertEqual(result, expected)
 
     def test_rlike_in_select(self):
-        #               0         1         2         3         4         5         6
-        #               0123456789012345678901234567890123456789012345678901234567890123456789
         result = parse(
             "select case when A rlike 'bb.*' then 1 else 0 end as bb from table1"
         )
