@@ -436,7 +436,6 @@ sortColumn = expr("value").set_parser_name("sort1") + Optional(
     DESC("sort") | ASC("sort")
 ) | expr("value").set_parser_name("sort2")
 
-# listagg(sellerid) within group (order by sellerid) over()
 selectColumn = (
     Group(
         Group(expr).set_parser_name("expression1")("value")
