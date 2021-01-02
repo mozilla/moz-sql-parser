@@ -24,6 +24,7 @@ FULL = Keyword("full", caseless=True)
 GROUP = Keyword("group", caseless=True).suppress()
 HAVING = Keyword("having", caseless=True).suppress()
 INNER = Keyword("inner", caseless=True)
+TIMESTAMP = Keyword("timestamp", caseless=True)
 INTERVAL = Keyword("interval", caseless=True)
 JOIN = Keyword("join", caseless=True)
 LEFT = Keyword("left", caseless=True)
@@ -44,8 +45,10 @@ USING = Keyword("using", caseless=True).suppress()
 WHEN = Keyword("when", caseless=True).suppress()
 WHERE = Keyword("where", caseless=True).suppress()
 WITH = Keyword("with", caseless=True).suppress()
+WITHIN = Keyword("within", caseless=True).suppress()
 
 # SIMPLE OPERATORS
+CASTING = Literal("::").set_parser_name("concat")
 CONCAT = Literal("||").set_parser_name("concat")
 MUL = Literal("*").set_parser_name("mul")
 DIV = Literal("/").set_parser_name("div")
@@ -88,6 +91,7 @@ RIGHT_JOIN = Group(RIGHT + JOIN).set_parser_name("right join")
 RIGHT_OUTER_JOIN = Group(RIGHT + OUTER + JOIN).set_parser_name("right outer join")
 SELECT_DISTINCT = Group(SELECT + DISTINCT).set_parser_name("select distinct")
 UNION_ALL = Group(UNION + ALL).set_parser_name("union_all")
+WITHIN_GROUP = Group(WITHIN + GROUP).set_parser_name("within_group")
 
 # COMPOUND OPERATORS
 NOT_BETWEEN = Group(NOT + BETWEEN).set_parser_name("not_between")
@@ -120,6 +124,7 @@ join_keywords = {
 unary_ops = (NEG, NOT, BINARY_NOT)
 
 binary_ops = {
+    "::": "cast",
     "COLLATE": "collate",
     "||": "concat",
     "*": "mul",
@@ -148,6 +153,7 @@ binary_ops = {
 
 precedence = {
     # https://www.sqlite.org/lang_expr.html
+    "cast": 0,
     "collate": 0,
     "concat": 1,
     "mul": 2,
@@ -180,6 +186,7 @@ precedence = {
 
 
 KNOWN_OPS = [
+    CASTING,
     COLLATE,
     CONCAT,
     MUL | DIV | MOD,
@@ -205,14 +212,28 @@ KNOWN_OPS = [
     OR,
 ]
 
+times = ["now", "today", "tomorrow", "eod", "epoch"]
 
-durations = [
-    "milliseconds",
-    "seconds",
-    "minutes",
-    "hours",
-    "days",
-    "weeks",
-    "months",
-    "years",
-]
+durations = {
+    "milliseconds": "millisecond",
+    "millisecond": "millisecond",
+    "seconds": "second",
+    "second": "second",
+    "s": "second",
+    "minutes": "minute",
+    "minute": "minute",
+    "m": "minute",
+    "hours": "hour",
+    "hour": "hour",
+    "h": "hour",
+    "days": "day",
+    "day": "day",
+    "d": "day",
+    "weeks": "week",
+    "week": "week",
+    "w": "week",
+    "months": "month",
+    "month": "month",
+    "years": "year",
+    "year": "year",
+}
