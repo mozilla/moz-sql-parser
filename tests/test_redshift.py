@@ -10,6 +10,7 @@ from __future__ import absolute_import, division, unicode_literals
 
 from unittest import TestCase
 
+from mo_parsing.debug import Debugger
 from moz_sql_parser import parse
 
 
@@ -275,7 +276,7 @@ class TestRedshift(TestCase):
                     "name": "sum",
                     "over": {
                         "orderby": [{"value": "dateid"}, {"value": "salesid"}],
-                        "range": {"max": -1},
+                        "range": {"max": 0},
                     },
                     "value": {"sum": "qty"},
                 },
@@ -311,7 +312,7 @@ class TestRedshift(TestCase):
             result, {"select": {"value": {"cast": [109.652, {"decimal": [4, 1]}]}}}
         )
 
-    def test_window_function(self):
+    def test_window_function1(self):
         sql = (
             "select sum(qty) over (order by a rows between 1 preceding and 2 following)"
         )
@@ -319,7 +320,46 @@ class TestRedshift(TestCase):
         self.assertEqual(
             result,
             {"select": {
-                "over": {"orderby": {"value": "a"}, "range": {"max": 2, "min": -1},},
+                "over": {"orderby": {"value": "a"}, "range": {"min": -1, "max": 2}},
+                "value": {"sum": "qty"},
+            }},
+        )
+
+    def test_window_function2(self):
+        sql = (
+            "select sum(qty) over (order by a rows between 3 preceding and 1 preceding)"
+        )
+        result = parse(sql)
+        self.assertEqual(
+            result,
+            {"select": {
+                "over": {"orderby": {"value": "a"}, "range": {"min": -3, "max": -1}},
+                "value": {"sum": "qty"},
+            }},
+        )
+
+    def test_window_function3(self):
+        sql = (
+            "select sum(qty) over (order by a rows between 3 following and 5 following)"
+        )
+        result = parse(sql)
+        self.assertEqual(
+            result,
+            {"select": {
+                "over": {"orderby": {"value": "a"}, "range": {"min": 3, "max": 5}},
+                "value": {"sum": "qty"},
+            }},
+        )
+
+    def test_window_function4(self):
+        sql = (
+            "select sum(qty) over (order by a rows between 3 following and unbounded following)"
+        )
+        result = parse(sql)
+        self.assertEqual(
+            result,
+            {"select": {
+                "over": {"orderby": {"value": "a"}, "range": {"min": 3}},
                 "value": {"sum": "qty"},
             }},
         )

@@ -26,14 +26,14 @@ def _to_bound_call(tokens):
     limit = scrub(tokens["limit"])
     if direction == "preceding":
         if limit == "unbounded":
-            return {"max": -1}
+            return {"max": 0}
         else:
-            return {"min": -limit, "max": -1}
-    else:
+            return {"min": -limit, "max": 0}
+    else: # following
         if limit == "unbounded":
-            return {"min": 1}
+            return {"min": 0}
         else:
-            return {"min": 1, "max": limit}
+            return {"min": 0, "max": limit}
 
 
 def _min(a, b):
@@ -55,6 +55,15 @@ def _max(a, b):
 def _to_between_call(tokens):
     minn = scrub(tokens["min"])
     maxx = scrub(tokens["max"])
+
+    if maxx.get("max") == 0:
+        # following
+        minn['max'] = maxx.get('min')
+        return minn
+    if minn.get("min") == 0:
+        # preceding
+        maxx['min'] = minn.get('max')
+        return maxx
 
     return {
         "min": _min(minn.get("min"), maxx.get("min")),
