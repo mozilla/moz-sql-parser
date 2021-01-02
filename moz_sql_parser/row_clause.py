@@ -29,27 +29,11 @@ def _to_bound_call(tokens):
             return {"max": 0}
         else:
             return {"min": -limit, "max": 0}
-    else: # following
+    else:  # following
         if limit == "unbounded":
             return {"min": 0}
         else:
             return {"min": 0, "max": limit}
-
-
-def _min(a, b):
-    if a is None:
-        return b
-    if b is None:
-        return a
-    return min(a, b)
-
-
-def _max(a, b):
-    if a is None:
-        return b
-    if b is None:
-        return a
-    return max(a, b)
 
 
 def _to_between_call(tokens):
@@ -58,17 +42,21 @@ def _to_between_call(tokens):
 
     if maxx.get("max") == 0:
         # following
-        minn['max'] = maxx.get('min')
-        return minn
-    if minn.get("min") == 0:
+        return {
+            "min": minn.get('min'),
+            "max": maxx.get('min'),
+        }
+    elif minn.get("min") == 0:
         # preceding
-        maxx['min'] = minn.get('max')
-        return maxx
-
-    return {
-        "min": _min(minn.get("min"), maxx.get("min")),
-        "max": _max(minn.get("max"), maxx.get("max")),
-    }
+        return {
+            "min": minn.get('max'),
+            "max": maxx.get('max')
+        }
+    else:
+        return {
+            "min": minn.get("min"),
+            "max": maxx.get("max"),
+        }
 
 
 UNBOUNDED = Keyword("unbounded", caseless=True)
