@@ -241,6 +241,14 @@ class Formatter:
     def _not_like(self, pair):
         return "{0} NOT LIKE {1}".format(self.dispatch(pair[0]), self.dispatch(pair[1]))
 
+    def _rlike(self, pair):
+        return "{0} RLIKE {1}".format(self.dispatch(pair[0]), self.dispatch(pair[1]))
+
+    def _not_rlike(self, pair):
+        return "{0} NOT RLIKE {1}".format(
+            self.dispatch(pair[0]), self.dispatch(pair[1])
+        )
+
     def _is(self, pair):
         return "{0} IS {1}".format(self.dispatch(pair[0]), self.dispatch(pair[1]))
 
