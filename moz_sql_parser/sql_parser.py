@@ -185,11 +185,6 @@ def to_interval_call(tokens):
     )
 
 
-def to_timestamp_call(tokens):
-    params = scrub(tokens["params"])
-    return ParseResults(tokens.type, tokens.start, tokens.end, [{"date": params}],)
-
-
 def to_case_call(tokens):
     cases = list(tokens["case"])
     elze = tokens["else"]
@@ -369,14 +364,13 @@ interval = (
     INTERVAL + ("'" + delimitedList(duration) + "'" | duration)
 ).addParseAction(to_interval_call)
 
-
 _times = _or([
     Keyword(t, caseless=True).addParseAction(lambda t: t.lower()) for t in times
 ])("params")
 
 timestamp = (
-    TIMESTAMP + ("'" + _times + "'" | _times)
-).addParseAction(to_timestamp_call)
+    TIMESTAMP("op") + ("'" + _times + "'" | _times)
+).addParseAction(to_json_call)
 
 namedColumn = Group(
     Group(expr)("value") + Optional(Optional(AS) + Group(ident))("name")
@@ -385,7 +379,6 @@ namedColumn = Group(
 distinct = (
     DISTINCT("op") + delimitedList(namedColumn)("params")
 ).addParseAction(to_json_call)
-
 
 compound = (
     NULL
@@ -443,7 +436,7 @@ selectColumn = (
             + LB
             + Optional(ORDER_BY + delimitedList(Group(sortColumn))("orderby"))
             + RB
-        )("within_group")
+        )("within")
         + Optional(
             OVER
             + LB

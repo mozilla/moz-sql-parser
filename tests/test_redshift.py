@@ -44,7 +44,7 @@ class TestRedshift(TestCase):
                 "select": {
                     "name": "your_column_alias",
                     "value": {"add": [
-                        {"date": "epoch"},
+                        {"timestamp": "epoch"},
                         {"mul": ["your_timestamp_column", {"interval": [1, "second"]}]},
                     ]},
                 },
@@ -69,7 +69,7 @@ class TestRedshift(TestCase):
                 "from": "winsales",
                 "select": {
                     "value": {"listagg": "sellerid"},
-                    "within_group": {"orderby": {"value": "sellerid"}},
+                    "within": {"orderby": {"value": "sellerid"}},
                 },
             },
         )
