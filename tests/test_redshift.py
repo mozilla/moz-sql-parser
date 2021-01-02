@@ -261,16 +261,26 @@ class TestRedshift(TestCase):
         # Ref: https://docs.aws.amazon.com/redshift/latest/dg/r_WF_SUM.html#r_WF_SUM-examples
         sql = """
             select
-                salesid,
-                dateid,
-                sellerid,
-                qty,
                 sum(qty) over (order by dateid, salesid rows unbounded preceding) as sum
-            from winsales
+            from sales
             order by 2,1;
         """
         result = parse(sql)
-        self.assertEqual(result, {})
+        self.assertEqual(
+            result,
+            {
+                "from": "sales",
+                "orderby": [{"value": 2}, {"value": 1}],
+                "select": {
+                    "name": "sum",
+                    "over": {
+                        "orderby": [{"value": "dateid"}, {"value": "salesid"}],
+                        "range": {"max": -1},
+                    },
+                    "value": {"sum": "qty"},
+                },
+            },
+        )
 
     def test_issue5h_of_fork_extract(self):
         # Ref: https://docs.aws.amazon.com/redshift/latest/dg/r_EXTRACT_function.html#r_EXTRACT_function-examples
@@ -299,4 +309,17 @@ class TestRedshift(TestCase):
         result = parse(sql)
         self.assertEqual(
             result, {"select": {"value": {"cast": [109.652, {"decimal": [4, 1]}]}}}
+        )
+
+    def test_window_function(self):
+        sql = (
+            "select sum(qty) over (order by a rows between 1 preceding and 2 following)"
+        )
+        result = parse(sql)
+        self.assertEqual(
+            result,
+            {"select": {
+                "over": {"orderby": {"value": "a"}, "range": {"max": 2, "min": -1},},
+                "value": {"sum": "qty"},
+            }},
         )

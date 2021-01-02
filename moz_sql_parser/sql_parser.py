@@ -12,6 +12,7 @@ from __future__ import absolute_import, division, unicode_literals
 from mo_parsing.engine import Engine
 from moz_sql_parser.keywords import *
 from moz_sql_parser.utils import *
+from moz_sql_parser.row_clause import row_clause
 
 engine = Engine().use()
 engine.add_ignore(Literal("--") + restOfLine)
@@ -149,22 +150,27 @@ sortColumn = expr("value").set_parser_name("sort1") + Optional(
     DESC("sort") | ASC("sort")
 ) | expr("value").set_parser_name("sort2")
 
+window = Optional(
+    WITHIN_GROUP
+    + LB
+    + Optional(ORDER_BY + delimitedList(Group(sortColumn))("orderby"))
+    + RB
+)("within") + Optional(
+    OVER
+    + LB
+    + Optional(PARTITION_BY + delimitedList(Group(expr))("partitionby"))
+    + Optional(
+        ORDER_BY
+        + delimitedList(Group(sortColumn))("orderby")
+        + Optional(row_clause)("range")
+    )
+    + RB
+)("over")
+
 selectColumn = (
     Group(
         Group(expr).set_parser_name("expression1")("value")
-        + Optional(
-            WITHIN_GROUP
-            + LB
-            + Optional(ORDER_BY + delimitedList(Group(sortColumn))("orderby"))
-            + RB
-        )("within")
-        + Optional(
-            OVER
-            + LB
-            + Optional(PARTITION_BY + delimitedList(Group(expr))("partitionby"))
-            + Optional(ORDER_BY + delimitedList(Group(sortColumn))("orderby"))
-            + RB
-        )("over")
+        + Optional(window)
         + Optional(Optional(AS) + alias)
         | Literal("*")("value")
     )

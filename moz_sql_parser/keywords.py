@@ -318,21 +318,22 @@ _size = Optional(LB + intNum("params") + RB)
 _sizes = Optional(LB + intNum("params") + "," + intNum("params") + RB)
 
 # KNOWN TYPES
-ARRAY = Keyword("array", caseless=True)("op").addParseAction(to_json_call)
-BIGINT = Keyword("bigint", caseless=True)("op").addParseAction(to_json_call)
-BOOL = Keyword("bool", caseless=True)("op").addParseAction(to_json_call)
-BOOLEAN = Keyword("boolean", caseless=True)("op").addParseAction(to_json_call)
-DOUBLE = Keyword("double", caseless=True)("op").addParseAction(to_json_call)
-FLOAT64 = Keyword("float64", caseless=True)("op").addParseAction(to_json_call)
-GEOMETRY = Keyword("geometry", caseless=True)("op").addParseAction(to_json_call)
-INTEGER = Keyword("integer", caseless=True)("op").addParseAction(to_json_call)
-INT32 = Keyword("int32", caseless=True)("op").addParseAction(to_json_call)
-INT64 = Keyword("int64", caseless=True)("op").addParseAction(to_json_call)
-REAL = Keyword("real", caseless=True)("op").addParseAction(to_json_call)
-TEXT = Keyword("text", caseless=True)("op").addParseAction(to_json_call)
-SMALLINT = Keyword("smallint", caseless=True)("op").addParseAction(to_json_call)
-STRING = Keyword("string", caseless=True)("op").addParseAction(to_json_call)
-STRUCT = Keyword("struct", caseless=True)("op").addParseAction(to_json_call)
+ARRAY = Group(Keyword("array", caseless=True)("op")).addParseAction(to_json_call)
+BIGINT = Group(Keyword("bigint", caseless=True)("op")).addParseAction(to_json_call)
+BOOL = Group(Keyword("bool", caseless=True)("op")).addParseAction(to_json_call)
+BOOLEAN = Group(Keyword("boolean", caseless=True)("op")).addParseAction(to_json_call)
+DOUBLE = Group(Keyword("double", caseless=True)("op")).addParseAction(to_json_call)
+FLOAT64 = Group(Keyword("float64", caseless=True)("op")).addParseAction(to_json_call)
+GEOMETRY = Group(Keyword("geometry", caseless=True)("op")).addParseAction(to_json_call)
+INTEGER = Group(Keyword("integer", caseless=True)("op")).addParseAction(to_json_call)
+INT = Group(Keyword("int", caseless=True)("op")).addParseAction(to_json_call)
+INT32 = Group(Keyword("int32", caseless=True)("op")).addParseAction(to_json_call)
+INT64 = Group(Keyword("int64", caseless=True)("op")).addParseAction(to_json_call)
+REAL = Group(Keyword("real", caseless=True)("op")).addParseAction(to_json_call)
+TEXT = Group(Keyword("text", caseless=True)("op")).addParseAction(to_json_call)
+SMALLINT = Group(Keyword("smallint", caseless=True)("op")).addParseAction(to_json_call)
+STRING = Group(Keyword("string", caseless=True)("op")).addParseAction(to_json_call)
+STRUCT = Group(Keyword("struct", caseless=True)("op")).addParseAction(to_json_call)
 
 BLOB = (Keyword("blob", caseless=True)("op") + _size).addParseAction(to_json_call)
 BYTES = (Keyword("bytes", caseless=True)("op") + _size).addParseAction(to_json_call)
@@ -381,6 +382,7 @@ known_types = MatchFirst([
     FLOAT64,
     GEOMETRY,
     INTEGER,
+    INT,
     INT32,
     INT64,
     NUMERIC,
