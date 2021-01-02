@@ -152,3 +152,72 @@ class TestRedshift(TestCase):
         result = parse(sql)
 
         self.assertEqual(result, {"select": {"value": {"interval": [0.5, "day"]}}})
+
+    def test_issue5a_of_fork_date_cast_as_date(self):
+
+        sql = 'select * from t left join ex on t.date = ex.date_at :: date""'
+        result = parse(sql)
+        self.assertEqual(result, {})
+
+    def test_issue5b_of_fork_date_cast_as_date(self):
+
+        sql = "select distinct date_at :: date as date_at from t"
+        result = parse(sql)
+        self.assertEqual(result, {})
+
+    def test_issue5c_of_fork_date_cast_as_date(self):
+
+        sql = """
+            select
+                datediff('day', u.birth_date :: date, us.date_at :: date) as day_diff
+            from
+                users as u
+            inner join
+                user_sessions as us
+        """
+        result = parse(sql)
+        self.assertEqual(result, {})
+
+    def test_issue5d_of_fork_column_is_keyword(self):
+        sql = "select date as date_at from t"
+        result = parse(sql)
+        self.assertEqual(result, {})
+
+    def test_issue5e_of_fork_column_is_keyword(self):
+        sql = """
+            select count(*) as validation_errors
+            from t
+            where date is null
+        """
+        result = parse(sql)
+        self.assertEqual(result, {})
+
+    def test_issue5f_of_fork_column_is_keyword(self):
+        sql = """
+            select count(*) as validation_errors
+            from t
+            where timestamp is null
+        """
+        result = parse(sql)
+        self.assertEqual(result, {})
+
+    def test_issue5g_of_fork_window_function(self):
+        # Ref: https://docs.aws.amazon.com/redshift/latest/dg/r_WF_SUM.html#r_WF_SUM-examples
+        sql = """
+            select
+                salesid,
+                dateid,
+                sellerid,
+                qty,
+                sum(qty) over (order by dateid, salesid rows unbounded preceding) as sum
+            from winsales
+            order by 2,1;
+        """
+        result = parse(sql)
+        self.assertEqual(result, {})
+
+    def test_issue5h_of_fork_column_is_keyword(self):
+        # Ref: https://docs.aws.amazon.com/redshift/latest/dg/r_EXTRACT_function.html#r_EXTRACT_function-examples
+        sql = "select extract('epoch' from occurred_at)"
+        result = parse(sql)
+        self.assertEqual(result, {})
