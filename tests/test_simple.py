@@ -305,7 +305,6 @@ class TestSimple(TestCase):
         }
         self.assertEqual(result, expected)
 
-
     def test_rlike_in_where(self):
         result = parse("select a from table1 where A rlike '.*20.*'")
         expected = {
@@ -1116,7 +1115,10 @@ class TestSimple(TestCase):
         expected = {
             "select": {
                 "value": {"rank": "*"},
-                "over": {"partitionby": "a", "orderby": [{'value': 'b'}, {'value': 'c'}]},
+                "over": {
+                    "partitionby": "a",
+                    "orderby": [{"value": "b"}, {"value": "c"}],
+                },
             },
             "from": "tab",
         }
