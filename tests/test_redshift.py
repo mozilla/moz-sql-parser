@@ -13,7 +13,7 @@ from unittest import TestCase
 from moz_sql_parser import parse
 
 
-class TestSimple(TestCase):
+class TestRedshift(TestCase):
     def test_issue149a_casting(self):
         # Ref: https://docs.aws.amazon.com/redshift/latest/dg/r_CAST_function.html#r_CAST_function-examples
         sql = "select '' :: varchar as placeholder from table"
@@ -22,7 +22,10 @@ class TestSimple(TestCase):
             result,
             {
                 "from": "table",
-                "select": [{"name": "placeholder", "value": {"cast": ["", "varchar"]}}],
+                "select": {
+                    "name": "placeholder",
+                    "value": {"cast": [{"literal": ""}, "varchar"]},
+                },
             },
         )
 
@@ -38,13 +41,13 @@ class TestSimple(TestCase):
             result,
             {
                 "from": "your_table",
-                "select": [{
+                "select": {
                     "name": "your_column_alias",
                     "value": {"add": [
-                        {"timestamp": {"literal": "epoch"}},
+                        {"date": "epoch"},
                         {"mul": ["your_timestamp_column", {"interval": [1, "second"]}]},
                     ]},
-                }],
+                },
             },
         )
 
@@ -63,14 +66,11 @@ class TestSimple(TestCase):
         self.assertEqual(
             result,
             {
-                "from": "your_table",
-                "select": [{
-                    "name": "your_column_alias",
-                    "value": {"add": [
-                        {"timestamp": {"literal": "epoch"}},
-                        {"mul": ["your_timestamp_column", {"interval": [1, "second"]}]},
-                    ]},
-                }],
+                "from": "winsales",
+                "select": {
+                    "value": {"listagg": "sellerid"},
+                    "within_group": {"orderby": {"value": "sellerid"}},
+                },
             },
         )
 
@@ -93,8 +93,8 @@ class TestSimple(TestCase):
         self.assertEqual(
             result,
             {
-                "from": "your_table",
-                "select": [{
+                "from": "source",
+                "select": {
                     "name": "quantitytext",
                     "value": {"case": [
                         {
@@ -107,7 +107,7 @@ class TestSimple(TestCase):
                         },
                         {"literal": "The quantity is not 30 or 31"},
                     ]},
-                }],
+                },
             },
         )
 
@@ -131,24 +131,24 @@ class TestSimple(TestCase):
 
         self.assertEqual(
             result,
-            {"select": {"add": [
+            {"select": {"value": {"add": [
                 {"interval": [1, "week"]},
                 {"interval": [1, "hour"]},
                 {"interval": [1, "minute"]},
                 {"interval": [1, "second"]},
-            ]}},
+            ]}}},
         )
 
     def test_dates2(self):
         # https://docs.aws.amazon.com/redshift/latest/dg/r_interval_literals.html
-        sql = "select caldate + interval '52 weeks'"
+        sql = "select interval '52 weeks'"
         result = parse(sql)
 
-        self.assertEqual(result, {"select": {"interval": [52, "week"]}})
+        self.assertEqual(result, {"select": {"value": {"interval": [52, "week"]}}})
 
     def test_dates3(self):
         # https://docs.aws.amazon.com/redshift/latest/dg/r_interval_literals.html
-        sql = "select caldate + interval '0.5 days'"
+        sql = "select interval '0.5 days'"
         result = parse(sql)
 
-        self.assertEqual(result, {"select": {"interval": [0.5, "day"]}})
+        self.assertEqual(result, {"select": {"value": {"interval": [0.5, "day"]}}})
