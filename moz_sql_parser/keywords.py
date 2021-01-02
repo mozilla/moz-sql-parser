@@ -24,6 +24,7 @@ FULL = Keyword("full", caseless=True)
 GROUP = Keyword("group", caseless=True).suppress()
 HAVING = Keyword("having", caseless=True).suppress()
 INNER = Keyword("inner", caseless=True)
+TIMESTAMP = Keyword("timestamp", caseless=True)
 INTERVAL = Keyword("interval", caseless=True)
 JOIN = Keyword("join", caseless=True)
 LEFT = Keyword("left", caseless=True)
@@ -36,6 +37,7 @@ OUTER = Keyword("outer", caseless=True)
 OVER = Keyword("over", caseless=True).suppress()
 PARTITION = Keyword("partition", caseless=True).suppress()
 RIGHT = Keyword("right", caseless=True)
+RLIKE = Keyword("rlike", caseless=True)
 SELECT = Keyword("select", caseless=True).suppress()
 THEN = Keyword("then", caseless=True).suppress()
 UNION = Keyword("union", caseless=True)
@@ -43,8 +45,10 @@ USING = Keyword("using", caseless=True).suppress()
 WHEN = Keyword("when", caseless=True).suppress()
 WHERE = Keyword("where", caseless=True).suppress()
 WITH = Keyword("with", caseless=True).suppress()
+WITHIN = Keyword("within", caseless=True).suppress()
 
 # SIMPLE OPERATORS
+CASTING = Literal("::").set_parser_name("concat")
 CONCAT = Literal("||").set_parser_name("concat")
 MUL = Literal("*").set_parser_name("mul")
 DIV = Literal("/").set_parser_name("div")
@@ -87,10 +91,12 @@ RIGHT_JOIN = Group(RIGHT + JOIN).set_parser_name("right join")
 RIGHT_OUTER_JOIN = Group(RIGHT + OUTER + JOIN).set_parser_name("right outer join")
 SELECT_DISTINCT = Group(SELECT + DISTINCT).set_parser_name("select distinct")
 UNION_ALL = Group(UNION + ALL).set_parser_name("union_all")
+WITHIN_GROUP = Group(WITHIN + GROUP).set_parser_name("within_group")
 
 # COMPOUND OPERATORS
 NOT_BETWEEN = Group(NOT + BETWEEN).set_parser_name("not_between")
 NOT_LIKE = Group(NOT + LIKE).set_parser_name("not_like")
+NOT_RLIKE = Group(NOT + RLIKE).set_parser_name("not_rlike")
 NOT_IN = Group(NOT + IN).set_parser_name("nin")
 IS_NOT = Group(IS + NOT).set_parser_name("is_not")
 
@@ -118,6 +124,7 @@ join_keywords = {
 unary_ops = (NEG, NOT, BINARY_NOT)
 
 binary_ops = {
+    "::": "cast",
     "COLLATE": "collate",
     "||": "concat",
     "*": "mul",
@@ -139,12 +146,14 @@ binary_ops = {
     "is not": "neq",
     "is": "eq",
     "not like": "not_like",
+    "not rlike": "not_rlike",
     "or": "or",
     "and": "and",
 }
 
 precedence = {
     # https://www.sqlite.org/lang_expr.html
+    "cast": 0,
     "collate": 0,
     "concat": 1,
     "mul": 2,
@@ -169,12 +178,15 @@ precedence = {
     "is": 8,
     "like": 8,
     "not_like": 8,
+    "rlike": 8,
+    "not_rlike": 8,
     "and": 10,
     "or": 11,
 }
 
 
 KNOWN_OPS = [
+    CASTING,
     COLLATE,
     CONCAT,
     MUL | DIV | MOD,
@@ -193,19 +205,35 @@ KNOWN_OPS = [
     IS,
     LIKE,
     NOT_LIKE,
+    RLIKE,
+    NOT_RLIKE,
     NOT,
     AND,
     OR,
 ]
 
+times = ["now", "today", "tomorrow", "eod", "epoch"]
 
-durations = [
-    "milliseconds",
-    "seconds",
-    "minutes",
-    "hours",
-    "days",
-    "weeks",
-    "months",
-    "years",
-]
+durations = {
+    "milliseconds": "millisecond",
+    "millisecond": "millisecond",
+    "seconds": "second",
+    "second": "second",
+    "s": "second",
+    "minutes": "minute",
+    "minute": "minute",
+    "m": "minute",
+    "hours": "hour",
+    "hour": "hour",
+    "h": "hour",
+    "days": "day",
+    "day": "day",
+    "d": "day",
+    "weeks": "week",
+    "week": "week",
+    "w": "week",
+    "months": "month",
+    "month": "month",
+    "years": "year",
+    "year": "year",
+}

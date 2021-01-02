@@ -1,5 +1,4 @@
 # encoding: utf-8
-#
 # This Source Code Form is subject to the terms of the Mozilla Public
 # License, v. 2.0. If a copy of the MPL was not distributed with this file,
 # You can obtain one at http://mozilla.org/MPL/2.0/.
@@ -302,6 +301,56 @@ class TestSimple(TestCase):
                 {"in": ["id", {"literal": ["1", "2"]}]},
             ]},
             "select": "*",
+        }
+        self.assertEqual(result, expected)
+
+    def test_rlike_in_where(self):
+        result = parse("select a from table1 where A rlike '.*20.*'")
+        expected = {
+            "from": "table1",
+            "where": {"rlike": ["A", {"literal": ".*20.*"}]},
+            "select": {"value": "a"},
+        }
+        self.assertEqual(result, expected)
+
+    def test_not_rlike_in_where(self):
+        result = parse("select a from table1 where A not rlike '.*20.*'")
+        expected = {
+            "from": "table1",
+            "where": {"not_rlike": ["A", {"literal": ".*20.*"}]},
+            "select": {"value": "a"},
+        }
+        self.assertEqual(result, expected)
+
+    def test_rlike_in_select(self):
+        result = parse(
+            "select case when A rlike 'bb.*' then 1 else 0 end as bb from table1"
+        )
+        expected = {
+            "from": "table1",
+            "select": {
+                "name": "bb",
+                "value": {"case": [
+                    {"when": {"rlike": ["A", {"literal": "bb.*"}]}, "then": 1},
+                    0,
+                ]},
+            },
+        }
+        self.assertEqual(result, expected)
+
+    def test_not_rlike_in_select(self):
+        result = parse(
+            "select case when A not rlike 'bb.*' then 1 else 0 end as bb from table1"
+        )
+        expected = {
+            "from": "table1",
+            "select": {
+                "name": "bb",
+                "value": {"case": [
+                    {"when": {"not_rlike": ["A", {"literal": "bb.*"}]}, "then": 1},
+                    0,
+                ]},
+            },
         }
         self.assertEqual(result, expected)
 
@@ -1063,7 +1112,10 @@ class TestSimple(TestCase):
         expected = {
             "select": {
                 "value": {"rank": "*"},
-                "over": {"partitionby": "a", "orderby": [{'value': 'b'}, {'value': 'c'}]},
+                "over": {
+                    "partitionby": "a",
+                    "orderby": [{"value": "b"}, {"value": "c"}],
+                },
             },
             "from": "tab",
         }

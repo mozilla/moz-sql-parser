@@ -1,12 +1,11 @@
 # encoding: utf-8
 import inspect
-from collections import MutableMapping
 
 from mo_dots import is_many, is_null
-from mo_future import is_text, text, PY3, NEXT, zip_longest
-from mo_parsing.utils import Log, listwrap
+from mo_future import is_text, text, NEXT, zip_longest, MutableMapping
 
 from mo_parsing import engine
+from mo_parsing.utils import Log, listwrap
 from mo_parsing.utils import is_forward, forward_type
 
 USE_ATTRIBUTE_ACCESS = False

@@ -166,8 +166,38 @@ def to_json_call(tokens):
     return ParseResults(tokens.type, tokens.start, tokens.end, [{op: params}])
 
 
+def to_interval_call(tokens):
+    # ARRANGE INTO {interval: [amount, type]} FORMAT
+    params = scrub(tokens["params"])
+    if not params:
+        params = {}
+    if len(params) == 2:
+        return ParseResults(
+            tokens.type, tokens.start, tokens.end, [{"interval": params}]
+        )
+
+    return ParseResults(
+        tokens.type,
+        tokens.start,
+        tokens.end,
+        [{"add": [{"interval": p} for p in _chunk(params, size=2)]}],
+    )
+
+
 def to_case_call(tokens):
     cases = list(tokens["case"])
+    elze = tokens["else"]
+    if elze:
+        cases.append(elze)
+    return {"case": cases}
+
+
+def to_switch_call(tokens):
+    # CONVERT TO CLASSIC CASE STATEMENT
+    value = tokens["value"]
+    cases = list(tokens["case"])
+    for c in cases:
+        c["when"] = {"eq": [value, c["when"]]}
     elze = tokens["else"]
     if elze:
         cases.append(elze)
@@ -213,8 +243,12 @@ def to_union_call(tokens):
         output = scrub(unions[0].tokens)  # REMOVE THE Group()
     else:
         sources = scrub([unions[i] for i in range(0, len(unions), 2)])
-        operators = [unions[i] for i in range(1, len(unions), 2)]
-        op = "_".join(listwrap(scrub(operators)))
+        operators = [
+            "_".join(listwrap(scrub(unions[i]))) for i in range(1, len(unions), 2)
+        ]
+        op = operators[0]
+        if any(o != op for o in operators):
+            raise Exception("Expecting no mixing of UNION with UNION ALL")
 
         if not tokens["orderby"] and not tokens["offset"] and not tokens["limit"]:
             return {op: sources}
@@ -286,6 +320,17 @@ case = (
     + END
 ).addParseAction(to_case_call)
 
+# SWITCH
+switch = (
+    CASE
+    + expr("value")
+    + Group(ZeroOrMore(
+        (WHEN + expr("when") + THEN + expr("then")).addParseAction(to_when_call)
+    ))("case")
+    + Optional(ELSE + expr("else"))
+    + END
+).addParseAction(to_switch_call)
+
 
 # MAYBE TOO FLEXIBLE?
 datatype = Word(IDENT_CHAR).addParseAction(lambda t: t[0].lower())
@@ -297,11 +342,20 @@ cast = Group(
 
 ordered_sql = Forward()
 
-
 call_function = (
     ident("op") + LB + Optional(Group(ordered_sql) | delimitedList(expr))("params") + RB
 ).addParseAction(to_json_call)
 
+
+def _chunk(values, size):
+    acc = []
+    for v in values:
+        acc.append(v)
+        if len(acc)==size:
+            yield acc
+            acc=[]
+    if acc:
+        yield acc
 
 def _or(values):
     output = values[0]
@@ -310,24 +364,30 @@ def _or(values):
     return output
 
 
+duration = (realNum | intNum)("params") + _or([
+    Keyword(d, caseless=True).addParseAction(lambda t: durations[t.lower()])
+    for d in durations.keys()
+])("params")
+
 interval = (
-    INTERVAL("op")
-    + (realNum | intNum)("params")
-    + _or([
-        Keyword(d, caseless=True).addParseAction(lambda t: t.lower()[:-1])
-        for d in durations
-    ])("params")
+    INTERVAL + ("'" + delimitedList(duration) + "'" | duration)
+).addParseAction(to_interval_call)
+
+_times = _or([
+    Keyword(t, caseless=True).addParseAction(lambda t: t.lower()) for t in times
+])("params")
+
+timestamp = (
+    TIMESTAMP("op") + ("'" + _times + "'" | _times)
 ).addParseAction(to_json_call)
 
 namedColumn = Group(
     Group(expr)("value") + Optional(Optional(AS) + Group(ident))("name")
 )
 
-
 distinct = (
     DISTINCT("op") + delimitedList(namedColumn)("params")
 ).addParseAction(to_json_call)
-
 
 compound = (
     NULL
@@ -336,7 +396,9 @@ compound = (
     | NOCASE
     | (DATE("op") + sqlString("params")).addParseAction(to_json_call)
     | interval
+    | timestamp
     | case
+    | switch
     | cast
     | distinct
     | (LB + Group(ordered_sql) + RB)
@@ -374,9 +436,16 @@ sortColumn = expr("value").set_parser_name("sort1") + Optional(
     DESC("sort") | ASC("sort")
 ) | expr("value").set_parser_name("sort2")
 
+# listagg(sellerid) within group (order by sellerid) over()
 selectColumn = (
     Group(
         Group(expr).set_parser_name("expression1")("value")
+        + Optional(
+            WITHIN_GROUP
+            + LB
+            + Optional(ORDER_BY + delimitedList(Group(sortColumn))("orderby"))
+            + RB
+        )("within")
         + Optional(
             OVER
             + LB

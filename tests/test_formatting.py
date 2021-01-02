@@ -232,6 +232,29 @@ class TestSimple(TestCase):
         )
         self.assertEqual(result, expected)
 
+    def test_rlike_in_where(self):
+        result = format({
+            "from": "table1",
+            "where": {"rlike": ["A", {"literal": ".*20.*"}]},
+            "select": {"value": "a"},
+        })
+        expected = "SELECT a FROM table1 WHERE A RLIKE '.*20.*'"
+        self.assertEqual(result, expected)
+
+    def test_rlike_in_select(self):
+        result = format({
+            "from": "table1",
+            "select": {
+                "name": "bb",
+                "value": {"case": [
+                    {"when": {"rlike": ["A", {"literal": "bb.*"}]}, "then": 1},
+                    0,
+                ]},
+            },
+        })
+        expected = "SELECT CASE WHEN A RLIKE 'bb.*' THEN 1 ELSE 0 END AS bb FROM table1"
+        self.assertEqual(result, expected)
+
     def test_in_expression(self):
         result = format({
             "from": "task",
