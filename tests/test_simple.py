@@ -1125,7 +1125,7 @@ class TestSimple(TestCase):
         sql = "SELECT 1 + CAST(1 AS INT) result"
         result = parse(sql)
         expected = {"select": {
-            "value": {"add": [1, {"cast": [1, "int"]}]},
+            "value": {"add": [1, {"cast": [1, {"int": {}}]}]},
             "name": "result",
         }}
         self.assertEqual(result, expected)

@@ -1,6 +1,6 @@
 from mo_dots import Null
 
-from mo_parsing import Keyword, Literal, ParserElement, Or, Group
+from moz_sql_parser.utils import *
 
 # SQL CONSTANTS
 NULL = Keyword("null", caseless=True).addParseAction(lambda: [Null])
@@ -10,21 +10,18 @@ NOCASE = Keyword("nocase", caseless=True)
 ASC = Keyword("asc", caseless=True)
 DESC = Keyword("desc", caseless=True)
 
-
 # SIMPLE KEYWORDS
 AS = Keyword("as", caseless=True).suppress()
 ALL = Keyword("all", caseless=True)
 BY = Keyword("by", caseless=True).suppress()
 CAST = Keyword("cast", caseless=True)
 CROSS = Keyword("cross", caseless=True)
-DATE = Keyword("date", caseless=True)
 DISTINCT = Keyword("distinct", caseless=True)
 FROM = Keyword("from", caseless=True).suppress()
 FULL = Keyword("full", caseless=True)
 GROUP = Keyword("group", caseless=True).suppress()
 HAVING = Keyword("having", caseless=True).suppress()
 INNER = Keyword("inner", caseless=True)
-TIMESTAMP = Keyword("timestamp", caseless=True)
 INTERVAL = Keyword("interval", caseless=True)
 JOIN = Keyword("join", caseless=True)
 LEFT = Keyword("left", caseless=True)
@@ -100,10 +97,74 @@ NOT_RLIKE = Group(NOT + RLIKE).set_parser_name("not_rlike")
 NOT_IN = Group(NOT + IN).set_parser_name("nin")
 IS_NOT = Group(IS + NOT).set_parser_name("is_not")
 
-RESERVED = Or([
-    v
-    for k, v in locals().items()
-    if isinstance(v, ParserElement) and not isinstance(v, Literal)
+RESERVED = MatchFirst([
+    ALL,
+    AND,
+    AS,
+    ASC,
+    BETWEEN,
+    BY,
+    CASE,
+    CAST,
+    COLLATE,
+    CROSS_JOIN,
+    CROSS,
+    DESC,
+    DISTINCT,
+    ELSE,
+    END,
+    FALSE,
+    FROM,
+    FULL_JOIN,
+    FULL_OUTER_JOIN,
+    FULL,
+    GROUP_BY,
+    GROUP,
+    HAVING,
+    IN,
+    INNER_JOIN,
+    INNER,
+    INTERVAL,
+    IS_NOT,
+    IS,
+    JOIN,
+    LEFT_JOIN,
+    LEFT_OUTER_JOIN,
+    LEFT,
+    LIKE,
+    LIMIT,
+    NOCASE,
+    NOT_BETWEEN,
+    NOT_IN,
+    NOT_LIKE,
+    NOT_RLIKE,
+    NOT,
+    NULL,
+    OFFSET,
+    ON,
+    OR,
+    ORDER_BY,
+    ORDER,
+    OUTER,
+    OVER,
+    PARTITION_BY,
+    PARTITION,
+    RIGHT_JOIN,
+    RIGHT_OUTER_JOIN,
+    RIGHT,
+    RLIKE,
+    SELECT_DISTINCT,
+    SELECT,
+    THEN,
+    TRUE,
+    UNION_ALL,
+    UNION,
+    USING,
+    WHEN,
+    WHERE,
+    WITH,
+    WITHIN_GROUP,
+    WITHIN,
 ])
 
 LB = Literal("(").suppress()
@@ -122,34 +183,6 @@ join_keywords = {
 }
 
 unary_ops = (NEG, NOT, BINARY_NOT)
-
-binary_ops = {
-    "::": "cast",
-    "COLLATE": "collate",
-    "||": "concat",
-    "*": "mul",
-    "/": "div",
-    "%": "mod",
-    "+": "add",
-    "-": "sub",
-    "&": "binary_and",
-    "|": "binary_or",
-    "<": "lt",
-    "<=": "lte",
-    ">": "gt",
-    ">=": "gte",
-    "=": "eq",
-    "==": "eq",
-    "!=": "neq",
-    "<>": "neq",
-    "not in": "nin",
-    "is not": "neq",
-    "is": "eq",
-    "not like": "not_like",
-    "not rlike": "not_rlike",
-    "or": "or",
-    "and": "and",
-}
 
 precedence = {
     # https://www.sqlite.org/lang_expr.html
@@ -212,28 +245,155 @@ KNOWN_OPS = [
     OR,
 ]
 
-times = ["now", "today", "tomorrow", "eod", "epoch"]
+times = ["now", "today", "tomorrow", "eod"]
 
 durations = {
+    "microseconds": "microsecond",
+    "microsecond": "microsecond",
+    "microsecs": "microsecond",
+    "microsec": "microsecond",
+    "useconds": "microsecond",
+    "usecond": "microsecond",
+    "usecs": "microsecond",
+    "usec": "microsecond",
+    "us": "microsecond",
     "milliseconds": "millisecond",
     "millisecond": "millisecond",
+    "millisecon": "millisecond",
+    "mseconds": "millisecond",
+    "msecond": "millisecond",
+    "millisecs": "millisecond",
+    "millisec": "millisecond",
+    "msecs": "millisecond",
+    "msec": "millisecond",
+    "ms": "millisecond",
     "seconds": "second",
     "second": "second",
+    "secs": "second",
+    "sec": "second",
     "s": "second",
     "minutes": "minute",
     "minute": "minute",
+    "mins": "minute",
+    "min": "minute",
     "m": "minute",
     "hours": "hour",
     "hour": "hour",
+    "hrs": "hour",
+    "hr": "hour",
     "h": "hour",
     "days": "day",
     "day": "day",
     "d": "day",
+    "dayofweek": "dow",
+    "dow":"dow",
+    "weekday":"dow",
     "weeks": "week",
     "week": "week",
     "w": "week",
     "months": "month",
-    "month": "month",
+    "mons": "month",
+    "mon": "month",
+    "quarters": "quarter",
+    "quarter": "quarter",
     "years": "year",
     "year": "year",
+    "decades": "decade",
+    "decade": "decade",
+    "decs": "decade",
+    "dec": "decade",
+    "centuries": "century",
+    "century": "century",
+    "cents": "century",
+    "cent": "century",
+    "c": "century",
+    "millennia": "millennium",
+    "millennium": "millennium",
+    "mils": "millennium",
+    "mil": "millennium",
+    "epoch": "epoch",
 }
+
+_size = Optional(LB + intNum("params") + RB)
+_sizes = Optional(LB + intNum("params") + "," + intNum("params") + RB)
+
+# KNOWN TYPES
+ARRAY = Group(Keyword("array", caseless=True)("op")).addParseAction(to_json_call)
+BIGINT = Group(Keyword("bigint", caseless=True)("op")).addParseAction(to_json_call)
+BOOL = Group(Keyword("bool", caseless=True)("op")).addParseAction(to_json_call)
+BOOLEAN = Group(Keyword("boolean", caseless=True)("op")).addParseAction(to_json_call)
+DOUBLE = Group(Keyword("double", caseless=True)("op")).addParseAction(to_json_call)
+FLOAT64 = Group(Keyword("float64", caseless=True)("op")).addParseAction(to_json_call)
+GEOMETRY = Group(Keyword("geometry", caseless=True)("op")).addParseAction(to_json_call)
+INTEGER = Group(Keyword("integer", caseless=True)("op")).addParseAction(to_json_call)
+INT = Group(Keyword("int", caseless=True)("op")).addParseAction(to_json_call)
+INT32 = Group(Keyword("int32", caseless=True)("op")).addParseAction(to_json_call)
+INT64 = Group(Keyword("int64", caseless=True)("op")).addParseAction(to_json_call)
+REAL = Group(Keyword("real", caseless=True)("op")).addParseAction(to_json_call)
+TEXT = Group(Keyword("text", caseless=True)("op")).addParseAction(to_json_call)
+SMALLINT = Group(Keyword("smallint", caseless=True)("op")).addParseAction(to_json_call)
+STRING = Group(Keyword("string", caseless=True)("op")).addParseAction(to_json_call)
+STRUCT = Group(Keyword("struct", caseless=True)("op")).addParseAction(to_json_call)
+
+BLOB = (Keyword("blob", caseless=True)("op") + _size).addParseAction(to_json_call)
+BYTES = (Keyword("bytes", caseless=True)("op") + _size).addParseAction(to_json_call)
+CHAR = (Keyword("char", caseless=True)("op") + _size).addParseAction(to_json_call)
+VARCHAR = (Keyword("varchar", caseless=True)("op") + _size).addParseAction(to_json_call)
+
+DECIMAL = (
+    Keyword("decimal", caseless=True)("op") + _sizes
+).addParseAction(to_json_call)
+NUMERIC = (
+    Keyword("numeric", caseless=True)("op") + _sizes
+).addParseAction(to_json_call)
+
+
+DATE = Keyword("date", caseless=True)
+DATETIME = Keyword("datetime", caseless=True)
+TIME = Keyword("time", caseless=True)
+TIMESTAMP = Keyword("timestamp", caseless=True)
+TIMESTAMPTZ = Keyword("timestamptz", caseless=True)
+TIMETZ = Keyword("timetz", caseless=True)
+
+time_functions = MatchFirst([DATE, DATETIME, TIME, TIMESTAMP, TIMESTAMPTZ, TIMETZ])
+
+# KNOWNN TIME TYPES
+_format = Optional(Regex(r'\"(\"\"|[^"])*\"')("params").addParseAction(unquote))
+
+DATE_TYPE = (DATE("op") + _format).addParseAction(to_json_call)
+DATETIME_TYPE = (DATETIME("op") + _format).addParseAction(to_json_call)
+TIME_TYPE = (TIME("op") + _format).addParseAction(to_json_call)
+TIMESTAMP_TYPE = (TIMESTAMP("op") + _format).addParseAction(to_json_call)
+TIMESTAMPTZ_TYPE = (TIMESTAMPTZ("op") + _format).addParseAction(to_json_call)
+TIMETZ_TYPE = (TIMETZ("op") + _format).addParseAction(to_json_call)
+
+known_types = MatchFirst([
+    ARRAY,
+    BIGINT,
+    BOOL,
+    BOOLEAN,
+    BLOB,
+    BYTES,
+    CHAR,
+    DATE_TYPE,
+    DATETIME_TYPE,
+    DECIMAL,
+    DOUBLE,
+    FLOAT64,
+    GEOMETRY,
+    INTEGER,
+    INT,
+    INT32,
+    INT64,
+    NUMERIC,
+    REAL,
+    TEXT,
+    SMALLINT,
+    STRING,
+    STRUCT,
+    TIME_TYPE,
+    TIMESTAMP_TYPE,
+    TIMESTAMPTZ_TYPE,
+    TIMETZ_TYPE,
+    VARCHAR,
+])

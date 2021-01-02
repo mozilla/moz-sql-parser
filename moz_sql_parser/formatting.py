@@ -15,7 +15,8 @@ import re
 
 from mo_future import string_types, text, first, long, is_text
 
-from moz_sql_parser.keywords import join_keywords, precedence, binary_ops, RESERVED
+from moz_sql_parser.keywords import join_keywords, precedence, RESERVED
+from moz_sql_parser.utils import binary_ops
 
 VALID = re.compile(r"^[a-zA-Z_]\w*$")
 
