@@ -221,3 +221,13 @@ class TestRedshift(TestCase):
         sql = "select extract('epoch' from occurred_at)"
         result = parse(sql)
         self.assertEqual(result, {})
+
+    def test_cast_char(self):
+        sql = "select cast(2008 as char(4));"
+        result = parse(sql)
+        self.assertEqual(result, {})
+
+    def test_cast_decimal(self):
+        sql = "select cast(109.652 as decimal(4,1));"
+        result = parse(sql)
+        self.assertEqual(result, {})

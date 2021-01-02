@@ -1,6 +1,7 @@
 from mo_dots import Null
 
-from mo_parsing import Keyword, Literal, ParserElement, Or, Group
+from mo_parsing import Keyword, Literal, ParserElement, Or, Group, Optional, MatchFirst, Regex
+from moz_sql_parser.utils import *
 
 # SQL CONSTANTS
 NULL = Keyword("null", caseless=True).addParseAction(lambda: [Null])
@@ -10,21 +11,18 @@ NOCASE = Keyword("nocase", caseless=True)
 ASC = Keyword("asc", caseless=True)
 DESC = Keyword("desc", caseless=True)
 
-
 # SIMPLE KEYWORDS
 AS = Keyword("as", caseless=True).suppress()
 ALL = Keyword("all", caseless=True)
 BY = Keyword("by", caseless=True).suppress()
 CAST = Keyword("cast", caseless=True)
 CROSS = Keyword("cross", caseless=True)
-DATE = Keyword("date", caseless=True)
 DISTINCT = Keyword("distinct", caseless=True)
 FROM = Keyword("from", caseless=True).suppress()
 FULL = Keyword("full", caseless=True)
 GROUP = Keyword("group", caseless=True).suppress()
 HAVING = Keyword("having", caseless=True).suppress()
 INNER = Keyword("inner", caseless=True)
-TIMESTAMP = Keyword("timestamp", caseless=True)
 INTERVAL = Keyword("interval", caseless=True)
 JOIN = Keyword("join", caseless=True)
 LEFT = Keyword("left", caseless=True)
@@ -123,34 +121,6 @@ join_keywords = {
 
 unary_ops = (NEG, NOT, BINARY_NOT)
 
-binary_ops = {
-    "::": "cast",
-    "COLLATE": "collate",
-    "||": "concat",
-    "*": "mul",
-    "/": "div",
-    "%": "mod",
-    "+": "add",
-    "-": "sub",
-    "&": "binary_and",
-    "|": "binary_or",
-    "<": "lt",
-    "<=": "lte",
-    ">": "gt",
-    ">=": "gte",
-    "=": "eq",
-    "==": "eq",
-    "!=": "neq",
-    "<>": "neq",
-    "not in": "nin",
-    "is not": "neq",
-    "is": "eq",
-    "not like": "not_like",
-    "not rlike": "not_rlike",
-    "or": "or",
-    "and": "and",
-}
-
 precedence = {
     # https://www.sqlite.org/lang_expr.html
     "cast": 0,
@@ -237,3 +207,88 @@ durations = {
     "years": "year",
     "year": "year",
 }
+
+
+_size = Optional(LB + intNum("params") + RB)
+_sizes = Optional(LB + intNum("params") + "," + intNum("params") + RB)
+
+# KNOWN TYPES
+ARRAY = Keyword("array", caseless=True)("op").addParseAction(to_json_call)
+BIGINT = Keyword("bigint", caseless=True)("op").addParseAction(to_json_call)
+BOOL = Keyword("bool", caseless=True)("op").addParseAction(to_json_call)
+BOOLEAN = Keyword("boolean", caseless=True)("op").addParseAction(to_json_call)
+DOUBLE = Keyword("double", caseless=True)("op").addParseAction(to_json_call)
+FLOAT64 = Keyword("float64", caseless=True)("op").addParseAction(to_json_call)
+GEOMETRY = Keyword("geometry", caseless=True)("op").addParseAction(to_json_call)
+INTEGER = Keyword("integer", caseless=True)("op").addParseAction(to_json_call)
+INT32 = Keyword("int32", caseless=True)("op").addParseAction(to_json_call)
+INT64 = Keyword("int64", caseless=True)("op").addParseAction(to_json_call)
+REAL = Keyword("real", caseless=True)("op").addParseAction(to_json_call)
+TEXT = Keyword("text", caseless=True)("op").addParseAction(to_json_call)
+SMALLINT = Keyword("smallint", caseless=True)("op").addParseAction(to_json_call)
+STRING = Keyword("string", caseless=True)("op").addParseAction(to_json_call)
+STRUCT = Keyword("struct", caseless=True)("op").addParseAction(to_json_call)
+
+BLOB = (Keyword("blob", caseless=True)("op") + _size).addParseAction(to_json_call)
+BYTES = (Keyword("bytes", caseless=True)("op") + _size).addParseAction(to_json_call)
+CHAR = (Keyword("char", caseless=True)("op") + _size).addParseAction(to_json_call)
+VARCHAR = (Keyword("varchar", caseless=True)("op") + _size).addParseAction(to_json_call)
+
+DECIMAL = (
+    Keyword("decimal", caseless=True)("op") + _sizes
+).addParseAction(to_json_call)
+NUMERIC = (
+    Keyword("numeric", caseless=True)("op") + _sizes
+).addParseAction(to_json_call)
+
+
+DATE = Keyword("date", caseless=True)
+DATETIME =     Keyword("datetime", caseless=True)
+TIME = Keyword("time", caseless=True)
+TIMESTAMP =     Keyword("timestamp", caseless=True)
+TIMESTAMPTZ =     Keyword("timestamptz", caseless=True)
+TIMETZ = Keyword("timetz", caseless=True)
+
+time_functions = MatchFirst([
+    DATE, DATETIME, TIME, TIMESTAMP, TIMESTAMPTZ, TIMETZ
+])
+
+# KNOWNN TIME TYPES
+_format = Optional(Regex(r'\"(\"\"|[^"])*\"')("params").addParseAction(unquote))
+
+DATE_TYPE = (DATE("op") + _format).addParseAction(to_json_call)
+DATETIME_TYPE = (DATETIME("op") + _format).addParseAction(to_json_call)
+TIME_TYPE = (TIME("op") + _format).addParseAction(to_json_call)
+TIMESTAMP_TYPE = (TIMESTAMP("op") + _format).addParseAction(to_json_call)
+TIMESTAMPTZ_TYPE = (TIMESTAMPTZ("op") + _format).addParseAction(to_json_call)
+TIMETZ_TYPE = (TIMETZ("op") + _format).addParseAction(to_json_call)
+
+KNOWN_TYPES = MatchFirst([
+    ARRAY,
+    BIGINT,
+    BOOL,
+    BOOLEAN,
+    BLOB,
+    BYTES,
+    CHAR,
+    DATE_TYPE,
+    DATETIME_TYPE,
+    DECIMAL,
+    DOUBLE,
+    FLOAT64,
+    GEOMETRY,
+    INTEGER,
+    INT32,
+    INT64,
+    NUMERIC,
+    REAL,
+    TEXT,
+    SMALLINT,
+    STRING,
+    STRUCT,
+    TIME_TYPE,
+    TIMESTAMP_TYPE,
+    TIMESTAMPTZ_TYPE,
+    TIMETZ_TYPE,
+    VARCHAR,
+])
