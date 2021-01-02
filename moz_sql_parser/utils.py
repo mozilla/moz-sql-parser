@@ -14,7 +14,7 @@ import ast
 from mo_dots import is_data
 from mo_future import text, number_types, binary_type
 
-from mo_parsing import Regex, ParseResults
+from mo_parsing import *
 from mo_parsing.utils import is_number, listwrap, alphanums
 
 
@@ -312,8 +312,8 @@ def to_string(tokens):
 
 
 # NUMBERS
-realNum = Regex(r"[+-]?(\d+\.\d*|\.\d+)([eE][+-]?\d+)?").set_parser_name("float").addParseAction(float)
-intNum = Regex(r"[+-]?\d+([eE]\+?\d+)?").set_parser_name("int").addParseAction(int)
+realNum = Regex(r"[+-]?(\d+\.\d*|\.\d+)([eE][+-]?\d+)?").set_parser_name("float").addParseAction(lambda t: float(t[0]))
+intNum = Regex(r"[+-]?\d+([eE]\+?\d+)?").set_parser_name("int").addParseAction(lambda t: int(t[0]))
 
 # STRINGS
 sqlString = Regex(r"\'(\'\'|[^'])*\'").addParseAction(to_string)

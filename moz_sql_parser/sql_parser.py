@@ -9,34 +9,22 @@
 
 from __future__ import absolute_import, division, unicode_literals
 
-from pyparsing import restOfLine
-
-from mo_parsing import (
-    Forward,
-    ZeroOrMore,
-    OneOrMore,
-    infixNotation,
-    RIGHT_ASSOC,
-    LEFT_ASSOC,
-    delimitedList,
-    Combine,
-    Word,
-    Regex
-)
 from mo_parsing.engine import Engine
 from moz_sql_parser.keywords import *
 from moz_sql_parser.utils import *
 
 engine = Engine().use()
+engine.add_ignore(Literal("--") + restOfLine)
+engine.add_ignore(Literal("#") + restOfLine)
 
 # IDENTIFIER
-identString = Regex(r'\"(\"\"|[^"])*\"').addParseAction(unquote)
+literal_string = Regex(r'\"(\"\"|[^"])*\"').addParseAction(unquote)
 mysql_ident = Regex(r"\`(\`\`|[^`])*\`").addParseAction(unquote)
 sqlserver_ident = Regex(r"\[(\]\]|[^\]])*\]").addParseAction(unquote)
 ident = Combine(
     ~RESERVED
     + (delimitedList(
-        Literal("*") | identString | mysql_ident | sqlserver_ident | Word(IDENT_CHAR),
+        Literal("*") | literal_string | mysql_ident | sqlserver_ident | Word(IDENT_CHAR),
         separator=".",
         combine=True,
     ))
@@ -66,29 +54,23 @@ switch = (
     + END
 ).addParseAction(to_switch_call)
 
-
-# MAYBE TOO FLEXIBLE?
-datatype = Word(IDENT_CHAR).addParseAction(lambda t: t[0].lower())
-
 # CAST
 cast = Group(
-    CAST("op") + LB + expr("params") + AS + datatype("params") + RB
+    CAST("op") + LB + expr("params") + AS + known_types("params") + RB
 ).addParseAction(to_json_call)
 
-ordered_sql = Forward()
 
-call_function = (
-    ident("op") + LB + Optional(Group(ordered_sql) | delimitedList(expr))("params") + RB
-).addParseAction(to_json_call)
-
-duration = (realNum | intNum)("params") + MatchFirst([
+_standard_time_intervals = MatchFirst([
     Keyword(d, caseless=True).addParseAction(lambda t: durations[t.lower()])
     for d in durations.keys()
-])("params")
+]).set_parser_name("duration")("params")
+
+duration = (realNum | intNum)("params") + _standard_time_intervals
 
 interval = (
     INTERVAL + ("'" + delimitedList(duration) + "'" | duration)
 ).addParseAction(to_interval_call)
+
 
 timestamp = (
     time_functions("op")
@@ -101,7 +83,7 @@ timestamp = (
 ).addParseAction(to_json_call)
 
 extract = (
-    Keyword("extract", caseless=True)("op") + LB + duration + FROM + expr("params") + RB
+    Keyword("extract", caseless=True)("op") + LB + (_standard_time_intervals | expr("params")) + FROM + expr("params") + RB
 ).addParseAction(to_json_call)
 
 namedColumn = Group(
@@ -110,6 +92,12 @@ namedColumn = Group(
 
 distinct = (
     DISTINCT("op") + delimitedList(namedColumn)("params")
+).addParseAction(to_json_call)
+
+ordered_sql = Forward()
+
+call_function = (
+    ident("op") + LB + Optional(Group(ordered_sql) | delimitedList(expr))("params") + RB
 ).addParseAction(to_json_call)
 
 compound = (
@@ -131,6 +119,7 @@ compound = (
     | intNum.set_parser_name("int")
     | sqlString.set_parser_name("string")
     | call_function
+    | known_types
     | ident
 )
 
@@ -243,12 +232,4 @@ statement = (
 ).addParseAction(to_statement)
 
 SQLParser = statement
-
-# IGNORE SOME COMMENTS
-oracleSqlComment = Literal("--") + restOfLine
-mySqlComment = Literal("#") + restOfLine
-
-engine.add_ignore(oracleSqlComment)
-engine.add_ignore(mySqlComment)
-
 engine.release()

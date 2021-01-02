@@ -1,6 +1,5 @@
 from mo_dots import Null
 
-from mo_parsing import Keyword, Literal, ParserElement, Or, Group, Optional, MatchFirst, Regex
 from moz_sql_parser.utils import *
 
 # SQL CONSTANTS
@@ -98,10 +97,74 @@ NOT_RLIKE = Group(NOT + RLIKE).set_parser_name("not_rlike")
 NOT_IN = Group(NOT + IN).set_parser_name("nin")
 IS_NOT = Group(IS + NOT).set_parser_name("is_not")
 
-RESERVED = Or([
-    v
-    for k, v in locals().items()
-    if isinstance(v, ParserElement) and not isinstance(v, Literal)
+RESERVED = MatchFirst([
+    ALL,
+    AND,
+    AS,
+    ASC,
+    BETWEEN,
+    BY,
+    CASE,
+    CAST,
+    COLLATE,
+    CROSS_JOIN,
+    CROSS,
+    DESC,
+    DISTINCT,
+    ELSE,
+    END,
+    FALSE,
+    FROM,
+    FULL_JOIN,
+    FULL_OUTER_JOIN,
+    FULL,
+    GROUP_BY,
+    GROUP,
+    HAVING,
+    IN,
+    INNER_JOIN,
+    INNER,
+    INTERVAL,
+    IS_NOT,
+    IS,
+    JOIN,
+    LEFT_JOIN,
+    LEFT_OUTER_JOIN,
+    LEFT,
+    LIKE,
+    LIMIT,
+    NOCASE,
+    NOT_BETWEEN,
+    NOT_IN,
+    NOT_LIKE,
+    NOT_RLIKE,
+    NOT,
+    NULL,
+    OFFSET,
+    ON,
+    OR,
+    ORDER_BY,
+    ORDER,
+    OUTER,
+    OVER,
+    PARTITION_BY,
+    PARTITION,
+    RIGHT_JOIN,
+    RIGHT_OUTER_JOIN,
+    RIGHT,
+    RLIKE,
+    SELECT_DISTINCT,
+    SELECT,
+    THEN,
+    TRUE,
+    UNION_ALL,
+    UNION,
+    USING,
+    WHEN,
+    WHERE,
+    WITH,
+    WITHIN_GROUP,
+    WITHIN,
 ])
 
 LB = Literal("(").suppress()
@@ -182,32 +245,74 @@ KNOWN_OPS = [
     OR,
 ]
 
-times = ["now", "today", "tomorrow", "eod", "epoch"]
+times = ["now", "today", "tomorrow", "eod"]
 
 durations = {
+    "microseconds": "microsecond",
+    "microsecond": "microsecond",
+    "microsecs": "microsecond",
+    "microsec": "microsecond",
+    "useconds": "microsecond",
+    "usecond": "microsecond",
+    "usecs": "microsecond",
+    "usec": "microsecond",
+    "us": "microsecond",
     "milliseconds": "millisecond",
     "millisecond": "millisecond",
+    "millisecon": "millisecond",
+    "mseconds": "millisecond",
+    "msecond": "millisecond",
+    "millisecs": "millisecond",
+    "millisec": "millisecond",
+    "msecs": "millisecond",
+    "msec": "millisecond",
+    "ms": "millisecond",
     "seconds": "second",
     "second": "second",
+    "secs": "second",
+    "sec": "second",
     "s": "second",
     "minutes": "minute",
     "minute": "minute",
+    "mins": "minute",
+    "min": "minute",
     "m": "minute",
     "hours": "hour",
     "hour": "hour",
+    "hrs": "hour",
+    "hr": "hour",
     "h": "hour",
     "days": "day",
     "day": "day",
     "d": "day",
+    "dayofweek": "dow",
+    "dow":"dow",
+    "weekday":"dow",
     "weeks": "week",
     "week": "week",
     "w": "week",
     "months": "month",
-    "month": "month",
+    "mons": "month",
+    "mon": "month",
+    "quarters": "quarter",
+    "quarter": "quarter",
     "years": "year",
     "year": "year",
+    "decades": "decade",
+    "decade": "decade",
+    "decs": "decade",
+    "dec": "decade",
+    "centuries": "century",
+    "century": "century",
+    "cents": "century",
+    "cent": "century",
+    "c": "century",
+    "millennia": "millennium",
+    "millennium": "millennium",
+    "mils": "millennium",
+    "mil": "millennium",
+    "epoch": "epoch",
 }
-
 
 _size = Optional(LB + intNum("params") + RB)
 _sizes = Optional(LB + intNum("params") + "," + intNum("params") + RB)
@@ -243,15 +348,13 @@ NUMERIC = (
 
 
 DATE = Keyword("date", caseless=True)
-DATETIME =     Keyword("datetime", caseless=True)
+DATETIME = Keyword("datetime", caseless=True)
 TIME = Keyword("time", caseless=True)
-TIMESTAMP =     Keyword("timestamp", caseless=True)
-TIMESTAMPTZ =     Keyword("timestamptz", caseless=True)
+TIMESTAMP = Keyword("timestamp", caseless=True)
+TIMESTAMPTZ = Keyword("timestamptz", caseless=True)
 TIMETZ = Keyword("timetz", caseless=True)
 
-time_functions = MatchFirst([
-    DATE, DATETIME, TIME, TIMESTAMP, TIMESTAMPTZ, TIMETZ
-])
+time_functions = MatchFirst([DATE, DATETIME, TIME, TIMESTAMP, TIMESTAMPTZ, TIMETZ])
 
 # KNOWNN TIME TYPES
 _format = Optional(Regex(r'\"(\"\"|[^"])*\"')("params").addParseAction(unquote))
@@ -263,7 +366,7 @@ TIMESTAMP_TYPE = (TIMESTAMP("op") + _format).addParseAction(to_json_call)
 TIMESTAMPTZ_TYPE = (TIMESTAMPTZ("op") + _format).addParseAction(to_json_call)
 TIMETZ_TYPE = (TIMETZ("op") + _format).addParseAction(to_json_call)
 
-KNOWN_TYPES = MatchFirst([
+known_types = MatchFirst([
     ARRAY,
     BIGINT,
     BOOL,
