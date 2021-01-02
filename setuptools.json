@@ -22,8 +22,8 @@
             "",
             "|Branch      |Status   |",
             "|------------|---------|",
-            "|master      | [![Build Status](https://travis-ci.org/klahnakoski/moz-sql-parser.svg?branch=master)](https://travis-ci.org/mozilla/moz-sql-parser) |",
-            "|dev         | [![Build Status](https://travis-ci.org/klahnakoski/moz-sql-parser.svg?branch=dev)](https://travis-ci.org/mozilla/moz-sql-parser)    |",
+            "|master      | [![Build Status](https://travis-ci.org/klahnakoski/moz-sql-parser.svg?branch=master)](https://travis-ci.org/klahnakoski/moz-sql-parser) |",
+            "|dev         | [![Build Status](https://travis-ci.org/klahnakoski/moz-sql-parser.svg?branch=dev)](https://travis-ci.org/klahnakoski/moz-sql-parser)    |",
             "",
             "",
             "## Problem Statement",
@@ -120,6 +120,6 @@
     "name": "moz-sql-parser",
     "packages": ["moz_sql_parser", "mo_parsing"],
     "url": "https://github.com/klahnakoski/moz-sql-parser",
-    "version": "4.5.20343",
+    "version": "4.6.21002",
     "zip_safe": true
 }
