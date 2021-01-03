@@ -1,7 +1,6 @@
 # encoding: utf-8
 
 from mo_parsing.utils import Log
-from mo_parsing.cache import packrat_cache
 from mo_parsing.core import ParserElement
 from mo_parsing.exceptions import ParseException
 
@@ -59,37 +58,24 @@ timing = {}
 def _profile_parse(self, string, start, doActions=True):
     all_start = process_time()
     try:
-        lookup = (self, string, start, doActions)
-        value = packrat_cache.get(lookup)
-        if value is not None:
-            match = 0
-            if isinstance(value, Exception):
-                raise value
-            return value
-
         try:
-            try:
-                preloc = self.engine.skip(string, start)
-                parse_start = process_time()
-                tokens = self.parseImpl(string, preloc, doActions)
-                parse_end = process_time()
-                match = 1
-            except Exception as cause:
-                parse_end = process_time()
-                match = 2
-                self.parser_config.failAction and self.parser_config.failAction(
-                    self, start, string, cause
-                )
-                raise
-
-            if self.parseAction and (doActions or self.parser_config.callDuringTry):
-                for fn in self.parseAction:
-                    tokens = fn(tokens, start, string)
-        except ParseException as cause:
-            packrat_cache.set(lookup, cause)
+            preloc = self.engine.skip(string, start)
+            parse_start = process_time()
+            tokens = self.parseImpl(string, preloc, doActions)
+            parse_end = process_time()
+            match = 1
+        except Exception as cause:
+            parse_end = process_time()
+            match = 2
+            self.parser_config.failAction and self.parser_config.failAction(
+                self, start, string, cause
+            )
             raise
 
-        packrat_cache.set(lookup, tokens)
+        if self.parseAction and (doActions or self.parser_config.callDuringTry):
+            for fn in self.parseAction:
+                tokens = fn(tokens, start, string)
+
         return tokens
     finally:
         timing_entry = timing.get(self)

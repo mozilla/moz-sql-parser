@@ -4,7 +4,6 @@ from threading import RLock
 
 from mo_future import text
 
-from mo_parsing.cache import packrat_cache
 from mo_parsing.engine import Engine
 from mo_parsing.exceptions import (
     ParseException,
@@ -232,35 +231,21 @@ class ParserElement(object):
         return ParseResults(self, start, start, [])
 
     def _parse(self, string, start, doActions=True):
-        lookup = (self, string, start, doActions)
-        value = packrat_cache.get(lookup)
-        if value is not None:
-            if isinstance(value, Exception):
-                raise value
-            return value
-
         try:
             index = self.engine.skip(string, start)
-            try:
-                result = self.parseImpl(string, index, doActions)
-            except Exception as cause:
-                self.parser_config.failAction and self.parser_config.failAction(
-                    self, start, string, cause
-                )
-                raise
-
-            if self.parseAction and (doActions or self.parser_config.callDuringTry):
-                for fn in self.parseAction:
-                    next_result = fn(result, index, string)
-                    if next_result.end < result.end:
-                        fn(result, index, string)
-                        Log.error("parse action not allowed to roll back the end of parsing")
-                    result = next_result
-        except ParseException as cause:
-            packrat_cache.set(lookup, cause)
+            result = self.parseImpl(string, index, doActions)
+        except Exception as cause:
+            self.parser_config.failAction and self.parser_config.failAction(
+                self, start, string, cause
+            )
             raise
 
-        packrat_cache.set(lookup, result)
+        if doActions or self.parser_config.callDuringTry:
+            for fn in self.parseAction:
+                next_result = fn(result, index, string)
+                if next_result.end < result.end:
+                    Log.error("parse action not allowed to roll back the end of parsing")
+                result = next_result
         return result
 
     def tryParse(self, string, start):
@@ -300,7 +285,6 @@ class ParserElement(object):
         - explicitly expand the tabs in your input string before calling ``parseString``.
 
         """
-        cache.resetCache()
         expr = self.streamline()
         for e in expr.engine.ignore_list:
             e.streamline()
@@ -333,7 +317,6 @@ class ParserElement(object):
 
         instrlen = len(string)
         end = 0
-        cache.resetCache()
         matches = 0
         while end <= instrlen and matches < maxMatches:
             start = self.engine.skip(string, end)
@@ -690,7 +673,7 @@ class _PendingSkip(ParserElement):
 
 
 # export
-from mo_parsing import cache, engine, results
+from mo_parsing import engine, results
 
 engine.ParserElement = ParserElement
 results.ParserElement = ParserElement
