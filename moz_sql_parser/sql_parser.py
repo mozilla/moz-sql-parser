@@ -25,7 +25,11 @@ sqlserver_ident = Regex(r"\[(\]\]|[^\]])*\]").addParseAction(unquote)
 ident = Combine(
     ~RESERVED
     + (delimitedList(
-        Literal("*") | literal_string | mysql_ident | sqlserver_ident | Word(IDENT_CHAR),
+        Literal("*")
+        | literal_string
+        | mysql_ident
+        | sqlserver_ident
+        | Word(IDENT_CHAR),
         separator=".",
         combine=True,
     ))
@@ -60,7 +64,6 @@ cast = Group(
     CAST("op") + LB + expr("params") + AS + known_types("params") + RB
 ).addParseAction(to_json_call)
 
-
 _standard_time_intervals = MatchFirst([
     Keyword(d, caseless=True).addParseAction(lambda t: durations[t.lower()])
     for d in durations.keys()
@@ -71,7 +74,6 @@ duration = (realNum | intNum)("params") + _standard_time_intervals
 interval = (
     INTERVAL + ("'" + delimitedList(duration) + "'" | duration)
 ).addParseAction(to_interval_call)
-
 
 timestamp = (
     time_functions("op")
@@ -84,7 +86,12 @@ timestamp = (
 ).addParseAction(to_json_call)
 
 extract = (
-    Keyword("extract", caseless=True)("op") + LB + (_standard_time_intervals | expr("params")) + FROM + expr("params") + RB
+    Keyword("extract", caseless=True)("op")
+    + LB
+    + (_standard_time_intervals | expr("params"))
+    + FROM
+    + expr("params")
+    + RB
 ).addParseAction(to_json_call)
 
 namedColumn = Group(
@@ -106,7 +113,6 @@ compound = (
     | TRUE
     | FALSE
     | NOCASE
-    | (DATE("op") + sqlString("params")).addParseAction(to_json_call)
     | interval
     | timestamp
     | extract
@@ -121,8 +127,9 @@ compound = (
     | known_types
     | realNum.set_parser_name("float")
     | intNum.set_parser_name("int")
-    | ident
+    # | ident
 )
+compound |= ident
 
 expr << Group(
     infixNotation(
@@ -165,7 +172,9 @@ window = Optional(
         + Optional(row_clause)("range")
     )
     + RB
-)("over")
+)(
+    "over"
+)
 
 selectColumn = (
     Group(

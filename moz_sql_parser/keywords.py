@@ -355,7 +355,7 @@ TIMESTAMP = Keyword("timestamp", caseless=True)
 TIMESTAMPTZ = Keyword("timestamptz", caseless=True)
 TIMETZ = Keyword("timetz", caseless=True)
 
-time_functions = MatchFirst([DATE, DATETIME, TIME, TIMESTAMP, TIMESTAMPTZ, TIMETZ])
+time_functions = (DATE | DATETIME | TIME | TIMESTAMP | TIMESTAMPTZ | TIMETZ)
 
 # KNOWNN TIME TYPES
 _format = Optional(Regex(r'\"(\"\"|[^"])*\"')("params").addParseAction(unquote))

@@ -1,6 +1,6 @@
 # encoding: utf-8
 import re
-from collections import namedtuple
+from collections import namedtuple, OrderedDict
 
 from mo_dots import Null, is_null
 from mo_future import text, is_text
@@ -52,6 +52,15 @@ class ParseElementEnhance(ParserElement):
         else:
             output.expr = self.expr.copy()
         return output
+
+    def expecting(self):
+        if self.expr:
+            return OrderedDict((
+                (k, self)
+                for k, e in self.expr.expecting().items()
+            ))
+        else:
+            return {}
 
     def _min_length(self):
         return self.expr.min_length()

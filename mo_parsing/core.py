@@ -214,6 +214,13 @@ class ParserElement(object):
     def is_annotated(self):
         return self.parseAction or self.token_name or self.parser_name
 
+    def expecting(self):
+        """
+        RETURN EXPECTED CHARACTER SEQUENCE, IF ANY
+        :return:
+        """
+        return {}
+
     def min_length(self):
         if not hasattr(self, "min_cache"):
             Log.error("should not happen")

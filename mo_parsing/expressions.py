@@ -1,4 +1,5 @@
 # encoding: utf-8
+from collections import OrderedDict
 from operator import itemgetter
 
 from mo_future import Iterable, text, generator_types
@@ -19,6 +20,7 @@ from mo_parsing.utils import (
     Log,
     append_config,
     stack_depth,
+    regex_caseless,
 )
 
 
@@ -43,6 +45,20 @@ class ParseExpression(ParserElement):
         for e in self.exprs:
             if is_forward(e):
                 e.track(self)
+
+    def expecting(self):
+        output = OrderedDict()
+        if not self.is_annotated():
+            for e in self.exprs:
+                expect = e.expecting()
+                for k, ee in expect.items():
+                    output.setdefault(k, []).extend(ee)
+        else:
+            for e in self.exprs:
+                expect = e.expecting()
+                for k, _ in expect.items():
+                    output[k] = [self]
+        return output
 
     def copy(self):
         output = ParserElement.copy(self)
@@ -195,6 +211,15 @@ class And(ParseExpression):
         output.streamlined = True
         return output
 
+    def expecting(self):
+        if self.exprs:
+            return OrderedDict((
+                (k, self)
+                for k, e in self.exprs[0].expecting().items()
+            ))
+        else:
+            return {}
+
     def _min_length(self):
         return sum(e.min_length() for e in self.exprs)
 
@@ -244,7 +269,8 @@ class And(ParseExpression):
 
 
 class Or(ParseExpression):
-    """Requires that at least one `ParseExpression` is found. If
+    """
+    Requires that at least one `ParseExpression` is found. If
     two expressions match, the expression that matches the longest
     string will be used. May be constructed using the ``'^'``
     operator.
@@ -261,6 +287,8 @@ class Or(ParseExpression):
     def parseImpl(self, string, start, doActions=True):
         causes = []
         matches = []
+        if len(self.exprs) > 20:
+            print(";lomg")
         for e in self.exprs:
             try:
                 end = e.tryParse(string, start)
@@ -340,7 +368,7 @@ class MatchFirst(ParseExpression):
     __slots__ = []
 
     def __init__(self, exprs):
-        super(MatchFirst, self).__init__(exprs)
+        ParseExpression.__init__(self, exprs)
 
     def _min_length(self):
         if self.exprs:
@@ -375,6 +403,10 @@ class MatchFirst(ParseExpression):
             if len(output.exprs) == 1:
                 output = output.exprs[0]
 
+        patterns = [e.expecting() for e in output.exprs]
+        # SOME NUMBER OF CONSTANT PATTERNS
+        if sum(1 if p != None else 0 for p in patterns) > 5:
+            print("found")
         output.streamlined = True
         output.checkRecursion()
         return output
@@ -408,6 +440,69 @@ class MatchFirst(ParseExpression):
             return self.parser_name
 
         return " | ".join("{" + text(e) + "}" for e in self.exprs)
+
+
+def _distinct(a, b):
+    """
+    ASSUME a != b
+    RETURN MINIMUM length SO THAT a[:length] != b[:length]
+    """
+    ii = 1
+    for aa, bb in zip(a, b):
+        if aa != bb:
+            return ii
+        ii += 1
+    return ii
+
+
+class MatchFirstFast(MatchFirst):
+    __slots__ = []
+
+    def __init__(self, exprs):
+        MatchFirst.__init__(self, exprs)
+
+        lookup = OrderedDict()
+        for e in exprs:
+            for k, ee in e.expecting().items():
+                lookup.setdefault(k, []).append(ee)
+
+        merge = [(k, v) for k, v in lookup]
+        if len(merge) <= 1:
+            Log.error("not useful")
+
+        # patterns must be mutually exclusive to work
+        for i, (k, e) in enumerate(merge[:-1]):
+            for kk, ee in merge[i + 1 :]:
+                if kk.startswith(k) or k.startswith(kk):
+                    e.extend(ee)
+                    ee.clear()
+        compact = [(k, v) for k, v in merge if v]
+        if len(compact) <= 1:
+            Log.error("not useful")
+
+        # patterns can be shortened so far as they remain exclusive
+        shorter = [(
+            (k[:min_length], e)
+            for i, (k, e) in compact[:-1]
+            if e
+            for min_length in [max(_distinct(k, kk) for kk, _ in compact[i + 1 :])]
+        )]
+
+        self.set_config(
+            lookup={k: e for k, e in shorter},
+            regex="|".join(regex_caseless(k) for k, _ in shorter),
+        )
+
+    def parseImpl(self, string, start, doActions=True):
+        config = self.parser_config
+        found = config.regex.match(string, start)
+        index = found.end().lower()
+
+        try:
+            result = config.lookup.get(index).parseImpl(string, start, doActions)
+            return ParseResults(self, result.start, result.end, [result])
+        except ParseException as cause:
+            raise ParseException(self, start, string, cause=cause)
 
 
 class Each(ParseExpression):
