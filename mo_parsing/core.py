@@ -83,7 +83,7 @@ class ParserElement(object):
         "token_name",
         "engine",
         "streamlined",
-        "min_cache",
+        "min_length_cache",
         "parser_config",
     ]
     Config = namedtuple("Config", ["callDuringTry", "failAction", "lock_engine"])
@@ -94,7 +94,7 @@ class ParserElement(object):
         self.token_name = ""
         self.engine = engine.CURRENT
         self.streamlined = False
-        self.min_cache = -1
+        self.min_length_cache = -1
 
         self.parser_config = self.Config(*([None] * len(self.Config._fields)))
         self.set_config(callDuringTry=False, failAction=None, lock_engine=None)
@@ -115,7 +115,7 @@ class ParserElement(object):
         output.token_name = self.token_name
         output.parser_config = self.parser_config
         output.streamlined = self.streamlined
-        output.min_cache = -1
+        output.min_length_cache = -1
         return output
 
     def set_parser_name(self, name):
@@ -222,13 +222,11 @@ class ParserElement(object):
         return {}
 
     def min_length(self):
-        if not hasattr(self, "min_cache"):
-            Log.error("should not happen")
-        if self.min_cache >= 0:
-            return self.min_cache
+        if self.min_length_cache >= 0:
+            return self.min_length_cache
         min_ = self._min_length()
         if self.streamlined:
-            self.min_cache = min_
+            self.min_length_cache = min_
         return min_
 
     def _min_length(self):

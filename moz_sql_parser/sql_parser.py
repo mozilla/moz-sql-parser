@@ -127,9 +127,8 @@ compound = (
     | known_types
     | realNum.set_parser_name("float")
     | intNum.set_parser_name("int")
-    # | ident
+    | ident
 )
-compound |= ident
 
 expr << Group(
     infixNotation(

@@ -10,6 +10,7 @@ from __future__ import absolute_import, division, unicode_literals
 
 from unittest import TestCase
 
+from mo_parsing.debug import Debugger
 from moz_sql_parser import parse
 
 
@@ -17,7 +18,8 @@ class TestRedshift(TestCase):
     def test_issue149a_casting(self):
         # Ref: https://docs.aws.amazon.com/redshift/latest/dg/r_CAST_function.html#r_CAST_function-examples
         sql = "select '' :: varchar as placeholder from table"
-        result = parse(sql)
+        with Debugger():
+            result = parse(sql)
         self.assertEqual(
             result,
             {

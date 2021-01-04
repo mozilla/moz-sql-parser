@@ -899,9 +899,12 @@ def infixNotation(baseExpr, spec, lpar=Suppress("("), rpar=Suppress(")")):
     ])
     ops = Or([
         opPart.addParseAction(record_op(opPart))
-        for expr, op, is_suppressed, arity, assoc, pa in opList
-        if arity > 1
-        for opPart in (op if isinstance(op, tuple) else [op])
+        for opPart in set(
+            opPart
+            for expr, op, is_suppressed, arity, assoc, pa in opList
+            if arity > 1
+            for opPart in (op if isinstance(op, tuple) else [op])
+        )
     ])
 
     def make_tree(tokens, loc, string):

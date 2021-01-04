@@ -13,6 +13,7 @@ from unittest import TestCase
 
 from mo_dots import Null
 
+from mo_parsing.debug import Debugger
 from moz_sql_parser import parse
 
 try:

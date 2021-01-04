@@ -30,7 +30,6 @@ def _debug_parse(self, string, start, doActions=True):
     try:
         tokens = self.parseImpl(string, loc, doActions)
     except Exception as cause:
-        loc = self.engine.skip(string, start)
         self.parser_config.failAction and self.parser_config.failAction(self, start, string, cause)
         fail(self, start, string, cause)
         raise

@@ -56,7 +56,7 @@ class ParseElementEnhance(ParserElement):
     def expecting(self):
         if self.expr:
             return OrderedDict((
-                (k, self)
+                (k, [self])
                 for k, e in self.expr.expecting().items()
             ))
         else:
@@ -147,12 +147,21 @@ class NotAny(ParseElementEnhance):
         prec, pattern = self.expr.__regex__()
         try:
             self.regex = regex_compile(f"(?!{pattern})")
-        except Exception:
-            pass
+        except Exception as c:
+            self.regex = None
 
     def parseImpl(self, string, start, doActions=True):
-        if self.regex:
-            found = self.regex.match(string, start)
+        try:
+            regex = self.regex
+        except AttributeError:
+            prec, pattern = self.expr.__regex__()
+            try:
+                regex = self.regex = regex_compile(f"(?!{pattern})")
+            except Exception as c:
+                regex = self.regex = None
+
+        if regex:
+            found = regex.match(string, start)
             if found:
                 return ParseResults(self, start, start, [])
             raise ParseException(self, start, string)
@@ -170,6 +179,9 @@ class NotAny(ParseElementEnhance):
         if isinstance(output.expr, Empty):
             return NoMatch()
         return output
+
+    def expecting(self):
+        return {}
 
     def min_length(self):
         return 0
@@ -597,12 +609,12 @@ class Forward(ParserElement):
             self.expr.checkRecursion(seen + (self,))
 
     def min_length(self):
-        if self.min_cache is None and self.expr:
-            self.min_cache = 0  # BREAK CYCLE
+        if self.min_length_cache is None and self.expr:
+            self.min_length_cache = 0  # BREAK CYCLE
             try:
                 return self.expr.min_length()
             finally:
-                self.min_cache = None
+                self.min_length_cache = None
         return 0
 
     def parseImpl(self, string, loc, doActions=True):
