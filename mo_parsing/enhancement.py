@@ -150,16 +150,13 @@ class NotAny(ParseElementEnhance):
         except Exception as c:
             self.regex = None
 
-    def parseImpl(self, string, start, doActions=True):
-        try:
-            regex = self.regex
-        except AttributeError:
-            prec, pattern = self.expr.__regex__()
-            try:
-                regex = self.regex = regex_compile(f"(?!{pattern})")
-            except Exception as c:
-                regex = self.regex = None
+    def copy(self):
+        output = ParseElementEnhance.copy(self)
+        output.regex = self.regex
+        return output
 
+    def parseImpl(self, string, start, doActions=True):
+        regex = self.regex
         if regex:
             found = regex.match(string, start)
             if found:
