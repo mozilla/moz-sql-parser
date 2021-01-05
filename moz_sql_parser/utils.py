@@ -165,8 +165,10 @@ binary_ops = {
     "not in": "nin",
     "is not": "neq",
     "is": "eq",
+    "similar to": "similar_to",
     "not like": "not_like",
     "not rlike": "not_rlike",
+    "not simlilar to": "not_similar_to",
     "or": "or",
     "and": "and",
 }
@@ -180,12 +182,16 @@ def to_json_call(tokens):
     params = scrub(tokens["params"])
     if not params:
         params = {}
+    if scrub(tokens["ignore_nulls"]):
+        ignore_nulls = True
+    else:
+        ignore_nulls = None
     # elif isinstance(params, list) and len(params) == 1:
     #     params = params[0]
     # elif isinstance(params, ParseResults) and params.length() == 1:
     #     params = params[0]
 
-    return ParseResults(tokens.type, tokens.start, tokens.end, [{op: params}])
+    return ParseResults(tokens.type, tokens.start, tokens.end, [{op: params, "ignore_nulls": ignore_nulls}])
 
 
 def to_interval_call(tokens):

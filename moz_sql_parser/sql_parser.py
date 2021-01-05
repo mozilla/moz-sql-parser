@@ -12,7 +12,7 @@ from __future__ import absolute_import, division, unicode_literals
 from mo_parsing.engine import Engine
 from moz_sql_parser.keywords import *
 from moz_sql_parser.utils import *
-from moz_sql_parser.row_clause import row_clause
+from moz_sql_parser.windows import row_clause
 
 engine = Engine().use()
 engine.add_ignore(Literal("--") + restOfLine)
@@ -105,7 +105,11 @@ distinct = (
 ordered_sql = Forward()
 
 call_function = (
-    ident("op") + LB + Optional(Group(ordered_sql) | delimitedList(expr))("params") + RB
+    ident("op")
+    + LB
+    + Optional(Group(ordered_sql) | delimitedList(expr))("params")
+    + Optional(Keyword("ignore", caseless=True) + Keyword("nulls", caseless=True))("ignore_nulls")
+    + RB
 ).addParseAction(to_json_call)
 
 compound = (
@@ -234,12 +238,12 @@ ordered_sql << (
     + Optional(OFFSET + expr("offset"))
 ).set_parser_name("ordered sql").addParseAction(to_union_call)
 
-
-statement = (
+statement = Forward()
+statement << (
     Optional(
         WITH
         + delimitedList(Group(
-            ident("name") + AS + LB + Group(ordered_sql)("value") + RB
+            ident("name") + AS + LB + statement("value") + RB
         ))
     )("with")
     + Group(ordered_sql)("query")
