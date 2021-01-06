@@ -352,6 +352,10 @@ VARCHAR = (Keyword("varchar", caseless=True)("op") + _size).addParseAction(to_js
 DECIMAL = (
     Keyword("decimal", caseless=True)("op") + _sizes
 ).addParseAction(to_json_call)
+DOUBLE_PRECISION = (
+    Keyword("double", caseless=True)
+    + Keyword("precision", caseless=True)("op")
+).addParseAction(lambda: {"double_precision": {}})
 NUMERIC = (
     Keyword("numeric", caseless=True)("op") + _sizes
 ).addParseAction(to_json_call)
@@ -387,6 +391,7 @@ known_types = MatchFirst([
     DATE_TYPE,
     DATETIME_TYPE,
     DECIMAL,
+    DOUBLE_PRECISION,
     DOUBLE,
     FLOAT64,
     GEOMETRY,
