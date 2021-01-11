@@ -45,7 +45,7 @@ def scrub(result):
         # ATTEMPT A DICT INTERPRETATION
         kv_pairs = list(result.items())
         output = {k: vv for k, v in kv_pairs for vv in [scrub(v)] if vv != None}
-        if output:
+        if output or isinstance(result, dict):
             return output
         temp = list(result)
         return scrub(temp)
@@ -165,8 +165,10 @@ binary_ops = {
     "not in": "nin",
     "is not": "neq",
     "is": "eq",
+    "similar to": "similar_to",
     "not like": "not_like",
     "not rlike": "not_rlike",
+    "not simlilar to": "not_similar_to",
     "or": "or",
     "and": "and",
 }
@@ -180,12 +182,16 @@ def to_json_call(tokens):
     params = scrub(tokens["params"])
     if not params:
         params = {}
+    if scrub(tokens["ignore_nulls"]):
+        ignore_nulls = True
+    else:
+        ignore_nulls = None
     # elif isinstance(params, list) and len(params) == 1:
     #     params = params[0]
     # elif isinstance(params, ParseResults) and params.length() == 1:
     #     params = params[0]
 
-    return ParseResults(tokens.type, tokens.start, tokens.end, [{op: params}])
+    return ParseResults(tokens.type, tokens.start, tokens.end, [{op: params, "ignore_nulls": ignore_nulls}])
 
 
 def to_interval_call(tokens):
@@ -258,6 +264,10 @@ def to_select_call(tokens):
     if tokens["value"][0][0] == "*":
         return ["*"]
 
+    window = tokens['value']['window']
+    if window:
+        return window
+
 
 def to_union_call(tokens):
     unions = list(tokens["union"])
@@ -268,14 +278,19 @@ def to_union_call(tokens):
         operators = [
             "_".join(listwrap(scrub(unions[i]))) for i in range(1, len(unions), 2)
         ]
-        op = operators[0]
-        if any(o != op for o in operators):
-            raise Exception("Expecting no mixing of UNION with UNION ALL")
+        acc = sources[-1]
+        last_union = None
+        for op, so in reversed(list(zip(operators, sources))):
+            if op == last_union:
+                acc[op] = [so] + acc[op]
+            else:
+                acc = {op: [so, acc]}
+            last_union = op
 
         if not tokens["orderby"] and not tokens["offset"] and not tokens["limit"]:
-            return {op: sources}
+            return acc
         else:
-            output = {"from": {op: sources}}
+            output = {"from": acc}
 
     output["orderby"] = tokens["orderby"]
     output["offset"] = tokens["offset"]
@@ -318,3 +333,5 @@ intNum = Regex(r"[+-]?\d+([eE]\+?\d+)?").set_parser_name("int").addParseAction(l
 # STRINGS
 sqlString = Regex(r"\'(\'\'|[^'])*\'").addParseAction(to_string)
 
+
+expr = Forward()

@@ -97,6 +97,11 @@ NOT_RLIKE = Group(NOT + RLIKE).set_parser_name("not_rlike")
 NOT_IN = Group(NOT + IN).set_parser_name("nin")
 IS_NOT = Group(IS + NOT).set_parser_name("is_not")
 
+_SIMILAR = Keyword("similar", caseless=True)
+_TO = Keyword("to", caseless=True)
+SIMILAR_TO = Group(_SIMILAR+_TO).set_parser_name("is_not")
+NOT_SIMILAR_TO = Group(_SIMILAR+_TO).set_parser_name("is_not")
+
 RESERVED = MatchFirst([
     ALL,
     AND,
@@ -213,6 +218,8 @@ precedence = {
     "not_like": 8,
     "rlike": 8,
     "not_rlike": 8,
+    "similar_to": 8,
+    "not_similar_to": 8,
     "and": 10,
     "or": 11,
 }
@@ -240,6 +247,8 @@ KNOWN_OPS = [
     NOT_LIKE,
     RLIKE,
     NOT_RLIKE,
+    SIMILAR_TO,
+    NOT_SIMILAR_TO,
     NOT,
     AND,
     OR,
@@ -343,6 +352,10 @@ VARCHAR = (Keyword("varchar", caseless=True)("op") + _size).addParseAction(to_js
 DECIMAL = (
     Keyword("decimal", caseless=True)("op") + _sizes
 ).addParseAction(to_json_call)
+DOUBLE_PRECISION = (
+    Keyword("double", caseless=True)
+    + Keyword("precision", caseless=True)("op")
+).addParseAction(lambda: {"double_precision": {}})
 NUMERIC = (
     Keyword("numeric", caseless=True)("op") + _sizes
 ).addParseAction(to_json_call)
@@ -378,6 +391,7 @@ known_types = MatchFirst([
     DATE_TYPE,
     DATETIME_TYPE,
     DECIMAL,
+    DOUBLE_PRECISION,
     DOUBLE,
     FLOAT64,
     GEOMETRY,

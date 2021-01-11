@@ -12,7 +12,7 @@ from __future__ import absolute_import, division, unicode_literals
 from mo_parsing.engine import Engine
 from moz_sql_parser.keywords import *
 from moz_sql_parser.utils import *
-from moz_sql_parser.row_clause import row_clause
+from moz_sql_parser.windows import window, sortColumn
 
 engine = Engine().use()
 engine.add_ignore(Literal("--") + restOfLine)
@@ -36,7 +36,6 @@ ident = Combine(
 ).set_parser_name("identifier")
 
 # EXPRESSIONS
-expr = Forward()
 
 # CASE
 case = (
@@ -105,7 +104,11 @@ distinct = (
 ordered_sql = Forward()
 
 call_function = (
-    ident("op") + LB + Optional(Group(ordered_sql) | delimitedList(expr))("params") + RB
+    ident("op")
+    + LB
+    + Optional(Group(ordered_sql) | delimitedList(expr))("params")
+    + Optional(Keyword("ignore", caseless=True) + Keyword("nulls", caseless=True))("ignore_nulls")
+    + RB
 ).addParseAction(to_json_call)
 
 compound = (
@@ -151,29 +154,6 @@ alias = (
     .addParseAction(to_alias)
 )
 
-# SQL STATEMENT
-sortColumn = expr("value").set_parser_name("sort1") + Optional(
-    DESC("sort") | ASC("sort")
-) | expr("value").set_parser_name("sort2")
-
-window = Optional(
-    WITHIN_GROUP
-    + LB
-    + Optional(ORDER_BY + delimitedList(Group(sortColumn))("orderby"))
-    + RB
-)("within") + Optional(
-    OVER
-    + LB
-    + Optional(PARTITION_BY + delimitedList(Group(expr))("partitionby"))
-    + Optional(
-        ORDER_BY
-        + delimitedList(Group(sortColumn))("orderby")
-        + Optional(row_clause)("range")
-    )
-    + RB
-)(
-    "over"
-)
 
 selectColumn = (
     Group(
@@ -224,22 +204,19 @@ unordered_sql = (
 ordered_sql << (
     (
         Group(unordered_sql)
-        + (
-            OneOrMore(UNION_ALL + Group(unordered_sql))
-            | ZeroOrMore(Group(UNION) + Group(unordered_sql))
-        )
+        + ZeroOrMore((UNION_ALL | UNION) + Group(unordered_sql))
     )("union")
     + Optional(ORDER_BY + delimitedList(Group(sortColumn))("orderby"))
     + Optional(LIMIT + expr("limit"))
     + Optional(OFFSET + expr("offset"))
 ).set_parser_name("ordered sql").addParseAction(to_union_call)
 
-
-statement = (
+statement = Forward()
+statement << (
     Optional(
         WITH
         + delimitedList(Group(
-            ident("name") + AS + LB + Group(ordered_sql)("value") + RB
+            ident("name") + AS + LB + statement("value") + RB
         ))
     )("with")
     + Group(ordered_sql)("query")

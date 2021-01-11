@@ -43,15 +43,12 @@ def _to_between_call(tokens):
     if maxx.get("max") == 0:
         # following
         return {
-            "min": minn.get('min'),
-            "max": maxx.get('min'),
+            "min": minn.get("min"),
+            "max": maxx.get("min"),
         }
     elif minn.get("min") == 0:
         # preceding
-        return {
-            "min": minn.get('max'),
-            "max": maxx.get('max')
-        }
+        return {"min": minn.get("max"), "max": maxx.get("max")}
     else:
         return {
             "min": minn.get("min"),
@@ -73,3 +70,29 @@ bound = (
 between = (BETWEEN + bound("min") + AND + bound("max")).addParseAction(_to_between_call)
 
 row_clause = (ROWS | RANGE).suppress() + (between | bound)
+
+# SQL STATEMENT
+sortColumn = expr("value").set_parser_name("sort1") + Optional(
+    DESC("sort") | ASC("sort")
+) | expr("value").set_parser_name("sort2")
+
+window = (
+    # Optional((Keyword("ignore", caseless=True) + Keyword("nulls", caseless=True))("ignore_nulls").addParseAction(lambda: True))
+    Optional(
+        WITHIN_GROUP
+        + LB
+        + Optional(ORDER_BY + delimitedList(Group(sortColumn))("orderby"))
+        + RB
+    )("within")
+    + Optional(
+        OVER
+        + LB
+        + Optional(PARTITION_BY + delimitedList(Group(expr))("partitionby"))
+        + Optional(
+            ORDER_BY
+            + delimitedList(Group(sortColumn))("orderby")
+            + Optional(row_clause)("range")
+        )
+        + RB
+    )("over")
+)

@@ -222,12 +222,15 @@ class And(ParseExpression):
         return output
 
     def expecting(self):
-        if self.exprs:
-            return OrderedDict((
-                (k, [self]) for k, e in self.exprs[0].expecting().items()
-            ))
-        else:
+        if not self.exprs:
             return {}
+
+        acc = OrderedDict()
+        for e in self.exprs:
+            for k in e.expecting().keys():
+                acc[k] = [self]
+            break
+        return acc
 
     def _min_length(self):
         return sum(e.min_length() for e in self.exprs)
