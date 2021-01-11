@@ -123,6 +123,9 @@ class Literal(Token):
             return ParseResults(self, start, end, [match])
         raise ParseException(self, start, string)
 
+    def expecting(self):
+        return {self.parser_config.match: [self]}
+
     def _min_length(self):
         return len(self.parser_config.match)
 
@@ -202,6 +205,9 @@ class Keyword(Token):
         if found:
             return ParseResults(self, start, found.end(), [self.parser_config.match])
         raise ParseException(self, start, string)
+
+    def expecting(self):
+        return {self.parser_config.match: [self]}
 
     def _min_length(self):
         return len(self.parser_config.match)

@@ -4,7 +4,6 @@ from threading import RLock
 
 from mo_future import text
 
-from mo_parsing.cache import packrat_cache
 from mo_parsing.engine import Engine
 from mo_parsing.exceptions import (
     ParseException,
@@ -84,7 +83,7 @@ class ParserElement(object):
         "token_name",
         "engine",
         "streamlined",
-        "min_cache",
+        "min_length_cache",
         "parser_config",
     ]
     Config = namedtuple("Config", ["callDuringTry", "failAction", "lock_engine"])
@@ -95,7 +94,7 @@ class ParserElement(object):
         self.token_name = ""
         self.engine = engine.CURRENT
         self.streamlined = False
-        self.min_cache = -1
+        self.min_length_cache = -1
 
         self.parser_config = self.Config(*([None] * len(self.Config._fields)))
         self.set_config(callDuringTry=False, failAction=None, lock_engine=None)
@@ -116,7 +115,7 @@ class ParserElement(object):
         output.token_name = self.token_name
         output.parser_config = self.parser_config
         output.streamlined = self.streamlined
-        output.min_cache = -1
+        output.min_length_cache = -1
         return output
 
     def set_parser_name(self, name):
@@ -215,14 +214,19 @@ class ParserElement(object):
     def is_annotated(self):
         return self.parseAction or self.token_name or self.parser_name
 
+    def expecting(self):
+        """
+        RETURN EXPECTED CHARACTER SEQUENCE, IF ANY
+        :return:
+        """
+        return {}
+
     def min_length(self):
-        if not hasattr(self, "min_cache"):
-            Log.error("should not happen")
-        if self.min_cache >= 0:
-            return self.min_cache
+        if self.min_length_cache >= 0:
+            return self.min_length_cache
         min_ = self._min_length()
         if self.streamlined:
-            self.min_cache = min_
+            self.min_length_cache = min_
         return min_
 
     def _min_length(self):
@@ -232,35 +236,21 @@ class ParserElement(object):
         return ParseResults(self, start, start, [])
 
     def _parse(self, string, start, doActions=True):
-        lookup = (self, string, start, doActions)
-        value = packrat_cache.get(lookup)
-        if value is not None:
-            if isinstance(value, Exception):
-                raise value
-            return value
-
         try:
             index = self.engine.skip(string, start)
-            try:
-                result = self.parseImpl(string, index, doActions)
-            except Exception as cause:
-                self.parser_config.failAction and self.parser_config.failAction(
-                    self, start, string, cause
-                )
-                raise
-
-            if self.parseAction and (doActions or self.parser_config.callDuringTry):
-                for fn in self.parseAction:
-                    next_result = fn(result, index, string)
-                    if next_result.end < result.end:
-                        fn(result, index, string)
-                        Log.error("parse action not allowed to roll back the end of parsing")
-                    result = next_result
-        except ParseException as cause:
-            packrat_cache.set(lookup, cause)
+            result = self.parseImpl(string, index, doActions)
+        except Exception as cause:
+            self.parser_config.failAction and self.parser_config.failAction(
+                self, start, string, cause
+            )
             raise
 
-        packrat_cache.set(lookup, result)
+        if doActions or self.parser_config.callDuringTry:
+            for fn in self.parseAction:
+                next_result = fn(result, index, string)
+                if next_result.end < result.end:
+                    Log.error("parse action not allowed to roll back the end of parsing")
+                result = next_result
         return result
 
     def tryParse(self, string, start):
@@ -300,7 +290,6 @@ class ParserElement(object):
         - explicitly expand the tabs in your input string before calling ``parseString``.
 
         """
-        cache.resetCache()
         expr = self.streamline()
         for e in expr.engine.ignore_list:
             e.streamline()
@@ -333,7 +322,6 @@ class ParserElement(object):
 
         instrlen = len(string)
         end = 0
-        cache.resetCache()
         matches = 0
         while end <= instrlen and matches < maxMatches:
             start = self.engine.skip(string, end)
@@ -690,7 +678,7 @@ class _PendingSkip(ParserElement):
 
 
 # export
-from mo_parsing import cache, engine, results
+from mo_parsing import engine, results
 
 engine.ParserElement = ParserElement
 results.ParserElement = ParserElement

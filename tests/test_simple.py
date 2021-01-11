@@ -13,6 +13,7 @@ from unittest import TestCase
 
 from mo_dots import Null
 
+from mo_parsing.debug import Debugger
 from moz_sql_parser import parse
 
 try:
@@ -22,6 +23,17 @@ except ImportError:
 
 
 class TestSimple(TestCase):
+
+    # @classmethod
+    # def setUpClass(cls):
+    #     from mo_parsing.profile import Profiler
+    #     cls.profiler = Profiler("test_simple")
+    #     cls.profiler.__enter__()
+    #
+    # @classmethod
+    # def tearDownClass(cls):
+    #     cls.profiler.__exit__(None, None, None)
+
     def test_two_tables(self):
         result = parse("SELECT * from XYZZY, ABC")
         expected = {"select": "*", "from": ["XYZZY", "ABC"]}

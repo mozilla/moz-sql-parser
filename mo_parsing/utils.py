@@ -19,6 +19,10 @@ ParseException = delay_import("mo_parsing.exceptions.ParseException")
 
 
 def append_config(base, *slots):
+    dups = set(slots) & set(base.Config._fields)
+    if dups:
+        Log.error("Duplicate config fields: {{dups}}", dups=dups)
+
     fields = base.Config._fields + slots
     return namedtuple("Config", fields)
 

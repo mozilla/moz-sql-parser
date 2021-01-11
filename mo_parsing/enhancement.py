@@ -1,6 +1,6 @@
 # encoding: utf-8
 import re
-from collections import namedtuple
+from collections import namedtuple, OrderedDict
 
 from mo_dots import Null, is_null
 from mo_future import text, is_text
@@ -52,6 +52,15 @@ class ParseElementEnhance(ParserElement):
         else:
             output.expr = self.expr.copy()
         return output
+
+    def expecting(self):
+        if self.expr:
+            return OrderedDict((
+                (k, [self])
+                for k, e in self.expr.expecting().items()
+            ))
+        else:
+            return {}
 
     def _min_length(self):
         return self.expr.min_length()
@@ -138,12 +147,18 @@ class NotAny(ParseElementEnhance):
         prec, pattern = self.expr.__regex__()
         try:
             self.regex = regex_compile(f"(?!{pattern})")
-        except Exception:
-            pass
+        except Exception as c:
+            self.regex = None
+
+    def copy(self):
+        output = ParseElementEnhance.copy(self)
+        output.regex = self.regex
+        return output
 
     def parseImpl(self, string, start, doActions=True):
-        if self.regex:
-            found = self.regex.match(string, start)
+        regex = self.regex
+        if regex:
+            found = regex.match(string, start)
             if found:
                 return ParseResults(self, start, start, [])
             raise ParseException(self, start, string)
@@ -161,6 +176,9 @@ class NotAny(ParseElementEnhance):
         if isinstance(output.expr, Empty):
             return NoMatch()
         return output
+
+    def expecting(self):
+        return {}
 
     def min_length(self):
         return 0
@@ -588,12 +606,12 @@ class Forward(ParserElement):
             self.expr.checkRecursion(seen + (self,))
 
     def min_length(self):
-        if self.min_cache is None and self.expr:
-            self.min_cache = 0  # BREAK CYCLE
+        if self.min_length_cache is None and self.expr:
+            self.min_length_cache = 0  # BREAK CYCLE
             try:
                 return self.expr.min_length()
             finally:
-                self.min_cache = None
+                self.min_length_cache = None
         return 0
 
     def parseImpl(self, string, loc, doActions=True):

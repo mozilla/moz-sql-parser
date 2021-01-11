@@ -8,7 +8,7 @@
 
 from __future__ import absolute_import, division, unicode_literals
 
-from unittest import TestCase
+from unittest import TestCase, skip
 
 from mo_parsing.debug import Debugger
 from moz_sql_parser import parse
@@ -353,7 +353,8 @@ class TestRedshift(TestCase):
 
     def test_window_function4(self):
         sql = (
-            "select sum(qty) over (order by a rows between 3 following and unbounded following)"
+            "select sum(qty) over (order by a rows between 3 following and unbounded"
+            " following)"
         )
         result = parse(sql)
         self.assertEqual(
@@ -362,4 +363,139 @@ class TestRedshift(TestCase):
                 "over": {"orderby": {"value": "a"}, "range": {"min": 3}},
                 "value": {"sum": "qty"},
             }},
+        )
+
+    def test_issue7a_first_value_ignore_nulls(self):
+        # Ref: last example of https://docs.aws.amazon.com/redshift/latest/dg/r_WF_first_value.html#r_WF_first_value-examples
+        sql = """
+        select 
+            first_value(venuename ignore nulls) over(
+                partition by venuestate
+                order by venueseats desc
+                rows between unbounded preceding and unbounded following
+            )
+        """
+        result = parse(sql)
+        self.assertEqual(
+            result,
+            {"select": {
+                "over": {
+                    "orderby": {"sort": "desc", "value": "venueseats"},
+                    "partitionby": "venuestate",
+                    "range": {},
+                },
+                "value": {"first_value": "venuename", "ignore_nulls": True},
+            }},
+        )
+
+    def test_issue7b_nested_ctes(self):
+        sql = """
+        with outer_cte as (
+            with inner_cte as (
+                select * from source
+            )
+            select date_at :: date from inner_cte
+        )
+        select * from outer_cte
+        """
+        result = parse(sql)
+        self.assertEqual(
+            result,
+            {
+                "from": "outer_cte",
+                "select": "*",
+                "with": {
+                    "name": "outer_cte",
+                    "value": {
+                        "from": "inner_cte",
+                        "select": {"value": {"cast": ["date_at", {"date": {}}]}},
+                        "with": {
+                            "name": "inner_cte",
+                            "value": {"from": "source", "select": "*"},
+                        },
+                    },
+                },
+            },
+        )
+
+    def test_issue7c_similar_to(self):
+        # Ref: https://docs.aws.amazon.com/redshift/latest/dg/pattern-matching-conditions-similar-to.html#pattern-matching-conditions-similar-to-examples
+        sql = (
+            "select distinct city from users where city similar to '%E%|%H%' order by"
+            " city;"
+        )
+        result = parse(sql)
+        self.assertEqual(
+            result,
+            {
+                "from": "users",
+                "orderby": {"value": "city"},
+                "select": {"value": {"distinct": {"value": "city"}}},
+                "where": {"missing": "city"},
+            },
+        )
+
+    def test_issue7d_mixed_union(self):
+        sql = "select * from a union select * from b union all select * from c"
+        result = parse(sql)
+        self.assertEqual(
+            result,
+            {"union": [
+                {"from": "a", "select": "*"},
+                {"union_all": [
+                    {"from": "b", "select": "*"},
+                    {"from": "c", "select": "*"},
+                ]},
+            ]},
+        )
+
+    def test_issue7e_function_of_window(self):
+        sql = "select SUM(a) over (order by b rows between unbounded preceding and unbounded following)"
+        with Debugger():
+            result = parse(sql)
+        self.assertEqual(
+            result,
+            {"select": {
+                "over": {"orderby": {"value": "b"}, "range": {}},
+                "value": {"sum": "a"},
+            }},
+        )
+
+
+    @skip("can not handle function over window")
+    def test_issue7f_function_of_window(self):
+        sql = """
+        select
+            NVL(
+                SUM(prev_day_count - line_count) over (order by date_at rows unbounded preceding)
+            , 0) as dead_crons
+        from source
+        """
+        result = parse(sql)
+        self.assertEqual(result, {})
+
+    def test_issue7g_double_precision(self):
+        # Ref: https://docs.aws.amazon.com/redshift/latest/dg/r_Numeric_types201.html#r_Numeric_types201-floating-point-types
+        sql = "select sum(price::double precision) as revenue from source"
+        result = parse(sql)
+        self.assertEqual(
+            result,
+            {
+                "from": "source",
+                "select": {
+                    "name": "revenue",
+                    "value": {"sum": {"cast": ["price", {"double_precision": {}}]}},
+                },
+            },
+        )
+
+    def test_issue7h_udf_call(self):
+        sql = "select f_bigint_to_hhmmss(device_timezone) from t"
+        result = parse(sql)
+        self.assertEqual(
+            result,
+            {
+                "from": "t",
+                "select": {"value": {"f_bigint_to_hhmmss": "device_timezone"}},
+            },
         )
