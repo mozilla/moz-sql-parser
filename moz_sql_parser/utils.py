@@ -142,7 +142,6 @@ def to_tuple_call(tokens):
     return [scrub_literal(scrub(tokens))]
 
 
-
 binary_ops = {
     "::": "cast",
     "COLLATE": "collate",
