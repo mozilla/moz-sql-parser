@@ -451,8 +451,7 @@ class TestRedshift(TestCase):
 
     def test_issue7e_function_of_window(self):
         sql = "select SUM(a) over (order by b rows between unbounded preceding and unbounded following)"
-        with Debugger():
-            result = parse(sql)
+        result = parse(sql)
         self.assertEqual(
             result,
             {"select": {

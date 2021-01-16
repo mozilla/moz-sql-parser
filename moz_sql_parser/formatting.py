@@ -13,6 +13,7 @@ from __future__ import unicode_literals
 
 import re
 
+from mo_dots import split_field
 from mo_future import string_types, text, first, long, is_text
 
 from moz_sql_parser.keywords import join_keywords, precedence, RESERVED
@@ -43,43 +44,11 @@ def should_quote(identifier):
     return identifier != "*" and (not VALID.match(identifier) or is_keyword(identifier))
 
 
-def split_field(field):
-    """
-    RETURN field AS ARRAY OF DOT-SEPARATED FIELDS
-    """
-    if field == "." or field == None:
-        return []
-    elif is_text(field) and "." in field:
-        if field.startswith(".."):
-            remainder = field.lstrip(".")
-            back = len(field) - len(remainder) - 1
-            return [-1] * back + [
-                k.replace("\a", ".") for k in remainder.replace("\\.", "\a").split(".")
-            ]
-        else:
-            return [k.replace("\a", ".") for k in field.replace("\\.", "\a").split(".")]
-    else:
-        return [field]
-
-
-def join_field(path):
-    """
-    RETURN field SEQUENCE AS STRING
-    """
-    output = ".".join([f.replace(".", "\\.") for f in path if f != None])
-    return output if output else "."
-
-    # potent = [f for f in path if f != "."]
-    # if not potent:
-    #     return "."
-    # return ".".join([f.replace(".", "\\.") for f in potent])
-
-
 def escape(ident, ansi_quotes, should_quote):
     """
     Escape identifiers.
 
-    ANSI uses single quotes, but many databases use back quotes.
+    ANSI uses double quotes, but many databases use back quotes.
 
     """
 
@@ -91,7 +60,7 @@ def escape(ident, ansi_quotes, should_quote):
         identifier = identifier.replace(quote, 2 * quote)
         return "{0}{1}{2}".format(quote, identifier, quote)
 
-    return join_field(esc(f) for f in split_field(ident))
+    return ".".join(esc(f) for f in split_field(ident))
 
 
 def Operator(op):
@@ -187,10 +156,16 @@ class Formatter:
             elif "select_distinct" in json:
                 # Nested queries
                 return "({})".format(self.format(json))
+            elif "on" in json:
+                return self._join_on(json)
+            elif "null" in json:
+                return "NULL"
             else:
                 return self.op(json)
         if isinstance(json, string_types):
             return escape(json, self.ansi_quotes, self.should_quote)
+        if json == None:
+            return "NULL"
 
         return text(json)
 
@@ -204,8 +179,6 @@ class Formatter:
         return " ".join(parts)
 
     def op(self, json):
-        if "on" in json:
-            return self._join_on(json)
 
         if len(json) > 1:
             raise Exception("Operators should have only one key!")
