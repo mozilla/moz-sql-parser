@@ -191,6 +191,8 @@ class Formatter:
                 return self.op(json)
         if isinstance(json, string_types):
             return escape(json, self.ansi_quotes, self.should_quote)
+        if json == None:
+            return "NULL"
 
         return text(json)
 
