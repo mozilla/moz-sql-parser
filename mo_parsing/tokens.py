@@ -1,26 +1,14 @@
 # encoding: utf-8
-import re
 import sre_constants
-import warnings
-
-from mo_future import text
 
 from mo_parsing.core import ParserElement
 from mo_parsing.engine import Engine, PLAIN_ENGINE
 from mo_parsing.exceptions import ParseException
 from mo_parsing.results import ParseResults
-from mo_parsing.utils import (
-    Log,
-    regex_range,
-    append_config,
-    regex_type,
-    regex_caseless, regex_compile,
-)
-from mo_parsing.utils import (
-    MAX_INT,
-    col,
-    printables,
-)
+from mo_parsing.utils import *
+import re
+import warnings
+from mo_future import text
 
 
 class Token(ParserElement):
@@ -124,7 +112,7 @@ class Literal(Token):
         raise ParseException(self, start, string)
 
     def expecting(self):
-        return {self.parser_config.match: [self]}
+        return {self.parser_config.match.lower(): [self]}
 
     def _min_length(self):
         return len(self.parser_config.match)
@@ -207,7 +195,7 @@ class Keyword(Token):
         raise ParseException(self, start, string)
 
     def expecting(self):
-        return {self.parser_config.match: [self]}
+        return {self.parser_config.match.lower(): [self]}
 
     def _min_length(self):
         return len(self.parser_config.match)
