@@ -187,6 +187,10 @@ class Formatter:
             elif "select_distinct" in json:
                 # Nested queries
                 return "({})".format(self.format(json))
+            elif "on" in json:
+                return self._join_on(json)
+            elif "null" in json:
+                return "NULL"
             else:
                 return self.op(json)
         if isinstance(json, string_types):
@@ -206,8 +210,6 @@ class Formatter:
         return " ".join(parts)
 
     def op(self, json):
-        if "on" in json:
-            return self._join_on(json)
 
         if len(json) > 1:
             raise Exception("Operators should have only one key!")
