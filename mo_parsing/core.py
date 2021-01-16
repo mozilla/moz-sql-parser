@@ -393,7 +393,7 @@ class ParserElement(object):
             ]
 
         if not scanned:
-            return ParseResults(ZeroOrMore(g), -1, -1, [])
+            return ParseResults(ZeroOrMore(g), -1, 0, [])
         else:
             return ParseResults(
                 ZeroOrMore(g), scanned[0].start, scanned[-1].end, scanned

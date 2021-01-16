@@ -24,7 +24,7 @@ from mo_parsing.utils import (
     regex_compile,
 )
 
-MIN_SPLIT_SIZE = 9
+LOOKUP_COST = 5
 
 
 class ParseExpression(ParserElement):
@@ -296,7 +296,7 @@ class Or(ParseExpression):
 
     def copy(self):
         output = ParseExpression.copy(self)
-        output.fast = output.fast
+        output.fast = self.fast
         return output
 
     def _min_length(self):
@@ -457,9 +457,9 @@ class MatchFirst(ParseExpression):
             return output
         if not output.is_annotated():
             if len(output.exprs) == 0:
-                output = Empty()
+                return Empty()
             if len(output.exprs) == 1:
-                output = output.exprs[0]
+                return output.exprs[0]
 
         output.fast = faster(output.exprs)
 
@@ -506,7 +506,7 @@ def faster(exprs):
     :return: LESS EXPRESSIONS
     """
 
-    if len(exprs) < MIN_SPLIT_SIZE:
+    if len(exprs) < LOOKUP_COST:
         return exprs
 
     alternating = []
@@ -573,31 +573,32 @@ class MatchFast(ParserElement):
                 lookup.setdefault(k, []).extend(ee)
 
         # patterns must be mutually exclusive to work
-        items = list(sorted(lookup.items(), key=lambda t:t[0]))
-        if len(items) < MIN_SPLIT_SIZE:
+        items = list(lookup.items())
+        if len(maps) - max(len(v) for k, v in items) < LOOKUP_COST:
             Log.error("not useful")
 
         compact = []
         for k, e in items:
             min_k = k
-            acc = e.copy()
+            # FIND SHORTEST PREFIX
+            for kk, ee in items:
+                if ee and min_k.startswith(kk):
+                    min_k = kk
+            # COLLECT
+            acc = []
             for kk, ee in items:
                 if kk.startswith(min_k):
                     acc.extend(ee)
                     ee.clear()
-                elif min_k.startswith(kk):
-                    acc = acc + ee
-                    min_k = kk
-                    ee.clear()
             if acc:
                 compact.append((min_k, acc))
-        if len(compact) < MIN_SPLIT_SIZE:
+        if len(maps) - max(len(v) for k, v in compact) < LOOKUP_COST:
             Log.error("not useful")
 
         # patterns can be shortened so far as they remain exclusive
         shorter = [
             (k[:min_length], e)
-            for k, e in compact
+            for k, e in sorted(compact, key=lambda p: p[0])
             for min_length in [max(_distinct(k, kk) for kk, _ in compact if kk != k)]
         ]
 

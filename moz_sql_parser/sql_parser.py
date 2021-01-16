@@ -9,6 +9,8 @@
 
 from __future__ import absolute_import, division, unicode_literals
 
+from mo_parsing.helpers import restOfLine, delimitedList
+
 from mo_parsing.engine import Engine
 from moz_sql_parser.keywords import *
 from moz_sql_parser.utils import *
