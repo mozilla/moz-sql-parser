@@ -13,9 +13,10 @@ from __future__ import unicode_literals
 
 import re
 
+from mo_dots import split_field
 from mo_future import string_types, text, first, long, is_text
 
-from moz_sql_parser.keywords import join_keywords, precedence, RESERVED, literal_field
+from moz_sql_parser.keywords import join_keywords, precedence, RESERVED
 from moz_sql_parser.utils import binary_ops
 
 VALID = re.compile(r"^[a-zA-Z_]\w*$")
@@ -41,38 +42,6 @@ def should_quote(identifier):
 
     """
     return identifier != "*" and (not VALID.match(identifier) or is_keyword(identifier))
-
-
-def split_field(field):
-    """
-    RETURN field AS ARRAY OF DOT-SEPARATED FIELDS
-    """
-    if field == "." or field == None:
-        return []
-    elif is_text(field) and "." in field:
-        if field.startswith(".."):
-            remainder = field.lstrip(".")
-            back = len(field) - len(remainder) - 1
-            return [-1] * back + [
-                k.replace("\a", ".") for k in remainder.replace("\\.", "\a").split(".")
-            ]
-        else:
-            return [k.replace("\a", ".") for k in field.replace("\\.", "\a").split(".")]
-    else:
-        return [field]
-
-
-def join_field(path):
-    """
-    RETURN field SEQUENCE AS STRING
-    """
-    output = ".".join([f.replace(".", "\\.") for f in path if f != None])
-    return output if output else "."
-
-    # potent = [f for f in path if f != "."]
-    # if not potent:
-    #     return "."
-    # return ".".join([f.replace(".", "\\.") for f in potent])
 
 
 def escape(ident, ansi_quotes, should_quote):
