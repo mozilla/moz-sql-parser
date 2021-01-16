@@ -270,9 +270,10 @@ def to_select_call(tokens):
 
 def to_union_call(tokens):
     unions = tokens["union"]
-    if not isinstance(unions, list):
+    if unions.type.parser_name == "unordered sql":
         output = scrub(unions)  # REMOVE THE Group()
     else:
+        unions = list(unions)
         sources = scrub([unions[i] for i in range(0, len(unions), 2)])
         operators = [
             "_".join(listwrap(scrub(unions[i]))) for i in range(1, len(unions), 2)

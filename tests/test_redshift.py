@@ -460,7 +460,6 @@ class TestRedshift(TestCase):
             }},
         )
 
-
     @skip("can not handle function over window")
     def test_issue7f_function_of_window(self):
         sql = """
