@@ -260,7 +260,7 @@ def to_alias(tokens):
 
 
 def to_select_call(tokens):
-    if tokens["value"][0][0] == "*":
+    if tokens["value"].value() == "*":
         return ["*"]
 
     window = tokens['value']['window']
@@ -269,9 +269,9 @@ def to_select_call(tokens):
 
 
 def to_union_call(tokens):
-    unions = list(tokens["union"])
-    if len(unions) == 1:
-        output = scrub(unions[0].tokens)  # REMOVE THE Group()
+    unions = tokens["union"]
+    if not isinstance(unions, list):
+        output = scrub(unions)  # REMOVE THE Group()
     else:
         sources = scrub([unions[i] for i in range(0, len(unions), 2)])
         operators = [
