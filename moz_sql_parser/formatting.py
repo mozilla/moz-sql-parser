@@ -15,7 +15,7 @@ import re
 
 from mo_future import string_types, text, first, long, is_text
 
-from moz_sql_parser.keywords import join_keywords, precedence, RESERVED
+from moz_sql_parser.keywords import join_keywords, precedence, RESERVED, literal_field
 from moz_sql_parser.utils import binary_ops
 
 VALID = re.compile(r"^[a-zA-Z_]\w*$")
@@ -79,7 +79,7 @@ def escape(ident, ansi_quotes, should_quote):
     """
     Escape identifiers.
 
-    ANSI uses single quotes, but many databases use back quotes.
+    ANSI uses double quotes, but many databases use back quotes.
 
     """
 
@@ -91,7 +91,7 @@ def escape(ident, ansi_quotes, should_quote):
         identifier = identifier.replace(quote, 2 * quote)
         return "{0}{1}{2}".format(quote, identifier, quote)
 
-    return join_field(esc(f) for f in split_field(ident))
+    return ".".join(esc(f) for f in split_field(ident))
 
 
 def Operator(op):

@@ -1856,10 +1856,20 @@ from benn.college_football_players
         }
         self.verify_formatting(expected_sql, expected_json)
 
-    def test_issue152(self):
+    def test_issue152_null_expression(self):
         expected_sql = "SELECT a, CASE WHEN some_columns = 'Bob' THEN 'helloworld' ELSE NULL END AS some_columns FROM mytable"
         expected_json = {'select': [{'value': 'a'}, {'value': {
             'case': [{'when': {'eq': ['some_columns', {'literal': 'Bob'}]}, 'then': {'literal': 'helloworld'}}, None]},
             'name': 'some_columns'}], 'from': 'mytable'}
 
+        self.verify_formatting(expected_sql, expected_json)
+
+    def test_issue12a_dots_in_name(self):
+        expected_sql = "select a.x as a.b.c.x from a"
+        expected_json = {"select": {"value": "a.x", "name": "a.b.c.x"}, "from": "a"}
+        self.verify_formatting(expected_sql, expected_json)
+
+    def test_issue12b_dots_in_name(self):
+        expected_sql = 'select a.x as "a.b.c.x" from a'
+        expected_json = {"select": {"value": "a.x", "name": "a\\.b\\.c\\.x"}, "from": "a"}
         self.verify_formatting(expected_sql, expected_json)

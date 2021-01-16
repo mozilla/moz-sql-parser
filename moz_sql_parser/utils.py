@@ -11,7 +11,7 @@ from __future__ import absolute_import, division, unicode_literals
 
 import ast
 
-from mo_dots import is_data
+from mo_dots import is_data, literal_field
 from mo_future import text, number_types, binary_type
 
 from mo_parsing import *
@@ -315,7 +315,7 @@ def unquote(tokens):
         val = '"' + val[1:-1].replace("]]", "]").replace('"', '\\"') + '"'
     elif val.startswith("+"):
         val = val[1:]
-    un = ast.literal_eval(val)
+    un = ast.literal_eval(val).replace(".", "\\.")
     return un
 
 
