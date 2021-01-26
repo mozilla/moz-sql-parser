@@ -1,14 +1,14 @@
 # encoding: utf-8
-import sre_constants
+import re
+from collections import OrderedDict
+
+from mo_future import text, is_text
 
 from mo_parsing.core import ParserElement
 from mo_parsing.engine import Engine, PLAIN_ENGINE
 from mo_parsing.exceptions import ParseException
 from mo_parsing.results import ParseResults
 from mo_parsing.utils import *
-import re
-import warnings
-from mo_future import text
 
 
 class Token(ParserElement):
@@ -96,7 +96,10 @@ class Literal(Token):
     __slots__ = []
 
     def __init__(self, match):
+        if not is_text(match):
+            Log.error("Expecting string for literal")
         Token.__init__(self)
+
         self.set_config(match=match)
 
         if len(match) == 0:
@@ -144,26 +147,6 @@ class SingleCharLiteral(Literal):
 
 
 class Keyword(Token):
-    """Token to exactly match a specified string as a keyword, that is,
-    it must be immediately followed by a non-keyword character.  Compare
-    with `Literal`:
-
-     - ``Literal("if")`` will match the leading ``'if'`` in
-       ``'ifAndOnlyIf'``.
-     - ``Keyword("if")`` will not; it will only match the leading
-       ``'if'`` in ``'if x=1'``, or ``'if(y==2)'``
-
-    Accepts two optional constructor arguments in addition to the
-    keyword string:
-
-     - ``ident_chars`` is a string of characters that would be valid
-       identifier characters, defaulting to all alphanumerics + "_" and
-       "$"
-     - ``caseless`` allows case-insensitive matching, default is ``False``.
-
-    For case-insensitive matching, use `CaselessKeyword`.
-    """
-
     __slots__ = []
     Config = append_config(Token, "ident_chars")
 
@@ -293,45 +276,8 @@ class CloseMatch(Token):
 
 
 class Word(Token):
-    """Token for matching words composed of allowed character sets.
-    Defined with string containing all allowed initial characters, an
-    optional string containing allowed body characters (if omitted,
-    defaults to the initial character set), and an optional minimum,
-    maximum, and/or exact length.  The default value for ``min`` is
-    1 (a minimum value < 1 is not valid); the default values for
-    ``max`` and ``exact`` are 0, meaning no maximum or exact
-    length restriction. An optional ``excludeChars`` parameter can
-    list characters that might be found in the input ``body_chars``
-    string; useful to define a word of all printables except for one or
-    two characters, for instance.
-
-    `srange` is useful for defining custom character set strings
-    for defining ``Word`` expressions, using range notation from
-    regular expression character sets.
-
-    A common mistake is to use `Word` to match a specific literal
-    string, as in ``Word("Address")``. Remember that `Word`
-    uses the string argument to define *sets* of matchable characters.
-    This expression would match "Add", "AAA", "dAred", or any other word
-    made up of the characters 'A', 'd', 'r', 'e', and 's'. To match an
-    exact literal string, use `Literal` or `Keyword`.
-
-    mo_parsing includes helper strings for building Words:
-
-     - `alphas`
-     - `nums`
-     - `alphanums`
-     - `hexnums`
-     - `alphas8bit` (alphabetic characters in ASCII range 128-255
-       - accented, tilded, umlauted, etc.)
-     - `punc8bit` (non-alphabetic characters in ASCII range
-       128-255 - currency, symbols, superscripts, diacriticals, etc.)
-     - `printables` (any non-whitespace character)
-
-    """
-
-    __slots__ = []
-    Config = append_config(Token, "min")
+    __slots__ = ["regex"]
+    Config = append_config(Token, "min", "init_chars")
 
     def __init__(
         self,
@@ -340,8 +286,8 @@ class Word(Token):
         min=1,
         max=None,
         exact=0,
-        asKeyword=False,
-        excludeChars=None,
+        as_keyword=False,  # IF WE EXPECT NON-WORD CHARACTERS BEFORE AND AFTER
+        exclude='',
     ):
         Token.__init__(self)
 
@@ -358,60 +304,77 @@ class Word(Token):
 
         if body_chars == init_chars:
             prec, regexp = Char(
-                init_chars, excludeChars=excludeChars
+                init_chars, exclude=exclude
             )[min:max].__regex__()
         elif max is None or max == MAX_INT:
             prec, regexp = (
-                Char(init_chars, excludeChars=excludeChars)
-                + Char(body_chars, excludeChars=excludeChars)[min - 1 :]
+                Char(init_chars, exclude=exclude)
+                + Char(body_chars, exclude=exclude)[min - 1 :]
             ).__regex__()
         else:
             prec, regexp = (
-                Char(init_chars, excludeChars=excludeChars)
-                + Char(body_chars, excludeChars=excludeChars)[min - 1 : max - 1]
+                Char(init_chars, exclude=exclude)
+                + Char(body_chars, exclude=exclude)[min - 1 : max - 1]
             ).__regex__()
 
-        if asKeyword:
+        if as_keyword:
             regexp = r"\b" + regexp + r"\b"
 
-        self.set_config(regex=regex_compile(regexp), min=min)
+        self.regex = regex_compile(regexp)
+        self.set_config(min=min, init_chars=init_chars)
+
+    def copy(self):
+        output = Token.copy(self)
+        output.regex=self.regex
+        return output
 
     def parseImpl(self, string, start, doActions=True):
-        found = self.parser_config.regex.match(string, start)
+        found = self.regex.match(string, start)
         if found:
             return ParseResults(self, start, found.end(), [found.group()])
-
-        raise ParseException(self, start, string)
+        else:
+            raise ParseException(self, start, string)
 
     def min_length(self):
         return self.parser_config.min
 
+    # def expecting(self):
+    #     return OrderedDict((c, [self]) for c in self.parser_config.init_chars)
+
     def __regex__(self):
-        return "+", self.parser_config.regex.pattern
+        return "+", self.regex.pattern
 
     def __str__(self):
         if self.parser_name:
             return self.parser_name
-        return f"W:({self.parser_config.regex.pattern})"
+        return f"W:({self.regex.pattern})"
 
 
 class Char(Token):
     __slots__ = []
-    Config = append_config(Token, "charset")
+    Config = append_config(Token, "include", "exclude")
 
-    def __init__(self, charset, asKeyword=False, excludeChars=None):
+    def __init__(self, include="", asKeyword=False, exclude=""):
         """
-        Represent one character in a given charset
+        Represent one character in a given include
         """
         Token.__init__(self)
-        if excludeChars:
-            charset = set(charset) - set(excludeChars)
-        regex = regex_range(charset)
+        include = set(include) if include else set()
+        exclude = set(exclude) if exclude else set()
+        include = "".join(sorted(include - exclude))
+        exclude = "".join(sorted(exclude))
+
+        if not include:
+            regex = regex_range(exclude, exclude=True)
+        else:
+            regex = regex_range(include)
+
         if asKeyword:
             regex = r"\b%s\b" % self
         self.set_config(
             regex=regex_compile(regex),
-            charset="".join(sorted(set(charset))),
+            include=include,
+            exclude=exclude
         )
 
     def parseImpl(self, string, start, doActions=True):
@@ -420,6 +383,9 @@ class Char(Token):
             return ParseResults(self, start, found.end(), [found.group()])
 
         raise ParseException(self, start, string)
+
+    def expecting(self):
+        return {c: [self] for c in self.parser_config.include}
 
     def min_length(self):
         return 1
@@ -429,291 +395,6 @@ class Char(Token):
 
     def __str__(self):
         return self.parser_config.regex.pattern
-
-
-class Regex(Token):
-    r"""Token for matching strings that match a given regular
-    expression. Defined with string specifying the regular expression in
-    a form recognized by the stdlib Python  `re module <https://docs.python.org/3/library/re.html>`_.
-    If the given regex contains named groups (defined using ``(?P<name>...)``),
-    these will be preserved as named parse results.
-    """
-    __slots__ = []
-    Config = append_config(Token, "flags")
-
-    def __new__(cls, pattern, flags=0, asGroupList=False, asMatch=False):
-        if asGroupList:
-            return object.__new__(_RegExAsGroup)
-        elif asMatch:
-            return object.__new__(_RegExAsMatch)
-        else:
-            return object.__new__(cls)
-
-    def __init__(self, pattern, flags=0, asGroupList=False, asMatch=False):
-        """The parameters ``pattern`` and ``flags`` are passed
-        to the ``regex_compile()`` function as-is. See the Python
-        `re module <https://docs.python.org/3/library/re.html>`_ module for an
-        explanation of the acceptable patterns and flags.
-        """
-        Token.__init__(self)
-
-        if isinstance(pattern, text):
-            if not pattern:
-                warnings.warn(
-                    "null string passed to Regex; use Empty() instead",
-                    SyntaxWarning,
-                    stacklevel=2,
-                )
-
-            try:
-                self.set_config(flags=flags, regex=re.compile(pattern, flags))
-            except sre_constants.error as cause:
-                Log.error(
-                    "invalid pattern {{pattern}} passed to Regex",
-                    pattern=pattern,
-                    cause=cause,
-                )
-        elif isinstance(pattern, regex_type):
-            self.set_config(flags=flags, regex=pattern)
-        else:
-            Log.error(
-                "Regex may only be constructed with a string or a compiled RE object"
-            )
-
-        self.parser_name = text(self)
-
-    def parseImpl(self, string, start, doActions=True):
-        found = self.parser_config.regex.match(string, start)
-        if found:
-            ret = ParseResults(self, start, found.end(), [found.group()])
-            d = found.groupdict()
-            if d:
-                for k, v in d.items():
-                    ret[k] = v
-            return ret
-
-        raise ParseException(self, start, string)
-
-    def min_length(self):
-        return 0
-
-    def __regex__(self):
-        return "|", self.parser_config.regex.pattern
-
-    def __str__(self):
-        return self.parser_config.regex.pattern
-
-    def sub(self, repl):
-        r"""
-        Return Regex with an attached parse action to transform the parsed
-        result as if called using `re.sub(expr, repl, string) <https://docs.python.org/3/library/re.html#re.sub>`_.
-
-        Example::
-
-            make_html = Regex(r"(\w+):(.*?):").sub(r"<\1>\2</\1>")
-            print(make_html.transformString("h1:main title:"))
-            # prints "<h1>main title</h1>"
-        """
-
-        def pa(tokens):
-            return self.parser_config.regex.sub(repl, tokens[0])
-
-        return self.addParseAction(pa)
-
-
-class _RegExAsGroup(Regex):
-    __slots__ = []
-
-    def parseImpl(self, string, start, doActions=True):
-        result = self.parser_config.regex.match(string, start)
-        if not result:
-            raise ParseException(self, start, string)
-
-        return ParseResults(self, start, result.end(), [result.groups()])
-
-    def sub(self, repl):
-        raise SyntaxError("cannot use sub() with Regex(asGroupList=True)")
-
-
-class _RegExAsMatch(Regex):
-    __slots__ = []
-
-    def parseImpl(self, string, start, doActions=True):
-        result = self.parser_config.regex.match(string, start)
-        if not result:
-            raise ParseException(self, start, string)
-
-        return ParseResults(self, start, result.end(), [result])
-
-    def sub(self, repl):
-        if callable(repl):
-            raise SyntaxError(
-                "cannot use sub() with a callable with Regex(asMatch=True)"
-            )
-
-        def pa(tokens):
-            return tokens[0].expand(repl)
-
-        return self.addParseAction(pa)
-
-
-class QuotedString(Token):
-    r"""
-    Token for matching strings that are delimited by quoting characters.
-
-    Defined with the following parameters:
-
-        - quoteChar - string of one or more characters defining the
-          quote delimiting string
-        - escChar - character to escape quotes, typically backslash
-          (default= ``None``)
-        - escQuote - special quote sequence to escape an embedded quote
-          string (such as SQL's ``""`` to escape an embedded ``"``)
-          (default= ``None``)
-        - multiline - boolean indicating whether quotes can span
-          multiple lines (default= ``False``)
-        - unquoteResults - boolean indicating whether the matched text
-          should be unquoted (default= ``True``)
-        - endQuoteChar - string of one or more characters defining the
-          end of the quote delimited string (default= ``None``  => same as
-          quoteChar)
-        - convertWhitespaceEscapes - convert escaped whitespace
-          (``'\t'``, ``'\n'``, etc.) to actual whitespace
-          (default= ``True``)
-
-    """
-    __slots__ = []
-    Config = append_config(
-        Token,
-        "quote_char",
-        "end_quote_char",
-        "esc_char",
-        "esc_quote",
-        "multiline",
-        "unquoteResults",
-        "convertWhitespaceEscapes",
-        "escCharReplacePattern",
-    )
-
-    def __init__(
-        self,
-        quoteChar,
-        escChar=None,
-        escQuote=None,
-        multiline=False,
-        unquoteResults=True,
-        endQuoteChar=None,
-        convertWhitespaceEscapes=True,
-    ):
-        super(QuotedString, self).__init__()
-
-        # remove white space from quote chars - wont work anyway
-        quoteChar = quoteChar.strip()
-        if not quoteChar:
-            warnings.warn(
-                "quoteChar cannot be the empty string", SyntaxWarning, stacklevel=2
-            )
-            raise SyntaxError()
-
-        if endQuoteChar is None:
-            endQuoteChar = quoteChar
-        else:
-            endQuoteChar = endQuoteChar.strip()
-            if not endQuoteChar:
-                warnings.warn(
-                    "endQuoteChar cannot be the empty string",
-                    SyntaxWarning,
-                    stacklevel=2,
-                )
-                raise SyntaxError()
-
-        self.set_config(
-            quote_char=quoteChar,
-            end_quote_char=endQuoteChar,
-            esc_char=escChar,
-            esc_quote=escQuote,
-            unquoteResults=unquoteResults,
-            convertWhitespaceEscapes=convertWhitespaceEscapes,
-        )
-        # TODO: FIX THIS MESS. WE SHOULD BE ABLE TO CONSTRUCT REGEX FROM ParserElements
-        included = Empty()
-        excluded = Literal(self.parser_config.end_quote_char)
-
-        if not multiline:
-            excluded |= Char("\r\n")
-        if escQuote:
-            included |= Literal(escQuote)
-        if escChar:
-            excluded |= Literal(self.parser_config.esc_char)
-            included = included | escChar + Char(printables)
-            self.set_config(
-                escCharReplacePattern=re.escape(self.parser_config.esc_char) + "(.)"
-            )
-
-        prec, pattern = (
-            Literal(quoteChar)
-            + ((~excluded + AnyChar()) | included)[0:]
-            + Literal(self.parser_config.end_quote_char)
-        ).__regex__()
-
-        self.set_config(multiline=multiline, regex=regex_compile(pattern))
-
-        self.parser_name = text(self)
-
-    def parseImpl(self, string, start, doActions=True):
-        found = self.parser_config.regex.match(string, start)
-        if not found:
-            raise ParseException(self, start, string)
-
-        end = found.end()
-        ret = found.group()
-
-        if self.parser_config.unquoteResults:
-
-            # strip off quotes
-            ret = ret[
-                len(self.parser_config.quote_char) : -len(self.parser_config.end_quote_char)
-            ]
-
-            if isinstance(ret, text):
-                # replace escaped whitespace
-                if "\\" in ret and self.parser_config.convertWhitespaceEscapes:
-                    ws_map = {
-                        r"\t": "\t",
-                        r"\n": "\n",
-                        r"\f": "\f",
-                        r"\r": "\r",
-                    }
-                    for wslit, wschar in ws_map.items():
-                        ret = ret.replace(wslit, wschar)
-
-                # replace escaped characters
-                if self.parser_config.esc_char:
-                    ret = re.sub(
-                        self.parser_config.escCharReplacePattern, r"\g<1>", ret
-                    )
-
-                # replace escaped quotes
-                if self.parser_config.esc_quote:
-                    ret = ret.replace(
-                        self.parser_config.esc_quote, self.parser_config.end_quote_char
-                    )
-
-        return ParseResults(self, start, end, [ret])
-
-    def min_length(self):
-        return 2
-
-    def __str__(self):
-        try:
-            return super(QuotedString, self).__str__()
-        except Exception:
-            pass
-
-        return "quoted string, starting with %s ending with %s" % (
-            self.parser_config.quote_char,
-            self.parser_config.end_quote_char,
-        )
 
 
 class CharsNotIn(Token):
@@ -1072,6 +753,7 @@ core.Token = Token
 engine.Token = Token
 engine.Literal = Literal
 engine.CURRENT.literal = Literal
+engine.PLAIN_ENGINE.literal = Literal
 
 enhancement.Token = Token
 enhancement.Literal = Literal

@@ -4,6 +4,7 @@ from collections import OrderedDict
 from operator import itemgetter
 
 from mo_future import Iterable, text, generator_types
+from mo_imports import export
 
 from mo_parsing.core import ParserElement, _PendingSkip
 from mo_parsing.engine import Engine
@@ -21,7 +22,7 @@ from mo_parsing.utils import (
     Log,
     append_config,
     regex_caseless,
-    regex_compile,
+    regex_compile, is_backtracking,
 )
 
 LOOKUP_COST = 5
@@ -54,11 +55,17 @@ class ParseExpression(ParserElement):
         if not self.is_annotated():
             for e in self.exprs:
                 expect = e.expecting()
+                if not expect:
+                    # NOT SURE WHAT THIS IS EXPECTING, BAIL
+                    return {}
                 for k, ee in expect.items():
                     output.setdefault(k, []).extend(ee)
         else:
             for e in self.exprs:
                 expect = e.expecting()
+                if not expect:
+                    # NOT SURE WHAT THIS IS EXPECTING, BAIL
+                    return {}
                 for k, _ in expect.items():
                     output[k] = [self]
         return output
@@ -143,11 +150,10 @@ class And(ParseExpression):
 
     __slots__ = []
 
-    class _ErrorStop(Empty):
+    class SyntaxErrorGuard(Empty):
         def __init__(self, *args, **kwargs):
-            with Engine() as engine:
-                engine.set_whitespace("")
-                super(And._ErrorStop, self).__init__(*args, **kwargs)
+            with Engine(""):
+                super(And.SyntaxErrorGuard, self).__init__(*args, **kwargs)
                 self.parser_name = "-"
 
     def __init__(self, exprs):
@@ -198,7 +204,6 @@ class And(ParseExpression):
 
         # streamline INDIVIDUAL EXPRESSIONS
         acc = []
-        clazz = self.__class__
         for e in exprs:
             if e is None:
                 continue
@@ -206,7 +211,7 @@ class And(ParseExpression):
             same = same and f is e
             if f.is_annotated():
                 acc.append(f)
-            elif isinstance(f, clazz):
+            elif isinstance(f, And):
                 same = False
                 acc.extend(f.exprs)
             else:
@@ -227,9 +232,13 @@ class And(ParseExpression):
 
         acc = OrderedDict()
         for e in self.exprs:
-            for k in e.expecting().keys():
+            expect = e.expecting()
+            if not expect:
+                return {}
+            for k in expect.keys():
                 acc[k] = [self]
-            break
+            if e.min_length():
+                break
         return acc
 
     def _min_length(self):
@@ -238,19 +247,19 @@ class And(ParseExpression):
     def parseImpl(self, string, start, doActions=True):
         # pass False as last arg to _parse for first element, since we already
         # pre-parsed the string as part of our And pre-parsing
-        encountered_error_stop = False
+        encountered_syntax_error = False
         end = start
         acc = []
         for expr in self.exprs:
-            if isinstance(expr, And._ErrorStop):
-                encountered_error_stop = True
+            if isinstance(expr, And.SyntaxErrorGuard):
+                encountered_syntax_error = True
                 continue
             try:
                 result = expr._parse(string, end, doActions)
                 end = result.end
                 acc.append(result)
             except ParseException as pe:
-                if encountered_error_stop:
+                if encountered_syntax_error:
                     raise ParseSyntaxException(pe.expr, pe.loc, pe.string)
                 else:
                     raise pe
@@ -288,15 +297,15 @@ class Or(ParseExpression):
     operator.
     """
 
-    __slots__ = ["fast"]
+    __slots__ = ["alternate"]
 
     def __init__(self, exprs):
         ParseExpression.__init__(self, exprs)
-        self.fast = self.exprs
+        self.alternate = self.exprs
 
     def copy(self):
         output = ParseExpression.copy(self)
-        output.fast = self.fast
+        output.alternate = self.alternate
         return output
 
     def _min_length(self):
@@ -308,15 +317,17 @@ class Or(ParseExpression):
 
         output = ParseExpression.streamline(self)
 
-        if isinstance(output, Empty):
+        if not isinstance(output, ParseExpression):
             return output
         if not output.is_annotated():
             if len(output.exprs) == 0:
                 output = Empty()
             if len(output.exprs) == 1:
                 output = output.exprs[0]
+                if not isinstance(output, ParseExpression):
+                    return output
 
-        output.fast = faster(output.exprs)
+        output.alternate = faster(output.exprs)
 
         output.streamlined = True
         output.checkRecursion()
@@ -326,17 +337,17 @@ class Or(ParseExpression):
         causes = []
         matches = []
 
-        for e in self.fast:
-            if isinstance(e, MatchFast):
+        for e in self.alternate:
+            if isinstance(e, Fast):
                 for ee in e.get_short_list(string, start):
                     try:
-                        end = ee.tryParse(string, start)
+                        end = ee._parse(string, start).end
                         matches.append((end, ee))
                     except ParseException as err:
                         causes.append(err)
             else:
                 try:
-                    end = e.tryParse(string, start)
+                    end = e._parse(string, start).end
                     matches.append((end, e))
                 except ParseException as err:
                     causes.append(err)
@@ -417,15 +428,15 @@ class MatchFirst(ParseExpression):
     match. May be constructed using the ``'|'`` operator.
     """
 
-    __slots__ = ["fast"]
+    __slots__ = ["alternate"]
 
     def __init__(self, exprs):
         ParseExpression.__init__(self, exprs)
-        self.fast = self.exprs
+        self.alternate = self.exprs
 
     def copy(self):
         output = ParseExpression.copy(self)
-        output.fast = self.fast
+        output.alternate = self.alternate
         return output
 
     def _min_length(self):
@@ -438,7 +449,7 @@ class MatchFirst(ParseExpression):
     def parseImpl(self, string, start, doActions=True):
         causes = []
 
-        for e in self.fast:
+        for e in self.alternate:
             try:
                 result = e._parse(string, start, doActions)
                 return ParseResults(self, result.start, result.end, [result])
@@ -461,7 +472,7 @@ class MatchFirst(ParseExpression):
             if len(output.exprs) == 1:
                 return output.exprs[0]
 
-        output.fast = faster(output.exprs)
+        output.alternate = faster(output.exprs)
 
         output.streamlined = True
         output.checkRecursion()
@@ -522,7 +533,7 @@ def faster(exprs):
                 out.append(o)
             else:
                 try:
-                    e = MatchFast(acc)
+                    e = Fast(acc)
                     alternating.append(e)
                 except Exception as c:
                     alternating.extend(out)
@@ -539,7 +550,7 @@ def faster(exprs):
 
     if has_expecting:
         try:
-            e = MatchFast(acc)
+            e = Fast(acc)
             alternating.append(e)
         except Exception as cause:
             alternating.extend(out)
@@ -559,7 +570,7 @@ def _distinct(a, b):
     return ii
 
 
-class MatchFast(ParserElement):
+class Fast(ParserElement):
     __slots__ = ["lookup", "regex", "all_keys"]
 
     def __init__(self, maps):
@@ -636,7 +647,7 @@ class MatchFast(ParserElement):
             )
 
 
-class Each(ParseExpression):
+class MatchAll(ParseExpression):
     """
     Requires all given `ParseExpression` s to be found, but in
     any order. Expressions may be separated by whitespace.
@@ -652,7 +663,7 @@ class Each(ParseExpression):
         :param exprs: The expressions to be matched
         :param mins: list of integers indincating any minimums
         """
-        super(Each, self).__init__(exprs)
+        super(MatchAll, self).__init__(exprs)
         self.set_config(
             min_match=[
                 e.parser_config.min_match if isinstance(e, Many) else 1 for e in exprs
@@ -665,7 +676,7 @@ class Each(ParseExpression):
     def streamline(self):
         if self.streamlined:
             return self
-        return super(Each, self).streamline()
+        return super(MatchAll, self).streamline()
 
     def _min_length(self):
         # TODO: MAY BE TOO CONSERVATIVE, WE MAY BE ABLE TO PROVE self CAN CONSUME A CHARACTER
@@ -682,7 +693,7 @@ class Each(ParseExpression):
         while todo:
             for i, (c, (e, mi, ma)) in enumerate(zip(count, todo)):
                 try:
-                    loc = e.tryParse(string, end)
+                    loc = e._parse(string, end).end
                     if loc == end:
                         continue
                     end = loc
@@ -737,15 +748,12 @@ class Each(ParseExpression):
 
 
 # export
+export("mo_parsing.utils", Many)
+
+
 from mo_parsing import core, engine
 
 core.And = And
 core.Or = Or
-core.Each = Each
+core.MatchAll = MatchAll
 core.MatchFirst = MatchFirst
-
-from mo_parsing import helpers
-
-helpers.And = And
-helpers.Or = Or
-helpers.MatchFirst = MatchFirst

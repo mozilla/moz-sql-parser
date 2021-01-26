@@ -1,8 +1,8 @@
 # encoding: utf-8
 from mo_future import text
+from mo_logs import strings
 
 from mo_parsing.core import ParserElement
-from mo_parsing.exceptions import ParseException
 from mo_parsing.utils import (
     quote,
     lineno,
@@ -55,7 +55,7 @@ def _try(expr, start, string):
         + "(%d,%d)" % (lineno(start, string), col(start, string))
         + " for "
         + " " * stack_depth()
-        + text(expr)
+        + text(expr)[:300]
     )
 
 

@@ -219,20 +219,20 @@ class ParseResults(object):
     def __reversed__(self):
         return reversed(self.tokens)
 
-    def __getattr__(self, item):
-        """
-        IF THERE IS ONLY ONE VALUE, THEN DEFER TO IT
-        """
-        iter = self.__iter__()
-        try:
-            v1 = iter.__next__()
-            try:
-                iter.__next__()
-                raise Log.error("No attribute {{item}} for mutiple tokens", item=item)
-            except Exception:
-                return getattr(v1, item)
-        except Exception:
-            raise AttributeError(f"No attribute {item}")
+    # def __getattr__(self, item):
+    #     """
+    #     IF THERE IS ONLY ONE VALUE, THEN DEFER TO IT
+    #     """
+    #     iter = self.__iter__()
+    #     try:
+    #         v1 = iter.__next__()
+    #         try:
+    #             iter.__next__()
+    #             raise Log.error("No attribute {{item}} for mutiple tokens", item=item)
+    #         except Exception:
+    #             return getattr(v1, item)
+    #     except Exception as cause:
+    #         raise AttributeError(f"No attribute {item}")
 
     def value(self):
         """

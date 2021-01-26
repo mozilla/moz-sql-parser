@@ -1,13 +1,11 @@
 # encoding: utf-8
 import re
-import warnings
-from collections import Iterable
 from datetime import datetime
 
-from mo_dots import listwrap
 from mo_future import text
 
 from mo_parsing.core import add_reset_action
+from mo_parsing.debug import Debugger
 from mo_parsing.engine import Engine
 from mo_parsing.enhancement import (
     Combine,
@@ -23,18 +21,19 @@ from mo_parsing.enhancement import (
     Many,
 )
 from mo_parsing.exceptions import ParseException
-from mo_parsing.results import ParseResults, Annotation, NO_PARSER
+from mo_parsing.expressions import And
+from mo_parsing.infix import delimitedList
+from mo_parsing.regex import Regex
+from mo_parsing.results import ParseResults, Annotation
 from mo_parsing.tokens import (
-    CaselessKeyword,
-    CaselessLiteral,
     CharsNotIn,
     Empty,
     Keyword,
     LineEnd,
-    NoMatch,
-    Regex,
     Word,
     Literal,
+    AnyChar,
+    Char,
 )
 from mo_parsing.utils import (
     alphanums,
@@ -43,17 +42,110 @@ from mo_parsing.utils import (
     hexnums,
     nums,
     printables,
-    unichr,
-    wrap_parse_action,
+    Log,
 )
-from mo_parsing.utils import regex_range
 
-# import later
-And, Or, MatchFirst = [None] * 3
+
+def QuotedString(
+    quote_char,
+    esc_char=None,
+    esc_quote=None,
+    multiline=False,
+    unquote_results=True,
+    end_quote_char="",
+    convert_whitespace_escape=True,
+):
+    r"""
+    Token for matching strings that are delimited by quoting characters.
+
+    Defined with the following parameters:
+
+        - quote_char - string of one or more characters defining the
+          quote delimiting string
+        - esc_char - character to escape quotes, typically backslash
+          (default= ``None``)
+        - esc_quote - special quote sequence to escape an embedded quote
+          string (such as SQL's ``""`` to escape an embedded ``"``)
+          (default= ``None``)
+        - multiline - boolean indicating whether quotes can span
+          multiple lines (default= ``False``)
+        - unquoteResults - boolean indicating whether the matched text
+          should be unquoted (default= ``True``)
+        - end_quote_char - string of one or more characters defining the
+          end of the quote delimited string (default= ``None``  => same as
+          quote_char)
+        - convertWhitespaceEscapes - convert escaped whitespace
+          (``'\t'``, ``'\n'``, etc.) to actual whitespace
+          (default= ``True``)
+
+    """
+    quote_char = quote_char.strip()
+    end_quote_char = end_quote_char.strip() or quote_char
+
+    if not quote_char:
+        Log.error("quote_char cannot be the empty string")
+    if not end_quote_char:
+        Log.error("end_quote_char cannot be the empty string")
+
+    excluded = Literal(end_quote_char)
+
+    if multiline:
+        anychar = AnyChar()
+    else:
+        anychar = Char(exclude="\n")
+        excluded |= Char("\r\n")
+
+    included = ~Literal(end_quote_char) + anychar
+
+    if esc_quote:
+        included = Literal(esc_quote) | included
+    if esc_char:
+        excluded |= Literal(esc_char)
+        included = esc_char + Char(printables) | included
+        esc_char_replace_pattern = re.escape(esc_char) + "(.)"
+
+    prec, pattern = (
+        Literal(quote_char) + ((~excluded + anychar) | included)[0:]
+    ).__regex__()
+    # IMPORTANT: THE end_quote_char IS OUTSIDE THE Regex BECAUSE OF PATHOLOGICAL BACKTRACKING
+    output = Combine(Regex(pattern) + Literal(end_quote_char))
+
+    def post_parse(tokens):
+        ret = tokens[0]
+        if unquote_results:
+            # strip off quotes
+            ret = ret[len(quote_char) : -len(end_quote_char)]
+
+            if isinstance(ret, text):
+                # replace escaped whitespace
+                if "\\" in ret and convert_whitespace_escape:
+                    ws_map = {
+                        r"\t": "\t",
+                        r"\n": "\n",
+                        r"\f": "\f",
+                        r"\r": "\r",
+                    }
+                    for wslit, wschar in ws_map.items():
+                        ret = ret.replace(wslit, wschar)
+
+                # replace escaped characters
+                if esc_char:
+                    ret = re.sub(esc_char_replace_pattern, r"\g<1>", ret)
+
+                # replace escaped quotes
+                if esc_quote:
+                    ret = ret.replace(esc_quote, end_quote_char)
+
+        return ParseResults(tokens.type, tokens.start, tokens.end, [ret])
+
+    return output.addParseAction(post_parse).streamline()
 
 
 dblQuotedString = Combine(
-    Regex(r'"(?:[^"\n\r\\]|(?:"")|(?:\\(?:[^x]|x[0-9a-fA-F]+)))*') + '"'
+    #       0         1         2         3         4         5
+    #       012345678901234567890123456789012345678901234567890123456789
+    Regex(r'"(?:[^"\n\r\\]|(?:"")|(?:\\(?:[^x]|x[0-9a-fA-F]+)))*')
+    + '"'
 ).set_parser_name("string enclosed in double quotes")
 sglQuotedString = Combine(
     Regex(r"'(?:[^'\n\r\\]|(?:'')|(?:\\(?:[^x]|x[0-9a-fA-F]+)))*") + "'"
@@ -65,20 +157,6 @@ quotedString = Combine(
 unicodeString = Combine(
     Literal("u") + quotedString
 ).set_parser_name("unicode string literal")
-
-
-def delimitedList(expr, separator=",", combine=False):
-    """
-    PARSE DELIMITED LIST OF expr
-    Example::
-
-        delimitedList(Word(alphas)).parseString("aa,bb,cc") # -> ['aa', 'bb', 'cc']
-        delimitedList(Word(hexnums), delim=':', combine=True).parseString("AA:BB:CC:DD:EE") # -> ['AA:BB:CC:DD:EE']
-    """
-    if combine:
-        return Combine(expr + ZeroOrMore(separator + expr))
-    else:
-        return expr + ZeroOrMore(Suppress(separator) + expr)
 
 
 def countedArray(expr, intExpr=None):
@@ -197,87 +275,6 @@ def matchPreviousExpr(expr):
     expr.addParseAction(copyTokenToRepeater, callDuringTry=True)
     rep.set_parser_name("(prev) " + text(expr))
     return rep
-
-
-def oneOf(strs, caseless=False, asKeyword=False):
-    """Helper to quickly define a set of alternative Literals, and makes
-    sure to do longest-first testing when there is a conflict,
-    regardless of the input order, but returns
-    a `MatchFirst` for best performance.
-
-    Parameters:
-
-     - strs - a string of space-delimited literals, or a collection of
-       string literals
-     - caseless - (default= ``False``) - treat all literals as caseless
-     - asKeyword - (default=``False``) - enforce Keyword-style matching on the
-       generated expressions
-    """
-    if isinstance(caseless, text):
-        warnings.warn(
-            "More than one string argument passed to oneOf, pass "
-            "choices as a list or space-delimited string",
-            stacklevel=2,
-        )
-
-    if caseless:
-        isequal = lambda a, b: a.upper() == b.upper()
-        masks = lambda a, b: b.upper().startswith(a.upper())
-        parseElementClass = CaselessKeyword if asKeyword else CaselessLiteral
-    else:
-        isequal = lambda a, b: a == b
-        masks = lambda a, b: b.startswith(a)
-        parseElementClass = Keyword if asKeyword else Literal
-
-    symbols = []
-    if isinstance(strs, text):
-        symbols = strs.split()
-    elif isinstance(strs, Iterable):
-        symbols = list(strs)
-    else:
-        warnings.warn(
-            "Invalid argument to oneOf, expected string or iterable",
-            SyntaxWarning,
-            stacklevel=2,
-        )
-    if not symbols:
-        return NoMatch()
-
-    if not asKeyword:
-        # if not producing keywords, need to reorder to take care to avoid masking
-        # longer choices with shorter ones
-        i = 0
-        while i < len(symbols) - 1:
-            cur = symbols[i]
-            for j, other in enumerate(symbols[i + 1 :]):
-                if isequal(other, cur):
-                    del symbols[i + j + 1]
-                    break
-                elif masks(cur, other):
-                    del symbols[i + j + 1]
-                    symbols.insert(i, other)
-                    break
-            else:
-                i += 1
-
-    if caseless or asKeyword:
-        return (
-            MatchFirst(parseElementClass(sym) for sym in symbols)
-            .set_parser_name(" | ".join(symbols))
-            .streamline()
-        )
-
-    # CONVERT INTO REGEX
-    singles = [s for s in symbols if len(s) == 1]
-    rest = list(sorted([s for s in symbols if len(s) != 1], key=lambda s: -len(s)))
-
-    acc = []
-    acc.extend(re.escape(sym) for sym in rest)
-    if singles:
-        acc.append(regex_range("".join(singles)))
-    regex = "|".join(acc)
-
-    return Regex(regex).set_parser_name(" | ".join(symbols)).streamline()
 
 
 def dictOf(key, value):
@@ -475,69 +472,6 @@ def nestedExpr(opener="(", closer=")", content=None, ignoreExpr=quotedString):
     return ret
 
 
-with Engine(""):
-    _escapedPunc = Word(
-        "\\", r"\[]-*.$+^?()~ ", exact=2
-    ).addParseAction(lambda t, l, s: t[0][1])
-    _escapedHexChar = Regex(r"\\0?[xX][0-9a-fA-F]+").addParseAction(lambda t: unichr(int(
-        t[0].lstrip("\\").lstrip("0").lstrip("xX"), 16
-    )))
-    _escapedOctChar = Regex(r"\\0[0-7]+").addParseAction(lambda t, l, s: unichr(int(
-        t[0][1:], 8
-    )))
-    _singleChar = (
-        _escapedPunc | _escapedHexChar | _escapedOctChar | CharsNotIn(r"\]", exact=1)
-    )
-    _charRange = Group(_singleChar + Suppress("-") + _singleChar)
-    _reBracketExpr = (
-        "["
-        + Optional("^").set_token_name("negate")
-        + Group(OneOrMore(_charRange | _singleChar)).set_token_name("body")
-        + "]"
-    )
-
-
-def srange(s):
-    r"""Helper to easily define string ranges for use in Word
-    construction. Borrows syntax from regexp '[]' string range
-    definitions::
-
-        srange("[0-9]")   -> "0123456789"
-        srange("[a-z]")   -> "abcdefghijklmnopqrstuvwxyz"
-        srange("[a-z$_]") -> "abcdefghijklmnopqrstuvwxyz$_"
-
-    The input string must be enclosed in []'s, and the returned string
-    is the expanded character set joined into a single string. The
-    values enclosed in the []'s may be:
-
-     - a single character
-     - an escaped character with a leading backslash (such as ``\-``
-       or ``\]``)
-     - an escaped hex character with a leading ``'\x'``
-       (``\x21``, which is a ``'!'`` character) (``\0x##``
-       is also supported for backwards compatibility)
-     - an escaped octal character with a leading ``'\0'``
-       (``\041``, which is a ``'!'`` character)
-     - a range of any of the above, separated by a dash (``'a-z'``,
-       etc.)
-     - any combination of the above (``'aeiouy'``,
-       ``'a-zA-Z0-9_$'``, etc.)
-    """
-
-    def _expanded(p):
-        if not isinstance(p, ParseResults):
-            return p
-        else:
-            return "".join(unichr(c) for c in range(ord(p[0]), ord(p[1]) + 1))
-
-    try:
-        return "".join(
-            _expanded(part) for part in _reBracketExpr.parseString(s)["body"]
-        )
-    except Exception as cause:
-        return ""
-
-
 def matchOnlyAtCol(n):
     """Helper method for defining parse actions that require matching at
     a specific column in the input text.
@@ -608,7 +542,7 @@ def makeHTMLTags(tagStr, suppress_LT=Suppress("<"), suppress_GT=Suppress(">")):
 
     tagAttrName = Word(alphas, alphanums + "_-:")
     tagAttrValue = quotedString.addParseAction(removeQuotes) | Word(
-        printables, excludeChars=">"
+        printables, exclude=">"
     )
     simpler_name = "".join(resname.replace(":", " ").title().split())
 
@@ -642,79 +576,23 @@ def makeHTMLTags(tagStr, suppress_LT=Suppress("<"), suppress_GT=Suppress(">")):
     return openTag, closeTag
 
 
-def withAttribute(*args, **attrDict):
-    """Helper to create a validating parse action to be used with start
-    tags created with `makeXMLTags` or
-    `makeHTMLTags`. Use ``withAttribute`` to qualify
-    a starting tag with a required attribute value, to avoid false
-    matches on common tags such as ``<TD>`` or ``<DIV>``.
-
-    Call ``withAttribute`` with a series of attribute names and
-    values. Specify the list of filter attributes names and values as:
-
-     - keyword arguments, as in ``(align="right")``, or
-     - as an explicit dict with ``**`` operator, when an attribute
-       name is also a Python reserved word, as in ``**{"class":"Customer", "align":"right"}``
-     - a list of name-value tuples, as in ``(("ns1:class", "Customer"), ("ns2:align", "right"))``
-
-    For attribute names with a namespace prefix, you must use the second
-    form.  Attribute names are matched insensitive to upper/lower case.
-
-    If just testing for ``class`` (with or without a namespace), use
-    `withClass`.
-
-    To verify that the attribute exists, but without specifying a value,
-    pass ``withAttribute.ANY_VALUE`` as the value.
-
-    Example::
-
-        html = '''
-            <div>
-            Some text
-            <div type="grid">1 4 0 1 0</div>
-            <div type="graph">1,3 2,3 1,1</div>
-            <div>this has no type</div>
-            </div>
-
-        '''
-        div,div_end = makeHTMLTags("div")
-
-        # only match div tag having a type attribute with value "grid"
-        div_grid = div().addParseAction(withAttribute(type="grid"))
-        grid_expr = div_grid + SkipTo(div | div_end)("body")
-        for grid_header in grid_expr.searchString(html):
-            print(grid_header.body)
-
-        # construct a match with any div tag having a type attribute, regardless of the value
-        div_any_type = div().addParseAction(withAttribute(type=withAttribute.ANY_VALUE))
-        div_expr = div_any_type + SkipTo(div | div_end)("body")
-        for div_header in div_expr.searchString(html):
-            print(div_header.body)
-
-    prints::
-
-        1 4 0 1 0
-
-        1 4 0 1 0
-        1,3 2,3 1,1
+def withAttribute(**attr):
     """
-    if args:
-        attrs = args[:]
-    else:
-        attrs = attrDict.items()
-    attrs = [(k, v) for k, v in attrs]
-
+    Verify attributes have given value, or at least exists (using withAttribute.ANY_VALUE)
+    :param attr:  Expecting named parameters set to the expected value
+    :return:  Raise an exception if there is no match
+    """
     def pa(tokens, loc, string):
-        for attrName, attrValue in attrs:
-            if attrName not in tokens:
-                raise ParseException(tokens.type, loc, string, "no matching attribute ")
-            if attrValue != withAttribute.ANY_VALUE and tokens[attrName] != attrValue:
+        for name, expected_value in attr.items():
+            if name not in tokens:
+                raise ParseException(tokens.type, loc, string, f"is expecting {name} attribute")
+            if expected_value != withAttribute.ANY_VALUE and tokens[name] != expected_value:
                 raise ParseException(
                     tokens.type,
                     loc,
                     string,
-                    f"attribute '{attrName}' has value '{tokens[attrName]}', must be"
-                    f" '{attrValue}'",
+                    f"attribute '{name}' has value '{tokens[name]}', must be"
+                    f" '{expected_value}'",
                 )
 
     return pa
@@ -760,247 +638,6 @@ def withClass(classname, namespace=""):
     """
     classattr = "%s:class" % namespace if namespace else "class"
     return withAttribute(**{classattr: classname})
-
-
-LEFT_ASSOC = object()
-RIGHT_ASSOC = object()
-
-
-def infixNotation(baseExpr, spec, lpar=Suppress("("), rpar=Suppress(")")):
-    """
-    :param baseExpr: expression representing the most basic element for the
-       nested
-    :param spec: list of tuples, one for each operator precedence level
-       in the expression grammar; each tuple is of the form ``(opExpr,
-       numTerms, rightLeftAssoc, parseAction)``, where:
-
-       - opExpr is the mo_parsing expression for the operator; may also
-         be a string, which will be converted to a Literal; if numTerms
-         is 3, opExpr is a tuple of two expressions, for the two
-         operators separating the 3 terms
-       - numTerms is the number of terms for this operator (must be 1,
-         2, or 3)
-       - rightLeftAssoc is the indicator whether the operator is right
-         or left associative, using the mo_parsing-defined constants
-         ``RIGHT_ASSOC`` and ``LEFT_ASSOC``.
-       - parseAction is the parse action to be associated with
-         expressions matching this operator expression (the parse action
-         tuple member may be omitted); if the parse action is passed
-         a tuple or list of functions, this is equivalent to calling
-         ``setParseAction(*fn)``
-         (`ParserElement.addParseAction`)
-    :param lpar: expression for matching left-parentheses
-       (default= ``Suppress('(')``)
-    :param rpar: expression for matching right-parentheses
-       (default= ``Suppress(')')``)
-    :return: ParserElement
-    """
-
-    all_op = {}
-
-    def norm(op):
-        output = all_op.get(id(op))
-        if output:
-            return output
-
-        def record_self(tok):
-            ParseResults(tok.type, tok.start, tok.end, [tok.type.parser_name])
-
-        output = engine.CURRENT.normalize(op)
-        is_suppressed = isinstance(output, Suppress)
-        if is_suppressed:
-            output = output.expr
-        output = output.addParseAction(record_self)
-        all_op[id(op)] = is_suppressed, output
-        return is_suppressed, output
-
-    opList = []
-    """
-    SCRUBBED LIST OF OPERATORS
-    * expr - used exclusively for ParseResult(expr, [...]), not used to match
-    * op - used to match 
-    * arity - same
-    * assoc - same
-    * parse_actions - same
-    """
-
-    for operDef in spec:
-        op, arity, assoc, rest = operDef[0], operDef[1], operDef[2], operDef[3:]
-        parse_actions = list(map(wrap_parse_action, listwrap(rest[0]))) if rest else []
-        if arity == 1:
-            is_suppressed, op = norm(op)
-            if assoc == RIGHT_ASSOC:
-                opList.append((
-                    Group(baseExpr + op),
-                    op,
-                    is_suppressed,
-                    arity,
-                    assoc,
-                    parse_actions,
-                ))
-            else:
-                opList.append((
-                    Group(op + baseExpr),
-                    op,
-                    is_suppressed,
-                    arity,
-                    assoc,
-                    parse_actions,
-                ))
-        elif arity == 2:
-            is_suppressed, op = norm(op)
-            opList.append((
-                Group(baseExpr + op + baseExpr),
-                op,
-                is_suppressed,
-                arity,
-                assoc,
-                parse_actions,
-            ))
-        elif arity == 3:
-            is_suppressed, op = zip(norm(op[0]), norm(op[1]))
-            opList.append((
-                Group(baseExpr + op[0] + baseExpr + op[1] + baseExpr),
-                op,
-                is_suppressed,
-                arity,
-                assoc,
-                parse_actions,
-            ))
-    opList = tuple(opList)
-
-    def record_op(op):
-        def output(tokens):
-            return ParseResults(NO_PARSER, tokens.start, tokens.end, [(tokens, op)])
-
-        return output
-
-    prefix_ops = MatchFirst([
-        op.addParseAction(record_op(op))
-        for expr, op, is_suppressed, arity, assoc, pa in opList
-        if arity == 1 and assoc == RIGHT_ASSOC
-    ])
-    suffix_ops = MatchFirst([
-        op.addParseAction(record_op(op))
-        for expr, op, is_suppressed, arity, assoc, pa in opList
-        if arity == 1 and assoc == LEFT_ASSOC
-    ])
-    ops = Or([
-        opPart.addParseAction(record_op(opPart))
-        for opPart in set(
-            opPart
-            for expr, op, is_suppressed, arity, assoc, pa in opList
-            if arity > 1
-            for opPart in (op if isinstance(op, tuple) else [op])
-        )
-    ])
-
-    def make_tree(tokens, loc, string):
-        flat_tokens = list(tokens)
-        num = len(opList)
-        op_index = 0
-        while len(flat_tokens) > 1 and op_index < num:
-            expr, op, is_suppressed, arity, assoc, parse_actions = opList[op_index]
-            if arity == 1:
-                if assoc == RIGHT_ASSOC:
-                    # PREFIX OPERATOR -3
-                    todo = list(reversed(list(enumerate(flat_tokens[:-1]))))
-                    for i, (r, o) in todo:
-                        if o == op:
-                            tok = flat_tokens[i + 1][0]
-                            if is_suppressed:
-                                result = ParseResults(expr, tok.start, tok.end, (tok,))
-                            else:
-                                result = ParseResults(expr, r.start, tok.end, (r, tok))
-                            break
-                    else:
-                        op_index += 1
-                        continue
-                else:
-                    # SUFFIX OPERATOR 3!
-                    todo = list(enumerate(flat_tokens[1:]))
-                    for i, (r, o) in todo:
-                        if o == op:
-                            tok = flat_tokens[i][0]
-                            if is_suppressed:
-                                result = ParseResults(expr, tok.start, tok.end, (tok,))
-                            else:
-                                result = ParseResults(expr, tok.start, r.end, (tok, r,))
-                            break
-                    else:
-                        op_index += 1
-                        continue
-            elif arity == 2:
-                todo = list(enumerate(flat_tokens[1:-1]))
-                if assoc == RIGHT_ASSOC:
-                    todo = list(reversed(todo))
-
-                for i, (r, o) in todo:
-                    if o == op:
-                        if is_suppressed:
-                            result = ParseResults(
-                                expr,
-                                flat_tokens[i][0].start,
-                                flat_tokens[i + 2][0].end,
-                                (flat_tokens[i][0], flat_tokens[i + 2][0]),
-                            )
-                        else:
-                            result = ParseResults(
-                                expr,
-                                flat_tokens[i][0].start,
-                                flat_tokens[i + 2][0].end,
-                                (flat_tokens[i][0], r, flat_tokens[i + 2][0]),
-                            )
-                        break
-                else:
-                    op_index += 1
-                    continue
-
-            else:  # arity==3
-                todo = list(enumerate(flat_tokens[1:-3]))
-                if assoc == RIGHT_ASSOC:
-                    todo = list(reversed(todo))
-
-                for i, (r0, o0) in todo:
-                    if o0 == op[0]:
-                        r1, o1 = flat_tokens[i + 3]
-                        if o1 == op[1]:
-                            seq = [
-                                flat_tokens[i][0],
-                                flat_tokens[i + 2][0],
-                                flat_tokens[i + 4][0],
-                            ]
-                            s0, s1 = is_suppressed
-                            if not s1:
-                                seq.insert(2, r1)
-                            if not s0:
-                                seq.insert(1, r0)
-
-                            result = ParseResults(expr, seq[0].start, seq[-1].end, seq)
-                            break
-                else:
-                    op_index += 1
-                    continue
-
-            for p in parse_actions:
-                result = p(result, -1, string)
-            offset = (0, 2, 3, 5)[arity]
-            flat_tokens[i : i + offset] = [(result, (expr,))]
-            op_index = 0
-
-        result = flat_tokens[0][0]
-        result.end = tokens.end
-        return result
-
-    flat = Forward()
-    iso = lpar.suppress() + flat + rpar.suppress()
-    atom = (baseExpr | iso).addParseAction(record_op(baseExpr))
-    modified = ZeroOrMore(prefix_ops) + atom + ZeroOrMore(suffix_ops)
-    flat << (
-        modified + ZeroOrMore(ops + modified)
-    ).addParseAction(make_tree).streamline()
-
-    return flat.streamline()
 
 
 _indent_stack = [(1, None, None)]
@@ -1106,9 +743,6 @@ def indentedBlock(blockStatementExpr, indent=True):
     return smExpr.setFailAction(_reset_stack).set_parser_name("indented block")
 
 
-alphas8bit = srange(r"[\0xc0-\0xd6\0xd8-\0xf6\0xf8-\0xff]")
-punc8bit = srange(r"[\0xa1-\0xbf\0xd7\0xf7]")
-
 anyOpenTag, anyCloseTag = makeHTMLTags(
     Word(alphas, alphanums + "_:").set_parser_name("any tag")
 )
@@ -1127,14 +761,11 @@ def replaceHTMLEntity(t):
 cStyleComment = Combine(
     Regex(r"/\*(?:[^*]|\*(?!/))*") + "*/"
 ).set_parser_name("C style comment")
-"Comment of the form ``/* ... */``"
 
 htmlComment = Regex(r"<!--[\s\S]*?-->").set_parser_name("HTML comment")
-"Comment of the form ``<!-- ... -->``"
 
-with Engine() as engine:
-    engine.set_whitespace("")
-    restOfLine = Regex(r"[^\n]*").leaveWhitespace().set_parser_name("rest of line")
+with Engine("") as engine:
+    restOfLine = Regex(r"[^\n]*").set_parser_name("rest of line")
 
     dblSlashComment = Regex(r"//(?:\\\n|[^\n])*").set_parser_name("// comment")
 
@@ -1148,7 +779,7 @@ with Engine() as engine:
 
 _commasepitem = (
     Combine(OneOrMore(
-        Word(printables, excludeChars=",")
+        Word(printables, exclude=",")
         + Optional(Word(" \t") + ~Literal(",") + ~LineEnd())
     ))
     .addParseAction(lambda t: text(t).strip())
@@ -1175,51 +806,46 @@ signed_integer = (
 )
 
 fraction = (
-    signed_integer.addParseAction(convertToFloat)
-    + "/"
-    + signed_integer.addParseAction(convertToFloat)
-).set_parser_name("fraction")
-fraction.addParseAction(lambda t: t[0] / t[-1])
+    (
+        signed_integer.addParseAction(convertToFloat)
+        + "/"
+        + signed_integer.addParseAction(convertToFloat)
+    )
+    .set_parser_name("fraction")
+    .addParseAction(lambda t: t[0] / t[2])
+)
 
 mixed_integer = (
-    fraction | signed_integer + Optional(Optional("-").suppress() + fraction)
-).set_parser_name("fraction or mixed integer-fraction")
-"""mixed integer of the form 'integer - fraction', with optional leading integer, returns float"""
-mixed_integer.addParseAction(sum)
+    (fraction | signed_integer + Optional(Optional("-").suppress() + fraction))
+    .set_parser_name("fraction or mixed integer-fraction")
+    .addParseAction(sum)
+)
 
 real = (
-    Regex(r"[+-]?(:?\d+\.\d*|\.\d+)")
+    Regex(r"[+-]?(?:\d+\.\d*|\.\d+)")
     .set_parser_name("real number")
     .addParseAction(convertToFloat)
 )
-"""expression that parses a floating point number and returns a float"""
 
 sci_real = (
-    Regex(r"[+-]?(:?\d+(:?[eE][+-]?\d+)|(:?\d+\.\d*|\.\d+)(:?[eE][+-]?\d+)?)")
+    Regex(r"[+-]?(?:\d+(?:[eE][+-]?\d+)|(?:\d+\.\d*|\.\d+)(?:[eE][+-]?\d+)?)")
     .set_parser_name("real number with scientific notation")
     .addParseAction(convertToFloat)
 )
-"""expression that parses a floating point number with optional
-scientific notation and returns a float"""
 
-# streamlining this expression makes the docs nicer-looking
 number = (sci_real | real | signed_integer).streamline()
-"""any numeric expression, returns the corresponding Python type"""
 
 fnumber = (
     Regex(r"[+-]?\d+\.?\d*([eE][+-]?\d+)?")
     .set_parser_name("fnumber")
     .addParseAction(convertToFloat)
 )
-"""any int or real number, returned as float"""
 
 identifier = Word(alphas + "_", alphanums + "_").set_parser_name("identifier")
-"""typical code identifier (leading alpha or '_', followed by 0 or more alphas, nums, or '_')"""
 
 ipv4_address = Regex(
     r"(25[0-5]|2[0-4][0-9]|1?[0-9]{1,2})(\.(25[0-5]|2[0-4][0-9]|1?[0-9]{1,2})){3}"
 ).set_parser_name("IPv4 address")
-"IPv4 address (``0.0.0.0 - 255.255.255.255``)"
 
 _ipv6_part = Regex(r"[0-9a-fA-F]{1,4}").set_parser_name("hex_integer")
 _full_ipv6_address = (
@@ -1267,7 +893,7 @@ def convertToDate(fmt="%Y-%m-%d"):
 
     def cvt_fn(t, l, s):
         try:
-            return datetime.strptime(t[0], fmt).date()
+            return datetime.strptime(s[t.start : t.end], fmt).date()
         except ValueError as ve:
             raise ParseException(t.type, l, s, str(ve))
 
@@ -1294,7 +920,7 @@ def convertToDatetime(fmt="%Y-%m-%dT%H:%M:%S.%f"):
 
     def cvt_fn(t, l, s):
         try:
-            return datetime.strptime(t[0], fmt)
+            return datetime.strptime(s[t.start : t.end], fmt)
         except ValueError as ve:
             raise ParseException(t.type, l, s, str(ve))
 
@@ -1302,20 +928,23 @@ def convertToDatetime(fmt="%Y-%m-%dT%H:%M:%S.%f"):
 
 
 iso8601_date = (
-    Regex(r"(?P<year>\d{4})(?:-(?P<month>\d\d)(?:-(?P<day>\d\d))?)?").set_parser_name("ISO8601 date")
+    Regex(r"(?P<year>\d{4})(?:-(?P<month>\d\d)(?:-(?P<day>\d\d))?)?")
+    .capture_groups()
+    .set_parser_name("ISO8601 date")
 )
-"ISO8601 date (``yyyy-mm-dd``)"
 
-iso8601_datetime = Regex(
-    r"(?P<year>\d{4})-(?P<month>\d\d)-(?P<day>\d\d)[T"
-    r" ](?P<hour>\d\d):(?P<minute>\d\d)(:(?P<second>\d\d(\.\d*)?)?)?(?P<tz>Z|[+-]\d\d:?\d\d)?"
-).set_parser_name("ISO8601 datetime")
-"ISO8601 datetime (``yyyy-mm-ddThh:mm:ss.s(Z|+-00:00)``) - trailing seconds, milliseconds, and timezone optional; accepts separating ``'T'`` or ``' '``"
+iso8601_datetime = (
+    Regex(
+        r"(?P<year>\d{4})-(?P<month>\d\d)-(?P<day>\d\d)[T"
+        r" ](?P<hour>\d\d):(?P<minute>\d\d)(:(?P<second>\d\d(\.\d*)?)?)?(?P<tz>Z|[+-]\d\d:?\d\d)?"
+    )
+    .capture_groups()
+    .set_parser_name("ISO8601 datetime")
+)
 
 uuid = (
     Regex(r"[0-9a-fA-F]{8}(-[0-9a-fA-F]{4}){3}-[0-9a-fA-F]{12}").set_parser_name("UUID")
 )
-"UUID (``xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx``)"
 
 _html_stripper = anyOpenTag.suppress() | anyCloseTag.suppress()
 
@@ -1343,7 +972,7 @@ def _strip(tok):
 
 
 _commasepitem = (
-    Word(printables + " \t", excludeChars=",")
+    Word(printables + " \t", exclude=",")
     .set_parser_name("commaItem")
     .addParseAction(_strip)
 )

@@ -66,7 +66,7 @@ cast = Group(
 ).addParseAction(to_json_call)
 
 _standard_time_intervals = MatchFirst([
-    Keyword(d, caseless=True).addParseAction(lambda t: durations[t.lower()])
+    Keyword(d, caseless=True).addParseAction(lambda t: durations[t[0].lower()])
     for d in durations.keys()
 ]).set_parser_name("duration")("params")
 
