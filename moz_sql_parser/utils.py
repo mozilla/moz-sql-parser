@@ -67,11 +67,12 @@ def _chunk(values, size):
     acc = []
     for v in values:
         acc.append(v)
-        if len(acc)==size:
+        if len(acc) == size:
             yield acc
-            acc=[]
+            acc = []
     if acc:
         yield acc
+
 
 def to_json_operator(tokens):
     # ARRANGE INTO {op: params} FORMAT
@@ -190,7 +191,12 @@ def to_json_call(tokens):
     # elif isinstance(params, ParseResults) and params.length() == 1:
     #     params = params[0]
 
-    return ParseResults(tokens.type, tokens.start, tokens.end, [{op: params, "ignore_nulls": ignore_nulls}])
+    return ParseResults(
+        tokens.type,
+        tokens.start,
+        tokens.end,
+        [{op: params, "ignore_nulls": ignore_nulls}],
+    )
 
 
 def to_interval_call(tokens):
@@ -263,7 +269,7 @@ def to_select_call(tokens):
     if tokens["value"].value() == "*":
         return ["*"]
 
-    window = tokens['value']['window']
+    window = tokens["value"]["window"]
     if window:
         return window
 
@@ -327,11 +333,18 @@ def to_string(tokens):
 
 
 # NUMBERS
-realNum = Regex(r"[+-]?(\d+\.\d*|\.\d+)([eE][+-]?\d+)?").set_parser_name("float").addParseAction(lambda t: float(t[0]))
-intNum = Regex(r"[+-]?\d+([eE]\+?\d+)?").set_parser_name("int").addParseAction(lambda t: int(t[0]))
+realNum = (
+    Regex(r"[+-]?(\d+\.\d*|\.\d+)([eE][+-]?\d+)?")
+    .set_parser_name("float")
+    .addParseAction(lambda t: float(t[0]))
+)
+intNum = (
+    Regex(r"[+-]?\d+([eE]\+?\d+)?")
+    .set_parser_name("int")
+    .addParseAction(lambda t: int(t[0]))
+)
 
 # STRINGS
 sqlString = Regex(r"\'(\'\'|[^'])*\'").addParseAction(to_string)
-
 
 expr = Forward()
