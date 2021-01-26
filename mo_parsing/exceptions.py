@@ -4,6 +4,7 @@ from functools import wraps
 
 from mo_dots import coalesce
 from mo_future import text, is_text
+from mo_imports import export
 
 from mo_parsing.utils import Log, listwrap, quote, indent
 from mo_parsing.utils import wrap_parse_action, col, line, lineno
@@ -128,39 +129,10 @@ class ParseException(Exception):
         return "lineno col line".split() + dir(type(self))
 
 
-class ParseFatalException(Exception):
-    """user-throwable exception thrown when inconsistent parse content
-    is found; stops all parsing immediately"""
-
-    __slots__ = []
-
-    def __init__(self, expr, start, string, msg=""):
-        self.internal = ParseException(expr, start, string, msg)
-
-    @property
-    def line(self):
-        return self.internal.line
-
-    @property
-    def lineno(self):
-        return self.internal.lineno
-
-    @property
-    def col(self):
-        return self.internal.col
-
-    @property
-    def column(self):
-        return self.internal.column
-
-    @property
-    def loc(self):
-        return self.internal.loc
-
-
-class ParseSyntaxException(ParseFatalException):
-    """just like `ParseFatalException`, but thrown internally
-    when an `ErrorStop<And._ErrorStop>` ('-' operator) indicates
+class ParseSyntaxException(ParseException):
+    """
+    just like `ParseFatalException`, but thrown internally
+    when an `ErrorStop<And.SyntaxErrorGuard>` ('-' operator) indicates
     that parsing is to stop immediately because an unbacktrackable
     syntax error has been found.
     """
@@ -197,16 +169,4 @@ class RecursiveGrammarException(Exception):
             str(e) for e in self.parseElementTrace
         ])
 
-
-def conditionAsParseAction(fn, message=None, fatal=False):
-    msg = coalesce(message, "failed user-defined condition")
-    exc_type = ParseFatalException if fatal else ParseException
-    fn = wrap_parse_action(fn)
-
-    @wraps(fn)
-    def pa(t, l, s):
-        if not bool(fn(t, l, s)[0]):
-            raise exc_type(t.type, l, s, msg)
-        return t
-
-    return pa
+export("mo_parsing.utils", ParseException)

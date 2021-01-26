@@ -1,6 +1,5 @@
 # encoding: utf-8
-import re
-from collections import namedtuple, OrderedDict
+from collections import OrderedDict
 
 from mo_dots import Null, is_null
 from mo_future import text, is_text
@@ -12,7 +11,14 @@ from mo_parsing.exceptions import (
     RecursiveGrammarException,
 )
 from mo_parsing.results import ParseResults, Annotation
-from mo_parsing.utils import Log, listwrap, empty_tuple, regex_iso, append_config, regex_compile
+from mo_parsing.utils import (
+    Log,
+    listwrap,
+    empty_tuple,
+    regex_iso,
+    append_config,
+    regex_compile,
+)
 from mo_parsing.utils import MAX_INT, is_forward
 
 # import later
@@ -32,7 +38,7 @@ from mo_parsing.utils import MAX_INT, is_forward
 _get = object.__getattribute__
 
 
-class ParseElementEnhance(ParserElement):
+class ParseEnhancement(ParserElement):
     """Abstract subclass of `ParserElement`, for combining and
     post-processing parsed tokens.
     """
@@ -55,10 +61,7 @@ class ParseElementEnhance(ParserElement):
 
     def expecting(self):
         if self.expr:
-            return OrderedDict((
-                (k, [self])
-                for k, e in self.expr.expecting().items()
-            ))
+            return OrderedDict(((k, [self]) for k, e in self.expr.expecting().items()))
         else:
             return {}
 
@@ -104,8 +107,9 @@ class ParseElementEnhance(ParserElement):
         return f"{self.__class__.__name__}:({self.expr})"
 
 
-class FollowedBy(ParseElementEnhance):
-    """Lookahead matching of the given parse expression.
+class FollowedBy(ParseEnhancement):
+    """
+    Lookahead matching of the given parse expression.
     ``FollowedBy`` does *not* advance the parsing position within
     the input string, it only verifies that the specified parse
     expression matches at the current position.  ``FollowedBy``
@@ -131,7 +135,7 @@ class FollowedBy(ParseElementEnhance):
         return "*", f"(?={self.expr.__regex__()[1]})"
 
 
-class NotAny(ParseElementEnhance):
+class NotAny(ParseEnhancement):
     """Lookahead to disallow matching with the given parse expression.
     ``NotAny`` does *not* advance the parsing position within the
     input string, it only verifies that the specified parse expression
@@ -151,7 +155,7 @@ class NotAny(ParseElementEnhance):
             self.regex = None
 
     def copy(self):
-        output = ParseElementEnhance.copy(self)
+        output = ParseEnhancement.copy(self)
         output.regex = self.regex
         return output
 
@@ -170,7 +174,7 @@ class NotAny(ParseElementEnhance):
                 return ParseResults(self, start, start, [])
 
     def streamline(self):
-        output = ParseElementEnhance.streamline(self)
+        output = ParseEnhancement.streamline(self)
         if isinstance(output.expr, NoMatch):
             return Empty()
         if isinstance(output.expr, Empty):
@@ -192,9 +196,9 @@ class NotAny(ParseElementEnhance):
         return "~{" + str(self.expr) + "}"
 
 
-class Many(ParseElementEnhance):
+class Many(ParseEnhancement):
     __slots__ = []
-    Config = append_config(ParseElementEnhance, "min_match", "max_match", "end")
+    Config = append_config(ParseEnhancement, "min_match", "max_match", "end")
 
     def __init__(self, expr, stopOn=None, min_match=0, max_match=MAX_INT, exact=None):
         """
@@ -204,7 +208,7 @@ class Many(ParseElementEnhance):
         :param min_match: MINIMUM MATCHES REQUIRED FOR SUCCESS (-1 IS INVALID)
         :param max_match: MAXIMUM MATCH REQUIRED FOR SUCCESS (-1 IS INVALID)
         """
-        ParseElementEnhance.__init__(self, expr)
+        ParseEnhancement.__init__(self, expr)
         if exact is not None:
             min_match = exact
             max_match = exact
@@ -342,7 +346,7 @@ class Many(ParseElementEnhance):
                     " expressions"
                 )
 
-        return ParseElementEnhance.__call__(self, name)
+        return ParseEnhancement.__call__(self, name)
 
     def __str__(self):
         if self.parser_name:
@@ -436,11 +440,11 @@ class Optional(Many):
         return "[" + text(self.expr) + "]"
 
 
-class SkipTo(ParseElementEnhance):
+class SkipTo(ParseEnhancement):
     """Token for skipping over all undefined text until the matched expression is found."""
 
     __slots__ = []
-    Config = append_config(ParseElementEnhance, "include", "fail", "ignore")
+    Config = append_config(ParseEnhancement, "include", "fail", "ignore")
 
     def __init__(self, expr, include=False, ignore=None, failOn=None):
         """
@@ -453,7 +457,7 @@ class SkipTo(ParseElementEnhance):
           included in the skipped test; if found before the target expression is found,
           the SkipTo is not a match
         """
-        ParseElementEnhance.__init__(self, expr)
+        ParseEnhancement.__init__(self, expr)
         self.set_config(
             include=include, fail=engine.CURRENT.normalize(failOn), ignore=ignore
         )
@@ -471,24 +475,23 @@ class SkipTo(ParseElementEnhance):
         while loc <= instrlen:
             if fail:
                 # break if failOn expression matches
-                if fail.canParseNext(string, loc):
+                try:
+                    fail._parse(string, loc)
                     before_end = loc
                     break
+                except:
+                    pass
 
             if ignore:
                 # advance past ignore expressions
                 while 1:
                     try:
-                        loc = ignore.tryParse(string, loc)
-                        if loc == None:
-                            Log.error("")
+                        loc = ignore._parse(string, loc).end
                     except ParseException:
                         break
             try:
                 before_end = loc
                 loc = self.expr._parse(string, loc, doActions=False).end
-                if loc == None:
-                    Log.error("")
             except ParseException:
                 # no match, advance loc in string
                 loc += 1
@@ -543,7 +546,7 @@ class Forward(ParserElement):
     parser created using ``Forward``.
     """
 
-    __slots__ = ["expr", "used_by", "_str"]
+    __slots__ = ["expr", "used_by", "_str", "_reg"]
 
     def __init__(self, expr=Null):
         ParserElement.__init__(self)
@@ -551,6 +554,7 @@ class Forward(ParserElement):
         self.used_by = []
 
         self._str = None  # avoid recursion
+        self._reg = None  # avoid recursion
         if expr:
             self << engine.CURRENT.normalize(expr)
 
@@ -558,6 +562,7 @@ class Forward(ParserElement):
         output = ParserElement.copy(self)
         output.expr = self
         output._str = None
+        output._reg = None
 
         output.used_by = []
         return output
@@ -584,6 +589,7 @@ class Forward(ParserElement):
         if not self.expr:
             Log.error("not allowed")
         self.expr = self.expr.addParseAction(action)
+        return self
 
     def leaveWhitespace(self):
         with Engine(""):
@@ -626,6 +632,16 @@ class Forward(ParserElement):
                 )
             raise cause
 
+    def __regex__(self):
+        if self._reg or not self.expr:
+            return None
+
+        try:
+            self._reg = True
+            return self.expr.__regex__()
+        finally:
+            self._reg = None
+
     def __str__(self):
         if self.parser_name:
             return self.parser_name
@@ -647,7 +663,7 @@ class Forward(ParserElement):
         return output
 
 
-class TokenConverter(ParseElementEnhance):
+class TokenConverter(ParseEnhancement):
     """
     Abstract subclass of `ParseExpression`, for converting parsed results.
     """
@@ -663,24 +679,40 @@ class Combine(TokenConverter):
     Converter to concatenate all matching tokens to a single string.
     """
 
-    __slots__ = []
     Config = append_config(TokenConverter, "separator")
 
     def __init__(self, expr, separator=""):
         super(Combine, self).__init__(expr.streamline())
         self.set_config(separator=separator)
-        self.parseAction.append(_combine)
-        self.streamlined = True
 
+    def parseImpl(self, string, start, doActions=True):
+        result = self.expr.parseImpl(string, start, doActions=doActions)
+        output = ParseResults(
+            self,
+            start,
+            result.end,
+            [result.asString(sep=self.parser_config.separator)],
+        )
+        return output
 
-def _combine(tokens, start, string):
-    output = ParseResults(
-        tokens.type,
-        tokens.start,
-        tokens.end,
-        [tokens.asString(sep=tokens.type.parser_config.separator)],
-    )
-    return output
+    def streamline(self):
+        if self.streamlined:
+            return self
+
+        expr = self.expr.streamline()
+        if expr is self.expr:
+            self.streamlined = True
+            return self
+        return Combine(expr, self.parser_config.separator)
+
+    def expecting(self):
+        return OrderedDict((k, [self]) for k in self.expr.expecting().keys())
+
+    def min_length(self):
+        return self.expr.min_length()
+
+    def __regex__(self):
+        return self.expr.__regex__()
 
 
 class Group(TokenConverter):
@@ -773,7 +805,7 @@ def _suppress_post_parse(tokens, start, string):
     return ParseResults(tokens.type, tokens.start, tokens.end, [])
 
 
-class PrecededBy(ParseElementEnhance):
+class PrecededBy(ParseEnhancement):
     """Lookbehind matching of the given parse expression.
     ``PrecededBy`` does not advance the parsing position within the
     input string, it only verifies that the specified parse expression
@@ -796,7 +828,7 @@ class PrecededBy(ParseElementEnhance):
     """
 
     __slots__ = []
-    Config = append_config(ParseElementEnhance, "retreat", "exact")
+    Config = append_config(ParseEnhancement, "retreat", "exact")
 
     def __init__(self, expr, retreat=None):
         super(PrecededBy, self).__init__(expr)

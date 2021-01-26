@@ -9,6 +9,8 @@
 
 from __future__ import absolute_import, division, unicode_literals
 
+from mo_parsing.helpers import restOfLine, delimitedList
+
 from mo_parsing.engine import Engine
 from moz_sql_parser.keywords import *
 from moz_sql_parser.utils import *
@@ -64,7 +66,7 @@ cast = Group(
 ).addParseAction(to_json_call)
 
 _standard_time_intervals = MatchFirst([
-    Keyword(d, caseless=True).addParseAction(lambda t: durations[t.lower()])
+    Keyword(d, caseless=True).addParseAction(lambda t: durations[t[0].lower()])
     for d in durations.keys()
 ]).set_parser_name("duration")("params")
 
@@ -190,7 +192,7 @@ join = (
     + Optional((ON + expr("on")) | (USING + expr("using")))
 ).addParseAction(to_join_call)
 
-unordered_sql = (
+unordered_sql = Group(
     SELECT
     + delimitedList(selectColumn)("select")
     + Optional(
@@ -203,8 +205,8 @@ unordered_sql = (
 
 ordered_sql << (
     (
-        Group(unordered_sql)
-        + ZeroOrMore((UNION_ALL | UNION) + Group(unordered_sql))
+        unordered_sql
+        + ZeroOrMore((UNION_ALL | UNION) + unordered_sql)
     )("union")
     + Optional(ORDER_BY + delimitedList(Group(sortColumn))("orderby"))
     + Optional(LIMIT + expr("limit"))
