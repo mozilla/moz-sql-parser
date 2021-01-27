@@ -10,3 +10,5 @@
 from moz_sql_parser import parse
 
 parse("select *")
+
+print("done")
