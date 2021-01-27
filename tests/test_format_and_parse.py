@@ -10,12 +10,12 @@
 from __future__ import absolute_import, division, unicode_literals
 
 import re
-from unittest import skip, TestCase
+from unittest import TestCase, skip
 
 from mo_logs import Log
-
 from moz_sql_parser import format, parse
 from moz_sql_parser.keywords import join_keywords
+
 
 EXCEPTION_MESSAGE = """
 SQL:         {{expected_sql}}
@@ -81,12 +81,16 @@ class TestFormatAndParse(TestCase):
     def test_select_expression(self):
         expected_sql = "SELECT a + b/2 + 45*c + (2/d) from dual"
         expected_json = {
-            "select": {"value": {"add": [
-                "a",
-                {"div": ["b", 2]},
-                {"mul": [45, "c"]},
-                {"div": [2, "d"]},
-            ]}},
+            "select": {
+                "value": {
+                    "add": [
+                        "a",
+                        {"div": ["b", 2]},
+                        {"mul": [45, "c"]},
+                        {"div": [2, "d"]},
+                    ]
+                }
+            },
             "from": "dual",
         }
         self.verify_formatting(expected_sql, expected_json)
@@ -134,10 +138,12 @@ class TestFormatAndParse(TestCase):
         expected_json = {
             "select": {"value": "a"},
             "from": "dual",
-            "where": {"and": [
-                {"in": ["a", {"literal": ["r", "g", "b"]}]},
-                {"in": ["b", [10, 11, 12]]},
-            ]},
+            "where": {
+                "and": [
+                    {"in": ["a", {"literal": ["r", "g", "b"]}]},
+                    {"in": ["b", [10, 11, 12]]},
+                ]
+            },
         }
         self.verify_formatting(expected_sql, expected_json)
 
@@ -235,10 +241,12 @@ class TestFormatAndParse(TestCase):
             "from": "table1",
             "select": {
                 "name": "bb",
-                "value": {"case": [
-                    {"when": {"like": ["A", {"literal": "bb%"}]}, "then": 1},
-                    0,
-                ]},
+                "value": {
+                    "case": [
+                        {"when": {"like": ["A", {"literal": "bb%"}]}, "then": 1},
+                        0,
+                    ]
+                },
             },
         }
         self.verify_formatting(expected_sql, expected_json)
@@ -260,25 +268,43 @@ from benn.college_football_players
                 {"value": "weight"},
                 {
                     "name": "weight_group",
-                    "value": {"case": [
-                        {
-                            "then": {"literal": "over 250"},
-                            "when": {"gt": ["weight", 250]},
-                        },
-                        {
-                            "then": {"literal": "201-250"},
-                            "when": {"gt": ["weight", 200]},
-                        },
-                        {
-                            "then": {"literal": "176-200"},
-                            "when": {"gt": ["weight", 175]},
-                        },
-                        {"literal": "175 or under"},
-                    ]},
+                    "value": {
+                        "case": [
+                            {
+                                "then": {"literal": "over 250"},
+                                "when": {"gt": ["weight", 250]},
+                            },
+                            {
+                                "then": {"literal": "201-250"},
+                                "when": {"gt": ["weight", 200]},
+                            },
+                            {
+                                "then": {"literal": "176-200"},
+                                "when": {"gt": ["weight", 175]},
+                            },
+                            {"literal": "175 or under"},
+                        ]
+                    },
                 },
             ],
         }
         self.verify_formatting(expected_sql, expected_json)
+
+    def test_select_top_format(self):
+        sql = """
+select	TOP (5)
+	country_code,
+	impact_code,
+	impact_description,
+	number_sites
+from	EUNIS.v1.BISE_Country_Threats_Pressures_Number_Sites
+order by number_sites desc"""
+        result = parse(sql)
+        expected_sql = """SELECT TOP (5) country_code, impact_code,
+        impact_description, number_sites  FROM
+        EUNIS.v1.BISE_Country_Threats_Pressures_Number_Sites ORDER BY
+        number_sites DESC"""
+        self.verify_formatting(expected_sql, result)
 
     def test_like_from_pr16(self):
         expected_sql = (
@@ -287,11 +313,13 @@ from benn.college_football_players
         )
         expected_json = {
             "from": "trade",
-            "where": {"and": [
-                {"like": ["school", {"literal": "%shool"}]},
-                {"eq": ["name", {"literal": "abc"}]},
-                {"in": ["id", {"literal": ["1", "2"]}]},
-            ]},
+            "where": {
+                "and": [
+                    {"like": ["school", {"literal": "%shool"}]},
+                    {"eq": ["name", {"literal": "abc"}]},
+                    {"in": ["id", {"literal": ["1", "2"]}]},
+                ]
+            },
             "select": "*",
         }
         self.verify_formatting(expected_sql, expected_json)
@@ -303,10 +331,12 @@ from benn.college_football_players
         expected_json = {
             "from": "task",
             "select": "*",
-            "where": {"in": [
-                "repo.branch.name",
-                {"literal": ["try", "mozilla-central"]},
-            ]},
+            "where": {
+                "in": [
+                    "repo.branch.name",
+                    {"literal": ["try", "mozilla-central"]},
+                ]
+            },
         }
         self.verify_formatting(expected_sql, expected_json)
 
@@ -355,10 +385,12 @@ from benn.college_football_players
         expected_json = {
             "select": "*",
             "from": "task",
-            "where": {"and": [
-                {"exists": "build.product"},
-                {"neq": ["build.product", {"literal": "firefox"}]},
-            ]},
+            "where": {
+                "and": [
+                    {"exists": "build.product"},
+                    {"neq": ["build.product", {"literal": "firefox"}]},
+                ]
+            },
         }
         self.verify_formatting(expected_sql, expected_json)
 
@@ -911,21 +943,25 @@ from benn.college_football_players
         expected_json = {
             "from": "t6",
             "select": {"value": "a"},
-            "where": {"in": [
-                "b",
-                {
-                    "from": {"union": [
-                        {
-                            "from": "t6",
-                            "select": {"value": "b"},
-                            "where": {"lte": ["a", {"literal": "b"}]},
+            "where": {
+                "in": [
+                    "b",
+                    {
+                        "from": {
+                            "union": [
+                                {
+                                    "from": "t6",
+                                    "select": {"value": "b"},
+                                    "where": {"lte": ["a", {"literal": "b"}]},
+                                },
+                                {"select": {"value": {"literal": "3"}, "name": "x"}},
+                            ]
                         },
-                        {"select": {"value": {"literal": "3"}, "name": "x"}},
-                    ]},
-                    "orderby": {"value": 1},
-                    "limit": 1,
-                },
-            ]},
+                        "orderby": {"value": 1},
+                        "limit": 1,
+                    },
+                ]
+            },
         }
         self.verify_formatting(expected_sql, expected_json)
 
@@ -937,21 +973,25 @@ from benn.college_football_players
         expected_json = {
             "from": "t6",
             "select": {"value": "a"},
-            "where": {"in": [
-                "b",
-                {
-                    "from": {"union": [
-                        {
-                            "from": "t6",
-                            "select": {"value": "b"},
-                            "where": {"lte": ["a", {"literal": "b"}]},
+            "where": {
+                "in": [
+                    "b",
+                    {
+                        "from": {
+                            "union": [
+                                {
+                                    "from": "t6",
+                                    "select": {"value": "b"},
+                                    "where": {"lte": ["a", {"literal": "b"}]},
+                                },
+                                {"select": {"value": {"literal": "3"}, "name": "x"}},
+                            ]
                         },
-                        {"select": {"value": {"literal": "3"}, "name": "x"}},
-                    ]},
-                    "orderby": {"value": 1, "sort": "desc"},
-                    "limit": 1,
-                },
-            ]},
+                        "orderby": {"value": 1, "sort": "desc"},
+                        "limit": 1,
+                    },
+                ]
+            },
         }
         self.verify_formatting(expected_sql, expected_json)
 
@@ -963,21 +1003,25 @@ from benn.college_football_players
         expected_json = {
             "from": "t6",
             "select": {"value": "a"},
-            "where": {"in": [
-                "b",
-                {
-                    "from": {"union": [
-                        {
-                            "from": "t6",
-                            "select": {"value": "b"},
-                            "where": {"lte": ["a", {"literal": "b"}]},
+            "where": {
+                "in": [
+                    "b",
+                    {
+                        "from": {
+                            "union": [
+                                {
+                                    "from": "t6",
+                                    "select": {"value": "b"},
+                                    "where": {"lte": ["a", {"literal": "b"}]},
+                                },
+                                {"select": {"value": {"literal": "3"}, "name": "x"}},
+                            ]
                         },
-                        {"select": {"value": {"literal": "3"}, "name": "x"}},
-                    ]},
-                    "orderby": {"value": "b"},
-                    "limit": 2,
-                },
-            ]},
+                        "orderby": {"value": "b"},
+                        "limit": 2,
+                    },
+                ]
+            },
             "orderby": {"value": "a"},
         }
         self.verify_formatting(expected_sql, expected_json)
@@ -990,21 +1034,25 @@ from benn.college_football_players
         expected_json = {
             "from": "t6",
             "select": {"value": "a"},
-            "where": {"in": [
-                "b",
-                {
-                    "from": {"union": [
-                        {
-                            "from": "t6",
-                            "select": {"value": "b"},
-                            "where": {"lte": ["a", {"literal": "b"}]},
+            "where": {
+                "in": [
+                    "b",
+                    {
+                        "from": {
+                            "union": [
+                                {
+                                    "from": "t6",
+                                    "select": {"value": "b"},
+                                    "where": {"lte": ["a", {"literal": "b"}]},
+                                },
+                                {"select": {"value": {"literal": "3"}, "name": "x"}},
+                            ]
                         },
-                        {"select": {"value": {"literal": "3"}, "name": "x"}},
-                    ]},
-                    "orderby": {"value": "x", "sort": "desc"},
-                    "limit": 2,
-                },
-            ]},
+                        "orderby": {"value": "x", "sort": "desc"},
+                        "limit": 2,
+                    },
+                ]
+            },
             "orderby": {"value": "a"},
         }
         self.verify_formatting(expected_sql, expected_json)
@@ -1040,11 +1088,13 @@ from benn.college_football_players
         expected_json = {
             "from": "test1",
             "select": {"value": "f1"},
-            "where": {"between": [
-                {"concat": [{"literal": "x"}, "f1"]},
-                {"literal": "x10"},
-                {"literal": "x20"},
-            ]},
+            "where": {
+                "between": [
+                    {"concat": [{"literal": "x"}, "f1"]},
+                    {"literal": "x10"},
+                    {"literal": "x20"},
+                ]
+            },
             "orderby": {"value": "f1"},
         }
         self.verify_formatting(expected_sql, expected_json)
@@ -1057,11 +1107,13 @@ from benn.college_football_players
         expected_json = {
             "from": "test1",
             "select": {"value": "f1"},
-            "where": {"not_between": [
-                {"concat": [{"literal": "x"}, "f1"]},
-                {"literal": "x10"},
-                {"literal": "x20"},
-            ]},
+            "where": {
+                "not_between": [
+                    {"concat": [{"literal": "x"}, "f1"]},
+                    {"literal": "x10"},
+                    {"literal": "x20"},
+                ]
+            },
             "orderby": {"value": "f1"},
         }
         self.verify_formatting(expected_sql, expected_json)
@@ -1085,18 +1137,30 @@ from benn.college_football_players
             "from": "test1",
             "orderby": {"value": "f1"},
             "select": [
-                {"value": {"coalesce": [
-                    {"div": ["f1", {"sub": ["f1", 11]}]},
-                    {"literal": "x"},
-                ]}},
-                {"value": {"coalesce": [
-                    {"min": [{"div": ["f1", {"sub": ["f1", 11]}]}, 5]},
-                    {"literal": "y"},
-                ]}},
-                {"value": {"coalesce": [
-                    {"max": [{"div": ["f1", {"sub": ["f1", 33]}]}, 6]},
-                    {"literal": "z"},
-                ]}},
+                {
+                    "value": {
+                        "coalesce": [
+                            {"div": ["f1", {"sub": ["f1", 11]}]},
+                            {"literal": "x"},
+                        ]
+                    }
+                },
+                {
+                    "value": {
+                        "coalesce": [
+                            {"min": [{"div": ["f1", {"sub": ["f1", 11]}]}, 5]},
+                            {"literal": "y"},
+                        ]
+                    }
+                },
+                {
+                    "value": {
+                        "coalesce": [
+                            {"max": [{"div": ["f1", {"sub": ["f1", 33]}]}, 6]},
+                            {"literal": "z"},
+                        ]
+                    }
+                },
             ],
         }
         self.verify_formatting(expected_sql, expected_json)
@@ -1123,10 +1187,12 @@ from benn.college_football_players
         expected_json = {
             "from": "test1",
             "select": "*",
-            "where": {"lt": [
-                "f1",
-                {"from": "test2", "select": {"value": {"count": "*"}}},
-            ]},
+            "where": {
+                "lt": [
+                    "f1",
+                    {"from": "test2", "select": {"value": {"count": "*"}}},
+                ]
+            },
         }
         self.verify_formatting(expected_sql, expected_json)
 
@@ -1245,10 +1311,12 @@ from benn.college_football_players
     def test_118b(self):
         expected_sql = "SELECT * FROM t3 UNION SELECT 3 AS a, 4 ORDER BY a"
         expected_json = {
-            "from": {"union": [
-                {"from": "t3", "select": "*"},
-                {"select": [{"value": 3, "name": "a"}, {"value": 4}]},
-            ]},
+            "from": {
+                "union": [
+                    {"from": "t3", "select": "*"},
+                    {"select": [{"value": 3, "name": "a"}, {"value": 4}]},
+                ]
+            },
             "orderby": {"value": "a"},
         }
         self.verify_formatting(expected_sql, expected_json)
@@ -1256,20 +1324,24 @@ from benn.college_football_players
     def test_118c(self):
         expected_sql = "SELECT * FROM t3 UNION SELECT 3 AS a, 4 ORDER BY a"
         expected_json = {
-            "from": {"union": [
-                {"from": "t3", "select": "*"},
-                {"select": [{"value": 3, "name": "a"}, {"value": 4}]},
-            ]},
+            "from": {
+                "union": [
+                    {"from": "t3", "select": "*"},
+                    {"select": [{"value": 3, "name": "a"}, {"value": 4}]},
+                ]
+            },
             "orderby": {"value": "a"},
         }
         self.verify_formatting(expected_sql, expected_json)
 
     def test_119(self):
         expected_sql = "SELECT 3, 4 UNION SELECT * FROM t3"
-        expected_json = {"union": [
-            {"select": [{"value": 3}, {"value": 4}]},
-            {"from": "t3", "select": "*"},
-        ]}
+        expected_json = {
+            "union": [
+                {"select": [{"value": 3}, {"value": 4}]},
+                {"from": "t3", "select": "*"},
+            ]
+        }
         self.verify_formatting(expected_sql, expected_json)
 
     def test_120(self):
@@ -1297,11 +1369,15 @@ from benn.college_football_players
         )
         expected_json = {
             "from": {"value": "abc", "name": "upper"},
-            "select": {"value": {"count": {
-                "from": "abc",
-                "select": {"value": "a"},
-                "where": {"and": [{"missing": "a"}, {"gte": ["b", "upper.c"]}]},
-            }}},
+            "select": {
+                "value": {
+                    "count": {
+                        "from": "abc",
+                        "select": {"value": "a"},
+                        "where": {"and": [{"missing": "a"}, {"gte": ["b", "upper.c"]}]},
+                    }
+                }
+            },
         }
         self.verify_formatting(expected_sql, expected_json)
 
@@ -1316,18 +1392,30 @@ from benn.college_football_players
 
     def test_128(self):
         expected_sql = "SELECT 10 IN (SELECT rowid FROM sqlite_master)"
-        expected_json = {"select": {"value": {"in": [
-            10,
-            {"from": "sqlite_master", "select": {"value": "rowid"}},
-        ]}}}
+        expected_json = {
+            "select": {
+                "value": {
+                    "in": [
+                        10,
+                        {"from": "sqlite_master", "select": {"value": "rowid"}},
+                    ]
+                }
+            }
+        }
         self.verify_formatting(expected_sql, expected_json)
 
     def test_131(self):
         expected_sql = "SELECT 2 IN (SELECT a FROM t1)"
-        expected_json = {"select": {"value": {"in": [
-            2,
-            {"from": "t1", "select": {"value": "a"}},
-        ]}}}
+        expected_json = {
+            "select": {
+                "value": {
+                    "in": [
+                        2,
+                        {"from": "t1", "select": {"value": "a"}},
+                    ]
+                }
+            }
+        }
         self.verify_formatting(expected_sql, expected_json)
 
     def test_139(self):
@@ -1431,10 +1519,12 @@ from benn.college_football_players
         expected_json = {
             "from": ["aa", "bb"],
             "select": "*",
-            "where": {"case": [
-                {"when": {"eq": ["a", {"sub": ["b", 1]}]}, "then": 0},
-                1,
-            ]},
+            "where": {
+                "case": [
+                    {"when": {"eq": ["a", {"sub": ["b", 1]}]}, "then": 0},
+                    1,
+                ]
+            },
         }
         self.verify_formatting(expected_sql, expected_json)
 
@@ -1820,7 +1910,9 @@ from benn.college_football_players
     def test_192(self):
         for join_keyword in join_keywords:
             expected_sql = (
-                "SELECT t1.field1 FROM t1 {join_type} t2 ON t1.id = t2.id".format(join_type=join_keyword.upper())
+                "SELECT t1.field1 FROM t1 {join_type} t2 ON t1.id = t2.id".format(
+                    join_type=join_keyword.upper()
+                )
             )
             expected_json = {
                 "select": {"value": "t1.field1"},
@@ -1858,9 +1950,24 @@ from benn.college_football_players
 
     def test_issue152_null_expression(self):
         expected_sql = "SELECT a, CASE WHEN some_columns = 'Bob' THEN 'helloworld' ELSE NULL END AS some_columns FROM mytable"
-        expected_json = {'select': [{'value': 'a'}, {'value': {
-            'case': [{'when': {'eq': ['some_columns', {'literal': 'Bob'}]}, 'then': {'literal': 'helloworld'}}, None]},
-            'name': 'some_columns'}], 'from': 'mytable'}
+        expected_json = {
+            "select": [
+                {"value": "a"},
+                {
+                    "value": {
+                        "case": [
+                            {
+                                "when": {"eq": ["some_columns", {"literal": "Bob"}]},
+                                "then": {"literal": "helloworld"},
+                            },
+                            None,
+                        ]
+                    },
+                    "name": "some_columns",
+                },
+            ],
+            "from": "mytable",
+        }
 
         self.verify_formatting(expected_sql, expected_json)
 
@@ -1871,5 +1978,8 @@ from benn.college_football_players
 
     def test_issue12b_dots_in_name(self):
         expected_sql = 'select a.x as "a.b.c.x" from a'
-        expected_json = {"select": {"value": "a.x", "name": "a\\.b\\.c\\.x"}, "from": "a"}
+        expected_json = {
+            "select": {"value": "a.x", "name": "a\\.b\\.c\\.x"},
+            "from": "a",
+        }
         self.verify_formatting(expected_sql, expected_json)

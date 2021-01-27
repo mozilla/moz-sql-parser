@@ -1,5 +1,4 @@
 from mo_dots import Null
-
 from moz_sql_parser.utils import *
 
 # SQL CONSTANTS
@@ -37,6 +36,7 @@ RIGHT = Keyword("right", caseless=True)
 RLIKE = Keyword("rlike", caseless=True)
 SELECT = Keyword("select", caseless=True).suppress()
 THEN = Keyword("then", caseless=True).suppress()
+TOP = Keyword("top", caseless=True).suppress()
 UNION = Keyword("union", caseless=True)
 USING = Keyword("using", caseless=True).suppress()
 WHEN = Keyword("when", caseless=True).suppress()
@@ -99,78 +99,81 @@ IS_NOT = Group(IS + NOT).set_parser_name("is_not")
 
 _SIMILAR = Keyword("similar", caseless=True)
 _TO = Keyword("to", caseless=True)
-SIMILAR_TO = Group(_SIMILAR+_TO).set_parser_name("is_not")
-NOT_SIMILAR_TO = Group(_SIMILAR+_TO).set_parser_name("is_not")
+SIMILAR_TO = Group(_SIMILAR + _TO).set_parser_name("is_not")
+NOT_SIMILAR_TO = Group(_SIMILAR + _TO).set_parser_name("is_not")
 
-RESERVED = MatchFirst([
-    ALL,
-    AND,
-    AS,
-    ASC,
-    BETWEEN,
-    BY,
-    CASE,
-    CAST,
-    COLLATE,
-    CROSS_JOIN,
-    CROSS,
-    DESC,
-    DISTINCT,
-    ELSE,
-    END,
-    FALSE,
-    FROM,
-    FULL_JOIN,
-    FULL_OUTER_JOIN,
-    FULL,
-    GROUP_BY,
-    GROUP,
-    HAVING,
-    IN,
-    INNER_JOIN,
-    INNER,
-    INTERVAL,
-    IS_NOT,
-    IS,
-    JOIN,
-    LEFT_JOIN,
-    LEFT_OUTER_JOIN,
-    LEFT,
-    LIKE,
-    LIMIT,
-    NOCASE,
-    NOT_BETWEEN,
-    NOT_IN,
-    NOT_LIKE,
-    NOT_RLIKE,
-    NOT,
-    NULL,
-    OFFSET,
-    ON,
-    OR,
-    ORDER_BY,
-    ORDER,
-    OUTER,
-    OVER,
-    PARTITION_BY,
-    PARTITION,
-    RIGHT_JOIN,
-    RIGHT_OUTER_JOIN,
-    RIGHT,
-    RLIKE,
-    SELECT_DISTINCT,
-    SELECT,
-    THEN,
-    TRUE,
-    UNION_ALL,
-    UNION,
-    USING,
-    WHEN,
-    WHERE,
-    WITH,
-    WITHIN_GROUP,
-    WITHIN,
-])
+RESERVED = MatchFirst(
+    [
+        ALL,
+        AND,
+        AS,
+        ASC,
+        BETWEEN,
+        BY,
+        CASE,
+        CAST,
+        COLLATE,
+        CROSS_JOIN,
+        CROSS,
+        DESC,
+        DISTINCT,
+        ELSE,
+        END,
+        FALSE,
+        FROM,
+        FULL_JOIN,
+        FULL_OUTER_JOIN,
+        FULL,
+        GROUP_BY,
+        GROUP,
+        HAVING,
+        IN,
+        INNER_JOIN,
+        INNER,
+        INTERVAL,
+        IS_NOT,
+        IS,
+        JOIN,
+        LEFT_JOIN,
+        LEFT_OUTER_JOIN,
+        LEFT,
+        LIKE,
+        LIMIT,
+        NOCASE,
+        NOT_BETWEEN,
+        NOT_IN,
+        NOT_LIKE,
+        NOT_RLIKE,
+        NOT,
+        NULL,
+        OFFSET,
+        ON,
+        OR,
+        ORDER_BY,
+        ORDER,
+        OUTER,
+        OVER,
+        PARTITION_BY,
+        PARTITION,
+        RIGHT_JOIN,
+        RIGHT_OUTER_JOIN,
+        RIGHT,
+        RLIKE,
+        SELECT_DISTINCT,
+        SELECT,
+        THEN,
+        TOP,
+        TRUE,
+        UNION_ALL,
+        UNION,
+        USING,
+        WHEN,
+        WHERE,
+        WITH,
+        WITHIN_GROUP,
+        WITHIN,
+    ]
+)
 
 LB = Literal("(").suppress()
 RB = Literal(")").suppress()
@@ -295,8 +298,8 @@ durations = {
     "day": "day",
     "d": "day",
     "dayofweek": "dow",
-    "dow":"dow",
-    "weekday":"dow",
+    "dow": "dow",
+    "weekday": "dow",
     "weeks": "week",
     "week": "week",
     "w": "week",
@@ -349,16 +352,15 @@ BYTES = (Keyword("bytes", caseless=True)("op") + _size).addParseAction(to_json_c
 CHAR = (Keyword("char", caseless=True)("op") + _size).addParseAction(to_json_call)
 VARCHAR = (Keyword("varchar", caseless=True)("op") + _size).addParseAction(to_json_call)
 
-DECIMAL = (
-    Keyword("decimal", caseless=True)("op") + _sizes
-).addParseAction(to_json_call)
+DECIMAL = (Keyword("decimal", caseless=True)("op") + _sizes).addParseAction(
+    to_json_call
+)
 DOUBLE_PRECISION = (
-    Keyword("double", caseless=True)
-    + Keyword("precision", caseless=True)("op")
+    Keyword("double", caseless=True) + Keyword("precision", caseless=True)("op")
 ).addParseAction(lambda: {"double_precision": {}})
-NUMERIC = (
-    Keyword("numeric", caseless=True)("op") + _sizes
-).addParseAction(to_json_call)
+NUMERIC = (Keyword("numeric", caseless=True)("op") + _sizes).addParseAction(
+    to_json_call
+)
 
 
 DATE = Keyword("date", caseless=True)
@@ -368,7 +370,7 @@ TIMESTAMP = Keyword("timestamp", caseless=True)
 TIMESTAMPTZ = Keyword("timestamptz", caseless=True)
 TIMETZ = Keyword("timetz", caseless=True)
 
-time_functions = (DATE | DATETIME | TIME | TIMESTAMP | TIMESTAMPTZ | TIMETZ)
+time_functions = DATE | DATETIME | TIME | TIMESTAMP | TIMESTAMPTZ | TIMETZ
 
 # KNOWNN TIME TYPES
 _format = Optional(Regex(r'\"(\"\"|[^"])*\"')("params").addParseAction(unquote))
@@ -380,34 +382,36 @@ TIMESTAMP_TYPE = (TIMESTAMP("op") + _format).addParseAction(to_json_call)
 TIMESTAMPTZ_TYPE = (TIMESTAMPTZ("op") + _format).addParseAction(to_json_call)
 TIMETZ_TYPE = (TIMETZ("op") + _format).addParseAction(to_json_call)
 
-known_types = MatchFirst([
-    ARRAY,
-    BIGINT,
-    BOOL,
-    BOOLEAN,
-    BLOB,
-    BYTES,
-    CHAR,
-    DATE_TYPE,
-    DATETIME_TYPE,
-    DECIMAL,
-    DOUBLE_PRECISION,
-    DOUBLE,
-    FLOAT64,
-    GEOMETRY,
-    INTEGER,
-    INT,
-    INT32,
-    INT64,
-    NUMERIC,
-    REAL,
-    TEXT,
-    SMALLINT,
-    STRING,
-    STRUCT,
-    TIME_TYPE,
-    TIMESTAMP_TYPE,
-    TIMESTAMPTZ_TYPE,
-    TIMETZ_TYPE,
-    VARCHAR,
-])
+known_types = MatchFirst(
+    [
+        ARRAY,
+        BIGINT,
+        BOOL,
+        BOOLEAN,
+        BLOB,
+        BYTES,
+        CHAR,
+        DATE_TYPE,
+        DATETIME_TYPE,
+        DECIMAL,
+        DOUBLE_PRECISION,
+        DOUBLE,
+        FLOAT64,
+        GEOMETRY,
+        INTEGER,
+        INT,
+        INT32,
+        INT64,
+        NUMERIC,
+        REAL,
+        TEXT,
+        SMALLINT,
+        STRING,
+        STRUCT,
+        TIME_TYPE,
+        TIMESTAMP_TYPE,
+        TIMESTAMPTZ_TYPE,
+        TIMETZ_TYPE,
+        VARCHAR,
+    ]
+)

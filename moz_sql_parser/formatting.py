@@ -7,16 +7,13 @@
 # Author: Beto Dealmeida (beto@dealmeida.net)
 #
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import unicode_literals
+from __future__ import absolute_import, division, unicode_literals
 
 import re
 
 from mo_dots import split_field
-from mo_future import string_types, text, first, long, is_text
-
-from moz_sql_parser.keywords import join_keywords, precedence, RESERVED
+from mo_future import first, is_text, long, string_types, text
+from moz_sql_parser.keywords import RESERVED, join_keywords, precedence
 from moz_sql_parser.utils import binary_ops
 
 VALID = re.compile(r"^[a-zA-Z_]\w*$")
@@ -330,7 +327,13 @@ class Formatter:
 
     def select(self, json):
         if "select" in json:
-            return "SELECT {0}".format(self.dispatch(json["select"]))
+            if "top" in json:
+                return "SELECT TOP ({0}) {1} ".format(
+                    self.dispatch(json["top"]),
+                    self.dispatch(json["select"]),
+                )
+            else:
+                return "SELECT {0}".format(self.dispatch(json["select"]))
 
     def select_distinct(self, json):
         if "select_distinct" in json:
@@ -373,10 +376,16 @@ class Formatter:
             orderby = json["orderby"]
             if isinstance(orderby, dict):
                 orderby = [orderby]
-            return "ORDER BY {0}".format(",".join([
-                "{0} {1}".format(self.dispatch(o), o.get("sort", "").upper()).strip()
-                for o in orderby
-            ]))
+            return "ORDER BY {0}".format(
+                ",".join(
+                    [
+                        "{0} {1}".format(
+                            self.dispatch(o), o.get("sort", "").upper()
+                        ).strip()
+                        for o in orderby
+                    ]
+                )
+            )
 
     def limit(self, json):
         if "limit" in json:
