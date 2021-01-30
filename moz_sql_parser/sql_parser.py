@@ -9,12 +9,11 @@
 
 from __future__ import absolute_import, division, unicode_literals
 
-from mo_parsing.helpers import restOfLine, delimitedList
-
 from mo_parsing.engine import Engine
+from mo_parsing.helpers import delimitedList, restOfLine
 from moz_sql_parser.keywords import *
 from moz_sql_parser.utils import *
-from moz_sql_parser.windows import window, sortColumn
+from moz_sql_parser.windows import sortColumn, window
 
 engine = Engine().use()
 engine.add_ignore(Literal("--") + restOfLine)
@@ -206,6 +205,7 @@ join = (
 
 unordered_sql = Group(
     SELECT
+    + Optional(TOP + expr("top"))
     + delimitedList(selectColumn)("select")
     + Optional(
         (FROM + delimitedList(Group(table_source)) + ZeroOrMore(join))("from")

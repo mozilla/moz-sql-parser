@@ -12,7 +12,6 @@ import json
 from unittest import TestCase
 
 from mo_dots import Null
-
 from mo_parsing.debug import Debugger
 from moz_sql_parser import parse
 
@@ -603,8 +602,8 @@ class TestSimple(TestCase):
 
     def test_issue_68a(self):
         sql = """
-        SELECT * 
-        FROM aka_name AS an, cast_info AS ci, info_type AS it, link_type AS lt, movie_link AS ml, name AS n, person_info AS pi, title AS t 
+        SELECT *
+        FROM aka_name AS an, cast_info AS ci, info_type AS it, link_type AS lt, movie_link AS ml, name AS n, person_info AS pi, title AS t
         WHERE
             an.name  is not NULL
             and (an.name LIKE '%a%' or an.name LIKE 'A%')
@@ -614,16 +613,16 @@ class TestSimple(TestCase):
             AND (n.gender = 'm' OR (n.gender = 'f' AND n.name LIKE 'A%'))
             AND pi.note  is not NULL
             AND t.production_year BETWEEN 1980 AND 2010
-            AND n.id = an.person_id 
-            AND n.id = pi.person_id 
-            AND ci.person_id = n.id 
-            AND t.id = ci.movie_id 
-            AND ml.linked_movie_id = t.id 
-            AND lt.id = ml.link_type_id 
-            AND it.id = pi.info_type_id 
-            AND pi.person_id = an.person_id 
-            AND pi.person_id = ci.person_id 
-            AND an.person_id = ci.person_id 
+            AND n.id = an.person_id
+            AND n.id = pi.person_id
+            AND ci.person_id = n.id
+            AND t.id = ci.movie_id
+            AND ml.linked_movie_id = t.id
+            AND lt.id = ml.link_type_id
+            AND it.id = pi.info_type_id
+            AND pi.person_id = an.person_id
+            AND pi.person_id = ci.person_id
+            AND an.person_id = ci.person_id
             AND ci.movie_id = ml.linked_movie_id
         """
         result = parse(sql)
@@ -1202,5 +1201,31 @@ class TestSimple(TestCase):
                     },
                     "value": {"rank": "*"},
                 },
+            },
+        )
+
+    def test_select_top_5(self):
+        sql = """
+select	TOP (5)
+	country_code,
+	impact_code,
+	impact_description,
+	number_sites
+from	EUNIS.v1.BISE_Country_Threats_Pressures_Number_Sites
+order by number_sites desc"""
+        result = parse(sql)
+
+        self.assertEqual(
+            result,
+            {
+                "top": 5,
+                "select": [
+                    {"value": "country_code"},
+                    {"value": "impact_code"},
+                    {"value": "impact_description"},
+                    {"value": "number_sites"},
+                ],
+                "from": "EUNIS.v1.BISE_Country_Threats_Pressures_Number_Sites",
+                "orderby": {"value": "number_sites", "sort": "desc"},
             },
         )

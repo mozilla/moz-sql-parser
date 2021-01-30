@@ -164,7 +164,9 @@ class Keyword(Token):
 
         non_word = "($|(?!" + regex_range(ident_chars) + "))"
         self.set_config(
-            ident_chars=ident_chars, match=match, regex=regex_compile(pattern + non_word)
+            ident_chars=ident_chars,
+            match=match,
+            regex=regex_compile(pattern + non_word),
         )
 
         self.parser_name = match
@@ -205,8 +207,7 @@ class CaselessLiteral(Literal):
     def __init__(self, match):
         Literal.__init__(self, match.upper())
         self.set_config(
-            match=match,
-            regex=regex_compile(regex_caseless(match)),
+            match=match, regex=regex_compile(regex_caseless(match)),
         )
         self.parser_name = repr(self.parser_config.regex.pattern)
 
@@ -287,7 +288,7 @@ class Word(Token):
         max=None,
         exact=0,
         as_keyword=False,  # IF WE EXPECT NON-WORD CHARACTERS BEFORE AND AFTER
-        exclude='',
+        exclude="",
     ):
         Token.__init__(self)
 
@@ -303,9 +304,7 @@ class Word(Token):
             )
 
         if body_chars == init_chars:
-            prec, regexp = Char(
-                init_chars, exclude=exclude
-            )[min:max].__regex__()
+            prec, regexp = Char(init_chars, exclude=exclude)[min:max].__regex__()
         elif max is None or max == MAX_INT:
             prec, regexp = (
                 Char(init_chars, exclude=exclude)
@@ -325,7 +324,7 @@ class Word(Token):
 
     def copy(self):
         output = Token.copy(self)
-        output.regex=self.regex
+        output.regex = self.regex
         return output
 
     def parseImpl(self, string, start, doActions=True):
@@ -371,11 +370,7 @@ class Char(Token):
 
         if asKeyword:
             regex = r"\b%s\b" % self
-        self.set_config(
-            regex=regex_compile(regex),
-            include=include,
-            exclude=exclude
-        )
+        self.set_config(regex=regex_compile(regex), include=include, exclude=exclude)
 
     def parseImpl(self, string, start, doActions=True):
         found = self.parser_config.regex.match(string, start)
@@ -609,9 +604,7 @@ class LineEnd(_PositionToken):
     def __init__(self):
         with Engine(" \t") as e:
             super(LineEnd, self).__init__()
-            self.set_config(
-                lock_engine=e, regex=regex_compile("\\r?(\\n|$)")
-            )
+            self.set_config(lock_engine=e, regex=regex_compile("\\r?(\\n|$)"))
 
     def parseImpl(self, string, start, doActions=True):
         found = self.parser_config.regex.match(string, start)

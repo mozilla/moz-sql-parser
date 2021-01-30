@@ -1,5 +1,4 @@
 from mo_dots import Null
-
 from moz_sql_parser.utils import *
 
 # SQL CONSTANTS
@@ -100,8 +99,8 @@ IS_NOT = Group(IS + NOT).set_parser_name("is_not")
 
 _SIMILAR = Keyword("similar", caseless=True)
 _TO = Keyword("to", caseless=True)
-SIMILAR_TO = Group(_SIMILAR+_TO).set_parser_name("is_not")
-NOT_SIMILAR_TO = Group(_SIMILAR+_TO).set_parser_name("is_not")
+SIMILAR_TO = Group(_SIMILAR + _TO).set_parser_name("is_not")
+NOT_SIMILAR_TO = Group(_SIMILAR + _TO).set_parser_name("is_not")
 
 RESERVED = MatchFirst([
     ALL,
@@ -296,8 +295,8 @@ durations = {
     "day": "day",
     "d": "day",
     "dayofweek": "dow",
-    "dow":"dow",
-    "weekday":"dow",
+    "dow": "dow",
+    "weekday": "dow",
     "weeks": "week",
     "week": "week",
     "w": "week",
@@ -354,8 +353,7 @@ DECIMAL = (
     Keyword("decimal", caseless=True)("op") + _sizes
 ).addParseAction(to_json_call)
 DOUBLE_PRECISION = (
-    Keyword("double", caseless=True)
-    + Keyword("precision", caseless=True)("op")
+    Keyword("double", caseless=True) + Keyword("precision", caseless=True)("op")
 ).addParseAction(lambda: {"double_precision": {}})
 NUMERIC = (
     Keyword("numeric", caseless=True)("op") + _sizes
@@ -369,7 +367,7 @@ TIMESTAMP = Keyword("timestamp", caseless=True)
 TIMESTAMPTZ = Keyword("timestamptz", caseless=True)
 TIMETZ = Keyword("timetz", caseless=True)
 
-time_functions = (DATE | DATETIME | TIME | TIMESTAMP | TIMESTAMPTZ | TIMETZ)
+time_functions = DATE | DATETIME | TIME | TIMESTAMP | TIMESTAMPTZ | TIMETZ
 
 # KNOWNN TIME TYPES
 _format = Optional(Regex(r'\"(\"\"|[^"])*\"')("params").addParseAction(unquote))

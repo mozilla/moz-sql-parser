@@ -582,11 +582,17 @@ def withAttribute(**attr):
     :param attr:  Expecting named parameters set to the expected value
     :return:  Raise an exception if there is no match
     """
+
     def pa(tokens, loc, string):
         for name, expected_value in attr.items():
             if name not in tokens:
-                raise ParseException(tokens.type, loc, string, f"is expecting {name} attribute")
-            if expected_value != withAttribute.ANY_VALUE and tokens[name] != expected_value:
+                raise ParseException(
+                    tokens.type, loc, string, f"is expecting {name} attribute"
+                )
+            if (
+                expected_value != withAttribute.ANY_VALUE
+                and tokens[name] != expected_value
+            ):
                 raise ParseException(
                     tokens.type,
                     loc,

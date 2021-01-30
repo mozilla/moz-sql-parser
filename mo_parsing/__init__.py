@@ -42,7 +42,8 @@ from mo_parsing.enhancement import (
     SkipTo,
     Suppress,
     TokenConverter,
-    ZeroOrMore, Many,
+    ZeroOrMore,
+    Many,
 )
 from mo_parsing.exceptions import (
     ParseException,
