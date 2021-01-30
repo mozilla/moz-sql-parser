@@ -100,7 +100,14 @@ namedColumn = Group(
 )
 
 distinct = (
-    DISTINCT("op") + delimitedList(namedColumn)("params")
+    (
+        DISTINCT("op")
+        | TOP("op")
+        + expr("limit")
+        + Optional(Keyword("percent", caseless=True))("percent")
+        + Optional(WITH + Keyword("ties", caseless=True))("ties")
+    )
+    + delimitedList(namedColumn)("params")
 ).addParseAction(to_json_call)
 
 ordered_sql = Forward()
