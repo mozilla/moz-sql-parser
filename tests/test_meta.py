@@ -26,4 +26,3 @@ class TestSimple(TestCase):
         if os.environ.get("TRAVIS_BRANCH") == "master":
             limit = sys.getrecursionlimit()
             self.assertLess(limit, 1500)
-

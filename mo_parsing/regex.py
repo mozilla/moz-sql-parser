@@ -189,10 +189,10 @@ regex = Forward()
 line_start = Literal("^").addParseAction(lambda: LineStart())
 line_end = Literal("$").addParseAction(lambda: LineEnd())
 word_edge = Literal("\\b").addParseAction(lambda: NotAny(any_wordchar))
-simple_char = Word(printables, exclude=r".^$*+{}[]\|()").addParseAction(lambda t: Literal(t.value()))
-esc_char = (
-    "\\" + AnyChar()
-).addParseAction(lambda t: Literal(t.value()[1]))
+simple_char = Word(
+    printables, exclude=r".^$*+{}[]\|()"
+).addParseAction(lambda t: Literal(t.value()))
+esc_char = ("\\" + AnyChar()).addParseAction(lambda t: Literal(t.value()[1]))
 
 with Engine():
     # ALLOW SPACES IN THE RANGE
@@ -218,9 +218,21 @@ non_capture = ("(?:" + regex + ")").addParseAction(lambda t: t["value"])
 
 
 named = (
-    Literal("(?P<").addParseAction(INC) + Word(alphanums + "_")("name") + ">" + regex + ")"
-).addParseAction(name_token).addParseAction(DEC)
-group = (LB.addParseAction(INC) + regex + ")").addParseAction(name_token).addParseAction(DEC)
+    (
+        Literal("(?P<").addParseAction(INC)
+        + Word(alphanums + "_")("name")
+        + ">"
+        + regex
+        + ")"
+    )
+    .addParseAction(name_token)
+    .addParseAction(DEC)
+)
+group = (
+    (LB.addParseAction(INC) + regex + ")")
+    .addParseAction(name_token)
+    .addParseAction(DEC)
+)
 
 term = (
     macro
@@ -355,7 +367,7 @@ class Regex(ParseEnhancement):
     def streamline(self):
         # WE RUN THE DANGER OF MAKING PATHELOGICAL REGEX, SO WE DO NOT TRY
         if self.streamlined:
-           return self
+            return self
 
         expr = self.expr.streamline()
         if expr is self:

@@ -114,7 +114,7 @@ def regex_range(s, exclude=False):
     def esc(s):
         r = re.escape(s)
         o = _escapes.get(s, s)
-        if s not in "\t\r\n #~&" and r!=o:
+        if s not in "\t\r\n #~&" and r != o:
             Log.error("expecting same")
         return o
 
@@ -241,11 +241,16 @@ builtin_lookup = {"".join.__name__: ("iterable",)}
 def is_forward(expr):
     return expr.__class__.__name__ == "Forward"
 
+
 def is_backtracking(expr):
     """
     RETURN true IF THIS CAN BE EXPENSIVE BACKTRACKER
     """
-    return isinstance(expr, Many) and expr.parser_config.max_match - expr.parser_config.min_match > 3
+    return (
+        isinstance(expr, Many)
+        and expr.parser_config.max_match - expr.parser_config.min_match > 3
+    )
+
 
 def forward_type(expr):
     """
