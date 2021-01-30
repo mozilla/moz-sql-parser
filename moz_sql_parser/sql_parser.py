@@ -25,17 +25,15 @@ mysql_ident = Regex(r"\`(\`\`|[^`])*\`").addParseAction(unquote)
 sqlserver_ident = Regex(r"\[(\]\]|[^\]])*\]").addParseAction(unquote)
 ident = Combine(
     ~RESERVED
-    + (
-        delimitedList(
-            Literal("*")
-            | literal_string
-            | mysql_ident
-            | sqlserver_ident
-            | Word(IDENT_CHAR),
-            separator=".",
-            combine=True,
-        )
-    )
+    + (delimitedList(
+        Literal("*")
+        | literal_string
+        | mysql_ident
+        | sqlserver_ident
+        | Word(IDENT_CHAR),
+        separator=".",
+        combine=True,
+    ))
 ).set_parser_name("identifier")
 
 # EXPRESSIONS
@@ -43,11 +41,9 @@ ident = Combine(
 # CASE
 case = (
     CASE
-    + Group(
-        ZeroOrMore(
-            (WHEN + expr("when") + THEN + expr("then")).addParseAction(to_when_call)
-        )
-    )("case")
+    + Group(ZeroOrMore(
+        (WHEN + expr("when") + THEN + expr("then")).addParseAction(to_when_call)
+    ))("case")
     + Optional(ELSE + expr("else"))
     + END
 ).addParseAction(to_case_call)
@@ -56,11 +52,9 @@ case = (
 switch = (
     CASE
     + expr("value")
-    + Group(
-        ZeroOrMore(
-            (WHEN + expr("when") + THEN + expr("then")).addParseAction(to_when_call)
-        )
-    )("case")
+    + Group(ZeroOrMore(
+        (WHEN + expr("when") + THEN + expr("then")).addParseAction(to_when_call)
+    ))("case")
     + Optional(ELSE + expr("else"))
     + END
 ).addParseAction(to_switch_call)
@@ -70,29 +64,24 @@ cast = Group(
     CAST("op") + LB + expr("params") + AS + known_types("params") + RB
 ).addParseAction(to_json_call)
 
-_standard_time_intervals = MatchFirst(
-    [
-        Keyword(d, caseless=True).addParseAction(lambda t: durations[t[0].lower()])
-        for d in durations.keys()
-    ]
-).set_parser_name("duration")("params")
+_standard_time_intervals = MatchFirst([
+    Keyword(d, caseless=True).addParseAction(lambda t: durations[t[0].lower()])
+    for d in durations.keys()
+]).set_parser_name("duration")("params")
 
 duration = (realNum | intNum)("params") + _standard_time_intervals
 
-interval = (INTERVAL + ("'" + delimitedList(duration) + "'" | duration)).addParseAction(
-    to_interval_call
-)
+interval = (
+    INTERVAL + ("'" + delimitedList(duration) + "'" | duration)
+).addParseAction(to_interval_call)
 
 timestamp = (
     time_functions("op")
     + (
         sqlString("params")
-        | MatchFirst(
-            [
-                Keyword(t, caseless=True).addParseAction(lambda t: t.lower())
-                for t in times
-            ]
-        )("params")
+        | MatchFirst([
+            Keyword(t, caseless=True).addParseAction(lambda t: t.lower()) for t in times
+        ])("params")
     )
 ).addParseAction(to_json_call)
 
@@ -109,9 +98,9 @@ namedColumn = Group(
     Group(expr)("value") + Optional(Optional(AS) + Group(ident))("name")
 )
 
-distinct = (DISTINCT("op") + delimitedList(namedColumn)("params")).addParseAction(
-    to_json_call
-)
+distinct = (
+    DISTINCT("op") + delimitedList(namedColumn)("params")
+).addParseAction(to_json_call)
 
 ordered_sql = Forward()
 
@@ -119,9 +108,9 @@ call_function = (
     ident("op")
     + LB
     + Optional(Group(ordered_sql) | delimitedList(expr))("params")
-    + Optional(Keyword("ignore", caseless=True) + Keyword("nulls", caseless=True))(
-        "ignore_nulls"
-    )
+    + Optional(
+        Keyword("ignore", caseless=True) + Keyword("nulls", caseless=True)
+    )("ignore_nulls")
     + RB
 ).addParseAction(to_json_call)
 

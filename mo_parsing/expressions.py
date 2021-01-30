@@ -22,7 +22,8 @@ from mo_parsing.utils import (
     Log,
     append_config,
     regex_caseless,
-    regex_compile, is_backtracking,
+    regex_compile,
+    is_backtracking,
 )
 
 LOOKUP_COST = 5

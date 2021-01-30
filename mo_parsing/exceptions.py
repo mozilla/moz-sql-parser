@@ -169,4 +169,5 @@ class RecursiveGrammarException(Exception):
             str(e) for e in self.parseElementTrace
         ])
 
+
 export("mo_parsing.utils", ParseException)

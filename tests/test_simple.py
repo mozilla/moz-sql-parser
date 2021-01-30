@@ -69,16 +69,12 @@ class TestSimple(TestCase):
         #               0123456789012345678901234567890123456789012345678901234567890123456789
         result = parse("SELECT a + b/2 + 45*c + (2/d) from dual")
         expected = {
-            "select": {
-                "value": {
-                    "add": [
-                        "a",
-                        {"div": ["b", 2]},
-                        {"mul": [45, "c"]},
-                        {"div": [2, "d"]},
-                    ]
-                }
-            },
+            "select": {"value": {"add": [
+                "a",
+                {"div": ["b", 2]},
+                {"mul": [45, "c"]},
+                {"div": [2, "d"]},
+            ]}},
             "from": "dual",
         }
         self.assertEqual(result, expected)
@@ -155,12 +151,10 @@ class TestSimple(TestCase):
         expected = {
             "select": {"value": "a"},
             "from": "dual",
-            "where": {
-                "and": [
-                    {"in": ["a", {"literal": ["r", "g", "b"]}]},
-                    {"in": ["b", [10, 11, 12]]},
-                ]
-            },
+            "where": {"and": [
+                {"in": ["a", {"literal": ["r", "g", "b"]}]},
+                {"in": ["b", [10, 11, 12]]},
+            ]},
         }
         self.assertEqual(result, expected)
 
@@ -281,12 +275,10 @@ class TestSimple(TestCase):
             "from": "table1",
             "select": {
                 "name": "bb",
-                "value": {
-                    "case": [
-                        {"when": {"like": ["A", {"literal": "bb%"}]}, "then": 1},
-                        0,
-                    ]
-                },
+                "value": {"case": [
+                    {"when": {"like": ["A", {"literal": "bb%"}]}, "then": 1},
+                    0,
+                ]},
             },
         }
         self.assertEqual(result, expected)
@@ -299,12 +291,10 @@ class TestSimple(TestCase):
             "from": "table1",
             "select": {
                 "name": "bb",
-                "value": {
-                    "case": [
-                        {"when": {"not_like": ["A", {"literal": "bb%"}]}, "then": 1},
-                        0,
-                    ]
-                },
+                "value": {"case": [
+                    {"when": {"not_like": ["A", {"literal": "bb%"}]}, "then": 1},
+                    0,
+                ]},
             },
         }
         self.assertEqual(result, expected)
@@ -316,13 +306,11 @@ class TestSimple(TestCase):
         )
         expected = {
             "from": "trade",
-            "where": {
-                "and": [
-                    {"like": ["school", {"literal": "%shool"}]},
-                    {"eq": ["name", {"literal": "abc"}]},
-                    {"in": ["id", {"literal": ["1", "2"]}]},
-                ]
-            },
+            "where": {"and": [
+                {"like": ["school", {"literal": "%shool"}]},
+                {"eq": ["name", {"literal": "abc"}]},
+                {"in": ["id", {"literal": ["1", "2"]}]},
+            ]},
             "select": "*",
         }
         self.assertEqual(result, expected)
@@ -353,12 +341,10 @@ class TestSimple(TestCase):
             "from": "table1",
             "select": {
                 "name": "bb",
-                "value": {
-                    "case": [
-                        {"when": {"rlike": ["A", {"literal": "bb.*"}]}, "then": 1},
-                        0,
-                    ]
-                },
+                "value": {"case": [
+                    {"when": {"rlike": ["A", {"literal": "bb.*"}]}, "then": 1},
+                    0,
+                ]},
             },
         }
         self.assertEqual(result, expected)
@@ -371,12 +357,10 @@ class TestSimple(TestCase):
             "from": "table1",
             "select": {
                 "name": "bb",
-                "value": {
-                    "case": [
-                        {"when": {"not_rlike": ["A", {"literal": "bb.*"}]}, "then": 1},
-                        0,
-                    ]
-                },
+                "value": {"case": [
+                    {"when": {"not_rlike": ["A", {"literal": "bb.*"}]}, "then": 1},
+                    0,
+                ]},
             },
         }
         self.assertEqual(result, expected)
@@ -388,12 +372,10 @@ class TestSimple(TestCase):
         expected = {
             "from": "task",
             "select": "*",
-            "where": {
-                "in": [
-                    "repo.branch.name",
-                    {"literal": ["try", "mozilla-central"]},
-                ]
-            },
+            "where": {"in": [
+                "repo.branch.name",
+                {"literal": ["try", "mozilla-central"]},
+            ]},
         }
         self.assertEqual(result, expected)
 
@@ -405,12 +387,10 @@ class TestSimple(TestCase):
         expected = {
             "from": "task",
             "select": "*",
-            "where": {
-                "nin": [
-                    "repo.branch.name",
-                    {"literal": ["try", "mozilla-central"]},
-                ]
-            },
+            "where": {"nin": [
+                "repo.branch.name",
+                {"literal": ["try", "mozilla-central"]},
+            ]},
         }
         self.assertEqual(result, expected)
 
@@ -440,12 +420,10 @@ class TestSimple(TestCase):
         expected = {
             "select": "*",
             "from": "task",
-            "where": {
-                "and": [
-                    {"exists": "build.product"},
-                    {"neq": ["build.product", {"literal": "firefox"}]},
-                ]
-            },
+            "where": {"and": [
+                {"exists": "build.product"},
+                {"neq": ["build.product", {"literal": "firefox"}]},
+            ]},
         }
         self.assertEqual(result, expected)
 
@@ -496,12 +474,10 @@ class TestSimple(TestCase):
     def test_union(self):
         result = parse("SELECT b FROM t6 UNION SELECT '3' AS x ORDER BY x")
         expected = {
-            "from": {
-                "union": [
-                    {"from": "t6", "select": {"value": "b"}},
-                    {"select": {"value": {"literal": "3"}, "name": "x"}},
-                ]
-            },
+            "from": {"union": [
+                {"from": "t6", "select": {"value": "b"}},
+                {"select": {"value": {"literal": "3"}, "name": "x"}},
+            ]},
             "orderby": {"value": "x"},
         }
         self.assertEqual(result, expected)
@@ -615,14 +591,12 @@ class TestSimple(TestCase):
                 {"value": "movie_link", "name": "ml"},
                 {"value": "title", "name": "t"},
             ],
-            "where": {
-                "and": [
-                    {"neq": ["cn.country_code", {"literal": "[pl]"}]},
-                    {"exists": "ct.kind"},
-                    {"gt": ["t.production_year", 1950]},
-                    {"eq": ["ml.movie_id", "t.id"]},
-                ]
-            },
+            "where": {"and": [
+                {"neq": ["cn.country_code", {"literal": "[pl]"}]},
+                {"exists": "ct.kind"},
+                {"gt": ["t.production_year", 1950]},
+                {"eq": ["ml.movie_id", "t.id"]},
+            ]},
         }
         self.assertEqual(result, expected)
 
@@ -664,62 +638,44 @@ class TestSimple(TestCase):
                 {"name": "t", "value": "title"},
             ],
             "select": "*",
-            "where": {
-                "and": [
-                    {"exists": "an.name"},
-                    {
-                        "or": [
-                            {"like": ["an.name", {"literal": "%a%"}]},
-                            {"like": ["an.name", {"literal": "A%"}]},
-                        ]
-                    },
-                    {"eq": ["it.info", {"literal": "mini biography"}]},
-                    {
-                        "in": [
-                            "lt.link",
-                            {
-                                "literal": [
-                                    "references",
-                                    "referenced in",
-                                    "features",
-                                    "featured in",
-                                ]
-                            },
-                        ]
-                    },
-                    {
-                        "between": [
-                            "n.name_pcode_cf",
-                            {"literal": "A"},
-                            {"literal": "F"},
-                        ]
-                    },
-                    {
-                        "or": [
-                            {"eq": ["n.gender", {"literal": "m"}]},
-                            {
-                                "and": [
-                                    {"eq": ["n.gender", {"literal": "f"}]},
-                                    {"like": ["n.name", {"literal": "A%"}]},
-                                ]
-                            },
-                        ]
-                    },
-                    {"exists": "pi.note"},
-                    {"between": ["t.production_year", 1980, 2010]},
-                    {"eq": ["n.id", "an.person_id"]},
-                    {"eq": ["n.id", "pi.person_id"]},
-                    {"eq": ["ci.person_id", "n.id"]},
-                    {"eq": ["t.id", "ci.movie_id"]},
-                    {"eq": ["ml.linked_movie_id", "t.id"]},
-                    {"eq": ["lt.id", "ml.link_type_id"]},
-                    {"eq": ["it.id", "pi.info_type_id"]},
-                    {"eq": ["pi.person_id", "an.person_id"]},
-                    {"eq": ["pi.person_id", "ci.person_id"]},
-                    {"eq": ["an.person_id", "ci.person_id"]},
-                    {"eq": ["ci.movie_id", "ml.linked_movie_id"]},
-                ]
-            },
+            "where": {"and": [
+                {"exists": "an.name"},
+                {"or": [
+                    {"like": ["an.name", {"literal": "%a%"}]},
+                    {"like": ["an.name", {"literal": "A%"}]},
+                ]},
+                {"eq": ["it.info", {"literal": "mini biography"}]},
+                {"in": [
+                    "lt.link",
+                    {"literal": [
+                        "references",
+                        "referenced in",
+                        "features",
+                        "featured in",
+                    ]},
+                ]},
+                {"between": ["n.name_pcode_cf", {"literal": "A"}, {"literal": "F"}]},
+                {"or": [
+                    {"eq": ["n.gender", {"literal": "m"}]},
+                    {"and": [
+                        {"eq": ["n.gender", {"literal": "f"}]},
+                        {"like": ["n.name", {"literal": "A%"}]},
+                    ]},
+                ]},
+                {"exists": "pi.note"},
+                {"between": ["t.production_year", 1980, 2010]},
+                {"eq": ["n.id", "an.person_id"]},
+                {"eq": ["n.id", "pi.person_id"]},
+                {"eq": ["ci.person_id", "n.id"]},
+                {"eq": ["t.id", "ci.movie_id"]},
+                {"eq": ["ml.linked_movie_id", "t.id"]},
+                {"eq": ["lt.id", "ml.link_type_id"]},
+                {"eq": ["it.id", "pi.info_type_id"]},
+                {"eq": ["pi.person_id", "an.person_id"]},
+                {"eq": ["pi.person_id", "ci.person_id"]},
+                {"eq": ["an.person_id", "ci.person_id"]},
+                {"eq": ["ci.movie_id", "ml.linked_movie_id"]},
+            ]},
         }
         self.assertEqual(result, expected)
 
@@ -734,17 +690,13 @@ class TestSimple(TestCase):
         expected = {
             "select": {"value": {"count": "*"}, "name": "CNT"},
             "from": "test.tb",
-            "where": {
-                "and": [
-                    {
-                        "in": [
-                            "id",
-                            [{"unhex": {"literal": "1"}}, {"unhex": {"literal": "2"}}],
-                        ]
-                    },
-                    {"eq": ["status", 1]},
-                ]
-            },
+            "where": {"and": [
+                {"in": [
+                    "id",
+                    [{"unhex": {"literal": "1"}}, {"unhex": {"literal": "2"}}],
+                ]},
+                {"eq": ["status", 1]},
+            ]},
         }
         self.assertEqual(result, expected)
 
@@ -817,24 +769,20 @@ class TestSimple(TestCase):
         #               012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789
         result = parse("SELECT b FROM t6 UNION ALL SELECT '3' AS x ORDER BY x")
         expected = {
-            "from": {
-                "union_all": [
-                    {"from": "t6", "select": {"value": "b"}},
-                    {"select": {"value": {"literal": "3"}, "name": "x"}},
-                ]
-            },
+            "from": {"union_all": [
+                {"from": "t6", "select": {"value": "b"}},
+                {"select": {"value": {"literal": "3"}, "name": "x"}},
+            ]},
             "orderby": {"value": "x"},
         }
         self.assertEqual(result, expected)
 
     def test_union_all2(self):
         result = parse("SELECT b UNION ALL SELECT c")
-        expected = {
-            "union_all": [
-                {"select": {"value": "b"}},
-                {"select": {"value": "c"}},
-            ]
-        }
+        expected = {"union_all": [
+            {"select": {"value": "b"}},
+            {"select": {"value": "c"}},
+        ]}
         self.assertEqual(result, expected)
 
     def test_issue106(self):
@@ -852,12 +800,10 @@ class TestSimple(TestCase):
             "select": "*",
             "from": "MyTable",
             "groupby": {"value": "Col"},
-            "having": {
-                "or": [
-                    {"and": [{"gte": [{"avg": "X"}, 2]}, {"lte": [{"avg": "X"}, 4]}]},
-                    {"eq": [{"avg": "X"}, 5]},
-                ]
-            },
+            "having": {"or": [
+                {"and": [{"gte": [{"avg": "X"}, 2]}, {"lte": [{"avg": "X"}, 4]}]},
+                {"eq": [{"avg": "X"}, 5]},
+            ]},
         }
         self.assertEqual(result, expected)
 
@@ -932,13 +878,11 @@ class TestSimple(TestCase):
                 {"name": "manager_name", "value": "m.ename"},
                 {"name": "mgr_dept_count", "value": "dc2.dept_count"},
             ],
-            "where": {
-                "and": [
-                    {"eq": ["e.deptno", "dc1.deptno"]},
-                    {"eq": ["e.mgr", "m.empno"]},
-                    {"eq": ["m.deptno", "dc2.deptno"]},
-                ]
-            },
+            "where": {"and": [
+                {"eq": ["e.deptno", "dc1.deptno"]},
+                {"eq": ["e.mgr", "m.empno"]},
+                {"eq": ["m.deptno", "dc2.deptno"]},
+            ]},
         }
 
         self.assertEqual(result, expected)
@@ -956,10 +900,7 @@ class TestSimple(TestCase):
                 {"name": "a", "value": {"select": {"value": 1}}},
                 {"name": "b", "value": {"select": {"value": 2}}},
             ],
-            "union_all": [
-                {"select": "*", "from": "a"},
-                {"select": "*", "from": "b"},
-            ],
+            "union_all": [{"select": "*", "from": "a"}, {"select": "*", "from": "b"},],
         }
         self.assertEqual(result, expected)
 
@@ -1003,33 +944,24 @@ class TestSimple(TestCase):
         expected = {
             "from": "city",
             "select": {"value": "city_name"},
-            "where": {
-                "eq": [
-                    "population",
-                    {
-                        "from": "city",
-                        "select": {"value": {"max": "population"}},
-                        "where": {
-                            "in": [
-                                "state_name",
-                                {
-                                    "from": "state",
-                                    "select": {"value": "state_name"},
-                                    "where": {
-                                        "eq": [
-                                            "area",
-                                            {
-                                                "from": "state",
-                                                "select": {"value": {"min": "area"}},
-                                            },
-                                        ]
-                                    },
-                                },
-                            ]
+            "where": {"eq": [
+                "population",
+                {
+                    "from": "city",
+                    "select": {"value": {"max": "population"}},
+                    "where": {"in": [
+                        "state_name",
+                        {
+                            "from": "state",
+                            "select": {"value": "state_name"},
+                            "where": {"eq": [
+                                "area",
+                                {"from": "state", "select": {"value": {"min": "area"}}},
+                            ]},
                         },
-                    },
-                ]
-            },
+                    ]},
+                },
+            ]},
         }
         self.assertEqual(result, expected)
 
@@ -1040,15 +972,11 @@ class TestSimple(TestCase):
         result = parse(sql)
         expected = {
             "select": "*",
-            "from": {
-                "value": {
-                    "some_table.some_function": [
-                        {"literal": "parameter"},
-                        1,
-                        "some_col",
-                    ]
-                }
-            },
+            "from": {"value": {"some_table.some_function": [
+                {"literal": "parameter"},
+                1,
+                "some_col",
+            ]}},
         }
         self.assertEqual(result, expected)
 
@@ -1073,16 +1001,10 @@ class TestSimple(TestCase):
     def test_date_less_interval(self):
         sql = "select DATE '2020 01 25' - interval 4 seconds"
         result = parse(sql)
-        expected = {
-            "select": {
-                "value": {
-                    "sub": [
-                        {"date": {"literal": "2020 01 25"}},
-                        {"interval": [4, "second"]},
-                    ]
-                }
-            }
-        }
+        expected = {"select": {"value": {"sub": [
+            {"date": {"literal": "2020 01 25"}},
+            {"interval": [4, "second"]},
+        ]}}}
         self.assertEqual(result, expected)
 
     def test_issue_141(self):
@@ -1110,36 +1032,28 @@ class TestSimple(TestCase):
         expected = {
             "select": {"value": {"count": "url"}},
             "from": "crawl_urls",
-            "where": {
-                "and": [
-                    {"eq": ["http_status_code", 200]},
-                    {"eq": ["meta_redirect", False]},
-                    {"eq": ["primary_page", True]},
-                    {"eq": ["indexable", True]},
-                    {"eq": ["canonicalized_page", False]},
-                    {
-                        "or": [
-                            {"eq": ["paginated_page", False]},
-                            {
-                                "and": [
-                                    {"eq": ["paginated_page", True]},
-                                    {"eq": ["page_1", True]},
-                                ]
-                            },
-                        ]
-                    },
-                    {"neq": ["css", True]},
-                    {"neq": ["js", True]},
-                    {"neq": ["is_image", True]},
-                    {"eq": ["internal", True]},
-                    {
-                        "or": [
-                            {"eq": ["header_content_type", {"literal": "text/html"}]},
-                            {"eq": ["header_content_type", {"literal": ""}]},
-                        ]
-                    },
-                ]
-            },
+            "where": {"and": [
+                {"eq": ["http_status_code", 200]},
+                {"eq": ["meta_redirect", False]},
+                {"eq": ["primary_page", True]},
+                {"eq": ["indexable", True]},
+                {"eq": ["canonicalized_page", False]},
+                {"or": [
+                    {"eq": ["paginated_page", False]},
+                    {"and": [
+                        {"eq": ["paginated_page", True]},
+                        {"eq": ["page_1", True]},
+                    ]},
+                ]},
+                {"neq": ["css", True]},
+                {"neq": ["js", True]},
+                {"neq": ["is_image", True]},
+                {"eq": ["internal", True]},
+                {"or": [
+                    {"eq": ["header_content_type", {"literal": "text/html"}]},
+                    {"eq": ["header_content_type", {"literal": ""}]},
+                ]},
+            ]},
             "orderby": {"value": {"count": "url"}, "sort": "desc"},
         }
         self.assertEqual(result, expected)
@@ -1152,12 +1066,10 @@ class TestSimple(TestCase):
         expected = {
             "select": "*",
             "from": "a",
-            "where": {
-                "and": [
-                    {"eq": ["a", 1]},
-                    [{"and": [{"eq": ["b", 2]}, {"eq": ["c", 3]}]}, False],
-                ]
-            },
+            "where": {"and": [
+                {"eq": ["a", 1]},
+                [{"and": [{"eq": ["b", 2]}, {"eq": ["c", 3]}]}, False],
+            ]},
         }
         self.assertEqual(result, expected)
 
@@ -1223,26 +1135,20 @@ class TestSimple(TestCase):
     def test_issue119(self):
         sql = "SELECT 1 + CAST(1 AS INT) result"
         result = parse(sql)
-        expected = {
-            "select": {
-                "value": {"add": [1, {"cast": [1, {"int": {}}]}]},
-                "name": "result",
-            }
-        }
+        expected = {"select": {
+            "value": {"add": [1, {"cast": [1, {"int": {}}]}]},
+            "name": "result",
+        }}
         self.assertEqual(result, expected)
 
     def test_issue120(self):
         sql = "SELECT DISTINCT Country, City FROM Customers"
         result = parse(sql)
         expected = {
-            "select": {
-                "value": {
-                    "distinct": [
-                        {"value": "Country"},
-                        {"value": "City"},
-                    ]
-                }
-            },
+            "select": {"value": {"distinct": [
+                {"value": "Country"},
+                {"value": "City"},
+            ]}},
             "from": "Customers",
         }
         self.assertEqual(result, expected)
@@ -1270,16 +1176,10 @@ class TestSimple(TestCase):
             {
                 "from": "C",
                 "select": [
-                    {
-                        "value": {
-                            "count": {
-                                "distinct": [
-                                    {"value": "B"},
-                                    {"value": "E"},
-                                ]
-                            }
-                        }
-                    },
+                    {"value": {"count": {"distinct": [
+                        {"value": "B"},
+                        {"value": "E"},
+                    ]}}},
                     {"value": "A"},
                 ],
                 "where": {"eq": ["D", "X"]},

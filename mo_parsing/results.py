@@ -502,5 +502,3 @@ class Annotation(ParseResults):
 
 
 MutableMapping.register(ParseResults)
-
-

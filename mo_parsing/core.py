@@ -28,7 +28,7 @@ from mo_parsing.utils import Log, MAX_INT, wrap_parse_action, empty_tuple, is_fo
     Literal,
     Token,
     Group,
-    regex_parameters
+    regex_parameters,
 ) = [None] * 18
 
 DEBUG = False
@@ -60,9 +60,11 @@ def entrypoint(func):
                     Log.error("reset action failed", cause=e)
 
             self = args[0]
-            if not self.streamlined and (
-                not is_forward(self) or not self.expr.streamlined
-            ) and not streamlined.get(id(self)):
+            if (
+                not self.streamlined
+                and (not is_forward(self) or not self.expr.streamlined)
+                and not streamlined.get(id(self))
+            ):
                 Log.alert("Expecting expression to be streamlined before use")
                 _id = id(self)
                 self = self.streamline()
@@ -162,14 +164,21 @@ class ParserElement(object):
         - fatal   = if True, will raise ParseFatalException to stop parsing immediately; otherwise will raise ParseException
 
         """
+
         def make_cond(fn):
             def cond(token, index, string):
                 result = fn(token, index, string)
                 if not bool(result.tokens[0]):
                     if fatal:
-                        Log.error("fatal error", casue=ParseException(token.type, index, string, msg=message))
+                        Log.error(
+                            "fatal error",
+                            casue=ParseException(
+                                token.type, index, string, msg=message
+                            ),
+                        )
                     raise ParseException(token.type, index, string, msg=message)
                 return token
+
             return cond
 
         output = self.copy()
@@ -232,7 +241,9 @@ class ParserElement(object):
             for fn in self.parseAction:
                 next_result = fn(result, index, string)
                 if next_result.end < result.end:
-                    Log.error("parse action not allowed to roll back the end of parsing")
+                    Log.error(
+                        "parse action not allowed to roll back the end of parsing"
+                    )
                 result = next_result
         return result
 
@@ -393,7 +404,9 @@ class ParserElement(object):
 
             ['This', ' this', '', ' this sentence', ' is badly punctuated', '']
         """
-        return self._split(string, maxsplit=maxsplit, includeSeparators=includeSeparators)
+        return self._split(
+            string, maxsplit=maxsplit, includeSeparators=includeSeparators
+        )
 
     def _split(self, string, maxsplit=MAX_INT, includeSeparators=False):
         last = 0
