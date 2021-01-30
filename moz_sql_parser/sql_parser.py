@@ -109,7 +109,9 @@ call_function = (
     ident("op")
     + LB
     + Optional(Group(ordered_sql) | delimitedList(expr))("params")
-    + Optional(Keyword("ignore", caseless=True) + Keyword("nulls", caseless=True))("ignore_nulls")
+    + Optional(
+        Keyword("ignore", caseless=True) + Keyword("nulls", caseless=True)
+    )("ignore_nulls")
     + RB
 ).addParseAction(to_json_call)
 
@@ -135,20 +137,24 @@ compound = (
     | ident
 )
 
-expr << Group(
-    infixNotation(
-        compound,
-        [
-            (
-                o,
-                1 if o in unary_ops else (3 if isinstance(o, tuple) else 2),
-                RIGHT_ASSOC if o in unary_ops else LEFT_ASSOC,
-                to_json_operator,
-            )
-            for o in KNOWN_OPS
-        ],
-    ).set_parser_name("expression")
-)
+expr << (
+    (
+        infixNotation(
+            compound,
+            [
+                (
+                    o,
+                    1 if o in unary_ops else (3 if isinstance(o, tuple) else 2),
+                    RIGHT_ASSOC if o in unary_ops else LEFT_ASSOC,
+                    to_json_operator,
+                )
+                for o in KNOWN_OPS
+            ],
+        ).set_parser_name("expression")
+    )("value")
+    + Optional(window)
+).addParseAction(to_expression_call)
+
 
 alias = (
     (Group(ident) + Optional(LB + delimitedList(ident("col")) + RB))("name")
@@ -160,7 +166,6 @@ alias = (
 selectColumn = (
     Group(
         Group(expr).set_parser_name("expression1")("value")
-        + Optional(window)
         + Optional(Optional(AS) + alias)
         | Literal("*")("value")
     )
@@ -204,10 +209,7 @@ unordered_sql = Group(
 ).set_parser_name("unordered sql")
 
 ordered_sql << (
-    (
-        unordered_sql
-        + ZeroOrMore((UNION_ALL | UNION) + unordered_sql)
-    )("union")
+    (unordered_sql + ZeroOrMore((UNION_ALL | UNION) + unordered_sql))("union")
     + Optional(ORDER_BY + delimitedList(Group(sortColumn))("orderby"))
     + Optional(LIMIT + expr("limit"))
     + Optional(OFFSET + expr("offset"))
@@ -216,10 +218,7 @@ ordered_sql << (
 statement = Forward()
 statement << (
     Optional(
-        WITH
-        + delimitedList(Group(
-            ident("name") + AS + LB + statement("value") + RB
-        ))
+        WITH + delimitedList(Group(ident("name") + AS + LB + statement("value") + RB))
     )("with")
     + Group(ordered_sql)("query")
 ).addParseAction(to_statement)
