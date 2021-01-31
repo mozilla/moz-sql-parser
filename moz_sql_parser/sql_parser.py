@@ -9,12 +9,11 @@
 
 from __future__ import absolute_import, division, unicode_literals
 
-from mo_parsing.helpers import restOfLine, delimitedList
-
 from mo_parsing.engine import Engine
+from mo_parsing.helpers import delimitedList, restOfLine
 from moz_sql_parser.keywords import *
 from moz_sql_parser.utils import *
-from moz_sql_parser.windows import window, sortColumn
+from moz_sql_parser.windows import sortColumn, window
 
 engine = Engine().use()
 engine.add_ignore(Literal("--") + restOfLine)
@@ -137,20 +136,24 @@ compound = (
     | ident
 )
 
-expr << Group(
-    infixNotation(
-        compound,
-        [
-            (
-                o,
-                1 if o in unary_ops else (3 if isinstance(o, tuple) else 2),
-                RIGHT_ASSOC if o in unary_ops else LEFT_ASSOC,
-                to_json_operator,
-            )
-            for o in KNOWN_OPS
-        ],
-    ).set_parser_name("expression")
-)
+expr << (
+    (
+        infixNotation(
+            compound,
+            [
+                (
+                    o,
+                    1 if o in unary_ops else (3 if isinstance(o, tuple) else 2),
+                    RIGHT_ASSOC if o in unary_ops else LEFT_ASSOC,
+                    to_json_operator,
+                )
+                for o in KNOWN_OPS
+            ],
+        ).set_parser_name("expression")
+    )("value")
+    + Optional(window)
+).addParseAction(to_expression_call)
+
 
 alias = (
     (Group(ident) + Optional(LB + delimitedList(ident("col")) + RB))("name")
@@ -162,7 +165,6 @@ alias = (
 selectColumn = (
     Group(
         Group(expr).set_parser_name("expression1")("value")
-        + Optional(window)
         + Optional(Optional(AS) + alias)
         | Literal("*")("value")
     )
@@ -196,6 +198,12 @@ join = (
 
 unordered_sql = Group(
     SELECT
+    + Optional(
+        TOP
+        + expr("value")
+        + Optional(Keyword("percent", caseless=True))("percent")
+        + Optional(WITH + Keyword("ties", caseless=True))("ties")
+    )("top").addParseAction(to_top_clause)
     + delimitedList(selectColumn)("select")
     + Optional(
         (FROM + delimitedList(Group(table_source)) + ZeroOrMore(join))("from")

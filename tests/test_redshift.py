@@ -463,7 +463,7 @@ class TestRedshift(TestCase):
             }},
         )
 
-    @skip("can not handle function over window")
+    @skip("not handled yet")
     def test_issue7f_function_of_window(self):
         sql = """
         select
@@ -472,8 +472,22 @@ class TestRedshift(TestCase):
             , 0) as dead_crons
         from source
         """
-        result = parse(sql)
-        self.assertEqual(result, {})
+        with Debugger():
+            result = parse(sql)
+        expected = {
+            "from": "source",
+            "select": {
+                "name": "dead_crons",
+                "value": {"nvl": [
+                    {
+                        "over": {"orderby": {"value": "date_at"}, "range": {"max": 0}},
+                        "value": {"sum": {"sub": ["prev_day_count", "line_count"]}},
+                    },
+                    0,
+                ]},
+            },
+        }
+        self.assertEqual(result, expected)
 
     def test_issue7g_double_precision(self):
         # Ref: https://docs.aws.amazon.com/redshift/latest/dg/r_Numeric_types201.html#r_Numeric_types201-floating-point-types

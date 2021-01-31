@@ -428,8 +428,8 @@ class Optional(Many):
 
     def parseImpl(self, string, start, doActions=True):
         try:
-            tokens = self.expr._parse(string, start, doActions)
-            return ParseResults(self, tokens.start, tokens.end, [tokens])
+            results = self.expr._parse(string, start, doActions)
+            return ParseResults(self, results.start, results.end, [results])
         except ParseException:
             return ParseResults(self, start, start, self.parser_config.defaultValue)
 
