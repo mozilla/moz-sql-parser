@@ -27,6 +27,7 @@ class ParseResults(object):
         self.start = start
         self.end = end
         self.tokens = tokens
+        self.timing = None
 
     def _get_item_by_name(self, name):
         # return open list of (modal, value) pairs
@@ -502,5 +503,3 @@ class Annotation(ParseResults):
 
 
 MutableMapping.register(ParseResults)
-
-

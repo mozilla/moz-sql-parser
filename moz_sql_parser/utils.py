@@ -11,12 +11,13 @@ from __future__ import absolute_import, division, unicode_literals
 
 import ast
 
-from mo_dots import is_data, literal_field
+from mo_dots import is_data, is_null
 from mo_future import text, number_types, binary_type
+from mo_logs import Log
 
 from mo_parsing import *
+from mo_parsing import debug
 from mo_parsing.utils import is_number, listwrap, alphanums
-
 
 IDENT_CHAR = alphanums + "@_$"
 
@@ -25,6 +26,8 @@ def scrub(result):
     if result == None:
         return None
     elif isinstance(result, text):
+        if result == "null":
+            return None
         return result
     elif isinstance(result, binary_type):
         return result.decode("utf8")
@@ -44,8 +47,34 @@ def scrub(result):
     else:
         # ATTEMPT A DICT INTERPRETATION
         kv_pairs = list(result.items())
-        output = {k: vv for k, v in kv_pairs for vv in [scrub(v)] if vv != None}
-        if output or isinstance(result, dict):
+        output = {k: vv for k, v in kv_pairs for vv in [scrub(v)] if not is_null(vv)}
+        if isinstance(result, dict):
+            return output
+        elif output:
+            if debug.DEBUGGING:
+                # CHECK THAT NO ITEMS WERE MISSED
+                def look(r):
+                    for token in r.tokens:
+                        if isinstance(token, ParseResults):
+                            if token.name:
+                                continue
+                            elif token.length() == 0:
+                                continue
+                            elif isinstance(token.type, Group):
+                                Log.error(
+                                    "This token is lost during scrub: {{token}}",
+                                    token=token,
+                                )
+                            else:
+                                look(token)
+                        else:
+                            Log.error(
+                                "This token is lost during scrub: {{token}}",
+                                token=token,
+                            )
+
+                look(result)
+
             return output
         temp = list(result)
         return scrub(temp)
@@ -92,22 +121,22 @@ def to_json_operator(tokens):
         op = op.type.parser_name
     op = binary_ops.get(op, op)
     if op == "eq":
-        if tokens[2] == None:
+        if tokens[2] == "null":
             return {"missing": tokens[0]}
         elif tokens[0] == "null":
             return {"missing": tokens[2]}
     elif op == "neq":
-        if tokens[2] == None:
+        if tokens[2] == "null":
             return {"exists": tokens[0]}
         elif tokens[0] == "null":
             return {"exists": tokens[2]}
     elif op == "is":
-        if tokens[2] == None:
+        if tokens[2] == "null":
             return {"missing": tokens[0]}
         else:
             return {"exists": tokens[0]}
     elif op == "is_not":
-        if tokens[2] == None:
+        if tokens[2] == "null":
             return {"exists": tokens[0]}
         else:
             return {"missing": tokens[0]}
@@ -186,10 +215,6 @@ def to_json_call(tokens):
         ignore_nulls = True
     else:
         ignore_nulls = None
-    # elif isinstance(params, list) and len(params) == 1:
-    #     params = params[0]
-    # elif isinstance(params, ParseResults) and params.length() == 1:
-    #     params = params[0]
 
     return ParseResults(
         tokens.type,
@@ -220,7 +245,7 @@ def to_interval_call(tokens):
 def to_case_call(tokens):
     cases = list(tokens["case"])
     elze = tokens["else"]
-    if elze:
+    if elze != None:
         cases.append(elze)
     return {"case": cases}
 
@@ -257,6 +282,18 @@ def to_join_call(tokens):
     return output
 
 
+def to_expression_call(tokens):
+    over = tokens["over"]
+    within = tokens["within"]
+    if over or within:
+        return
+
+    expr = ParseResults(
+        tokens.type, tokens.start, tokens.end, listwrap(tokens["value"])
+    )
+    return expr
+
+
 def to_alias(tokens):
     cols = scrub(tokens["col"])
     name = scrub(tokens[0])
@@ -265,13 +302,35 @@ def to_alias(tokens):
     return name
 
 
+def to_top_clause(tokens):
+    value = scrub(tokens["value"])
+    if not value:
+        return None
+    elif tokens["ties"]:
+        output = {}
+        output["ties"] = True
+        if tokens["percent"]:
+            output["percent"] = value
+        else:
+            output["value"] = value
+        return output
+    elif tokens["percent"]:
+        return {"percent": value}
+    else:
+        return value
+
+
 def to_select_call(tokens):
-    if tokens["value"].value() == "*":
+    value = tokens["value"]
+    if value.value() == "*":
         return ["*"]
 
-    window = tokens["value"]["window"]
-    if window:
-        return window
+    if value["over"] or value["within"]:
+        output = ParseResults(tokens.type, tokens.start, tokens.end, value.tokens)
+        output["name"] = tokens["name"]
+        return output
+    else:
+        return
 
 
 def to_union_call(tokens):

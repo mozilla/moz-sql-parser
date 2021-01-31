@@ -1,6 +1,5 @@
 # encoding: utf-8
 from mo_future import text
-from mo_logs import strings
 
 from mo_parsing.core import ParserElement
 from mo_parsing.utils import (
@@ -11,17 +10,25 @@ from mo_parsing.utils import (
     quote as plain_quote,
 )
 
+DEBUGGING = False
+
 
 class Debugger(object):
     def __init__(self):
         self.previous_parse = None
+        self.was_debugging = False
 
     def __enter__(self):
+        global DEBUGGING
+        self.was_debugging = DEBUGGING
+        DEBUGGING = True
         self.previous_parse = ParserElement._parse
         ParserElement._parse = _debug_parse
 
     def __exit__(self, exc_type, exc_val, exc_tb):
+        global DEBUGGING
         ParserElement._parse = self.previous_parse
+        DEBUGGING = self.was_debugging
 
 
 def _debug_parse(self, string, start, doActions=True):
@@ -30,7 +37,9 @@ def _debug_parse(self, string, start, doActions=True):
     try:
         tokens = self.parseImpl(string, loc, doActions)
     except Exception as cause:
-        self.parser_config.failAction and self.parser_config.failAction(self, start, string, cause)
+        self.parser_config.failAction and self.parser_config.failAction(
+            self, start, string, cause
+        )
         fail(self, start, string, cause)
         raise
 

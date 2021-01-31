@@ -10,12 +10,12 @@
 from __future__ import absolute_import, division, unicode_literals
 
 import re
-from unittest import skip, TestCase
+from unittest import TestCase, skip
 
 from mo_logs import Log
-
 from moz_sql_parser import format, parse
 from moz_sql_parser.keywords import join_keywords
+
 
 EXCEPTION_MESSAGE = """
 SQL:         {{expected_sql}}
@@ -279,6 +279,22 @@ from benn.college_football_players
             ],
         }
         self.verify_formatting(expected_sql, expected_json)
+
+    def test_select_top_format(self):
+        sql = """
+select	TOP (5)
+	country_code,
+	impact_code,
+	impact_description,
+	number_sites
+from	EUNIS.v1.BISE_Country_Threats_Pressures_Number_Sites
+order by number_sites desc"""
+        result = parse(sql)
+        expected_sql = """SELECT TOP (5) country_code, impact_code,
+        impact_description, number_sites  FROM
+        EUNIS.v1.BISE_Country_Threats_Pressures_Number_Sites ORDER BY
+        number_sites DESC"""
+        self.verify_formatting(expected_sql, result)
 
     def test_like_from_pr16(self):
         expected_sql = (
@@ -1857,10 +1873,26 @@ from benn.college_football_players
         self.verify_formatting(expected_sql, expected_json)
 
     def test_issue152_null_expression(self):
-        expected_sql = "SELECT a, CASE WHEN some_columns = 'Bob' THEN 'helloworld' ELSE NULL END AS some_columns FROM mytable"
-        expected_json = {'select': [{'value': 'a'}, {'value': {
-            'case': [{'when': {'eq': ['some_columns', {'literal': 'Bob'}]}, 'then': {'literal': 'helloworld'}}, None]},
-            'name': 'some_columns'}], 'from': 'mytable'}
+        expected_sql = (
+            "SELECT a, CASE WHEN some_columns = 'Bob' THEN 'helloworld' ELSE NULL END"
+            " AS some_columns FROM mytable"
+        )
+        expected_json = {
+            "select": [
+                {"value": "a"},
+                {
+                    "value": {"case": [
+                        {
+                            "when": {"eq": ["some_columns", {"literal": "Bob"}]},
+                            "then": {"literal": "helloworld"},
+                        },
+                        None,
+                    ]},
+                    "name": "some_columns",
+                },
+            ],
+            "from": "mytable",
+        }
 
         self.verify_formatting(expected_sql, expected_json)
 
@@ -1871,5 +1903,8 @@ from benn.college_football_players
 
     def test_issue12b_dots_in_name(self):
         expected_sql = 'select a.x as "a.b.c.x" from a'
-        expected_json = {"select": {"value": "a.x", "name": "a\\.b\\.c\\.x"}, "from": "a"}
+        expected_json = {
+            "select": {"value": "a.x", "name": "a\\.b\\.c\\.x"},
+            "from": "a",
+        }
         self.verify_formatting(expected_sql, expected_json)

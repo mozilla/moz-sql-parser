@@ -1,11 +1,9 @@
-from mo_dots import Null
-
 from moz_sql_parser.utils import *
 
 # SQL CONSTANTS
-NULL = Keyword("null", caseless=True).addParseAction(lambda: [Null])
-TRUE = Keyword("true", caseless=True).addParseAction(lambda: [True])
-FALSE = Keyword("false", caseless=True).addParseAction(lambda: [False])
+NULL = Keyword("null", caseless=True).addParseAction(lambda: "null")
+TRUE = Keyword("true", caseless=True).addParseAction(lambda: True)
+FALSE = Keyword("false", caseless=True).addParseAction(lambda: False)
 NOCASE = Keyword("nocase", caseless=True)
 ASC = Keyword("asc", caseless=True)
 DESC = Keyword("desc", caseless=True)
@@ -37,6 +35,7 @@ RIGHT = Keyword("right", caseless=True)
 RLIKE = Keyword("rlike", caseless=True)
 SELECT = Keyword("select", caseless=True).suppress()
 THEN = Keyword("then", caseless=True).suppress()
+TOP = Keyword("top", caseless=True).suppress()
 UNION = Keyword("union", caseless=True)
 USING = Keyword("using", caseless=True).suppress()
 WHEN = Keyword("when", caseless=True).suppress()
@@ -99,8 +98,8 @@ IS_NOT = Group(IS + NOT).set_parser_name("is_not")
 
 _SIMILAR = Keyword("similar", caseless=True)
 _TO = Keyword("to", caseless=True)
-SIMILAR_TO = Group(_SIMILAR+_TO).set_parser_name("is_not")
-NOT_SIMILAR_TO = Group(_SIMILAR+_TO).set_parser_name("is_not")
+SIMILAR_TO = Group(_SIMILAR + _TO).set_parser_name("is_not")
+NOT_SIMILAR_TO = Group(_SIMILAR + _TO).set_parser_name("is_not")
 
 RESERVED = MatchFirst([
     ALL,
@@ -295,8 +294,8 @@ durations = {
     "day": "day",
     "d": "day",
     "dayofweek": "dow",
-    "dow":"dow",
-    "weekday":"dow",
+    "dow": "dow",
+    "weekday": "dow",
     "weeks": "week",
     "week": "week",
     "w": "week",
@@ -353,8 +352,7 @@ DECIMAL = (
     Keyword("decimal", caseless=True)("op") + _sizes
 ).addParseAction(to_json_call)
 DOUBLE_PRECISION = (
-    Keyword("double", caseless=True)
-    + Keyword("precision", caseless=True)("op")
+    Keyword("double", caseless=True) + Keyword("precision", caseless=True)("op")
 ).addParseAction(lambda: {"double_precision": {}})
 NUMERIC = (
     Keyword("numeric", caseless=True)("op") + _sizes
@@ -368,7 +366,7 @@ TIMESTAMP = Keyword("timestamp", caseless=True)
 TIMESTAMPTZ = Keyword("timestamptz", caseless=True)
 TIMETZ = Keyword("timetz", caseless=True)
 
-time_functions = (DATE | DATETIME | TIME | TIMESTAMP | TIMESTAMPTZ | TIMETZ)
+time_functions = DATE | DATETIME | TIME | TIMESTAMP | TIMESTAMPTZ | TIMETZ
 
 # KNOWNN TIME TYPES
 _format = Optional(Regex(r'\"(\"\"|[^"])*\"')("params").addParseAction(unquote))
