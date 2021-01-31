@@ -99,14 +99,7 @@ namedColumn = Group(
 )
 
 distinct = (
-    (
-        DISTINCT("op")
-        | TOP("op")
-        + expr("limit")
-        + Optional(Keyword("percent", caseless=True))("percent")
-        + Optional(WITH + Keyword("ties", caseless=True))("ties")
-    )
-    + delimitedList(namedColumn)("params")
+    DISTINCT("op") + delimitedList(namedColumn)("params")
 ).addParseAction(to_json_call)
 
 ordered_sql = Forward()
@@ -205,7 +198,12 @@ join = (
 
 unordered_sql = Group(
     SELECT
-    + Optional(TOP + expr("top"))
+    + Optional(
+        TOP
+        + expr("value")
+        + Optional(Keyword("percent", caseless=True))("percent")
+        + Optional(WITH + Keyword("ties", caseless=True))("ties")
+    )("top").addParseAction(to_top_clause)
     + delimitedList(selectColumn)("select")
     + Optional(
         (FROM + delimitedList(Group(table_source)) + ZeroOrMore(join))("from")

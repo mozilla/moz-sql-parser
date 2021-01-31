@@ -10,9 +10,7 @@ from __future__ import absolute_import, division, unicode_literals
 
 import json
 from unittest import TestCase
-
 from mo_dots import Null
-from mo_parsing.debug import Debugger
 from moz_sql_parser import parse
 
 try:
@@ -1201,31 +1199,5 @@ class TestSimple(TestCase):
                     },
                     "value": {"rank": "*"},
                 },
-            },
-        )
-
-    def test_select_top_5(self):
-        sql = """
-select	TOP (5)
-	country_code,
-	impact_code,
-	impact_description,
-	number_sites
-from	EUNIS.v1.BISE_Country_Threats_Pressures_Number_Sites
-order by number_sites desc"""
-        result = parse(sql)
-
-        self.assertEqual(
-            result,
-            {
-                "top": 5,
-                "select": [
-                    {"value": "country_code"},
-                    {"value": "impact_code"},
-                    {"value": "impact_description"},
-                    {"value": "number_sites"},
-                ],
-                "from": "EUNIS.v1.BISE_Country_Threats_Pressures_Number_Sites",
-                "orderby": {"value": "number_sites", "sort": "desc"},
             },
         )

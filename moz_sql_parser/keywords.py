@@ -1,10 +1,9 @@
-from mo_dots import Null
 from moz_sql_parser.utils import *
 
 # SQL CONSTANTS
-NULL = Keyword("null", caseless=True).addParseAction(lambda: [Null])
-TRUE = Keyword("true", caseless=True).addParseAction(lambda: [True])
-FALSE = Keyword("false", caseless=True).addParseAction(lambda: [False])
+NULL = Keyword("null", caseless=True).addParseAction(lambda: "null")
+TRUE = Keyword("true", caseless=True).addParseAction(lambda: True)
+FALSE = Keyword("false", caseless=True).addParseAction(lambda: False)
 NOCASE = Keyword("nocase", caseless=True)
 ASC = Keyword("asc", caseless=True)
 DESC = Keyword("desc", caseless=True)
@@ -36,7 +35,7 @@ RIGHT = Keyword("right", caseless=True)
 RLIKE = Keyword("rlike", caseless=True)
 SELECT = Keyword("select", caseless=True).suppress()
 THEN = Keyword("then", caseless=True).suppress()
-TOP = Keyword("then", caseless=True)
+TOP = Keyword("top", caseless=True).suppress()
 UNION = Keyword("union", caseless=True)
 USING = Keyword("using", caseless=True).suppress()
 WHEN = Keyword("when", caseless=True).suppress()

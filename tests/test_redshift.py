@@ -463,6 +463,7 @@ class TestRedshift(TestCase):
             }},
         )
 
+    @skip("not handled yet")
     def test_issue7f_function_of_window(self):
         sql = """
         select
