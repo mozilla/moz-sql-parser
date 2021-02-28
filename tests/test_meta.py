@@ -10,8 +10,13 @@
 from __future__ import absolute_import, division, unicode_literals
 
 import os
+import re
 import sys
 from unittest import TestCase
+
+from mo_future import unichr
+
+from mo_parsing.utils import regex_range
 from moz_sql_parser import sql_parser
 
 _ensure_imported = sql_parser
@@ -26,3 +31,11 @@ class TestSimple(TestCase):
         if os.environ.get("TRAVIS_BRANCH") == "master":
             limit = sys.getrecursionlimit()
             self.assertLess(limit, 1500)
+
+    def test_regex_range(self):
+        for i in range(9, 4000):
+            c = unichr(i)
+            pattern = regex_range(c)
+            found = re.match(pattern, c)
+            self.assertTrue(bool(found))
+

@@ -112,11 +112,7 @@ _escapes.update({c: "\\" + c for c in r".^$*?+-{}[]\|()"})
 
 def regex_range(s, exclude=False):
     def esc(s):
-        r = re.escape(s)
-        o = _escapes.get(s, s)
-        if s not in "\t\r\n #~&" and r != o:
-            Log.error("expecting same")
-        return o
+        return _escapes.get(s, s)
 
     if not s:
         return ""
