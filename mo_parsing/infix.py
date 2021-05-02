@@ -145,11 +145,7 @@ def infixNotation(baseExpr, spec, lpar=Suppress("("), rpar=Suppress(")")):
          or left associative, using the mo_parsing-defined constants
          ``RIGHT_ASSOC`` and ``LEFT_ASSOC``.
        - parseAction is the parse action to be associated with
-         expressions matching this operator expression (the parse action
-         tuple member may be omitted); if the parse action is passed
-         a tuple or list of functions, this is equivalent to calling
-         ``setParseAction(*fn)``
-         (`ParserElement.addParseAction`)
+         expressions matching this operator expression
     :param lpar: expression for matching left-parentheses
        (default= ``Suppress('(')``)
     :param rpar: expression for matching right-parentheses

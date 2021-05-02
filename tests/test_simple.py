@@ -1202,6 +1202,12 @@ class TestSimple(TestCase):
             },
         )
 
+    def test_issue_156a_SDSS_default_multiply(self):
+        sql = "SELECT 23e7test "
+        result = parse(sql)
+        self.assertEqual(result, {"select": {"value": {"mul": [230000000, "test"]}}})
+
+
     def test_issue_156a_SDSS(self):
         sql = """
             SELECT TOP 10 u,g,r,i,z,ra,dec, flags_r
@@ -1333,7 +1339,6 @@ class TestSimple(TestCase):
             },
         )
 
-    @skip("can not handle implicit * operator")
     def test_issue_156b_SDSS(self):
         sql = """        
             SELECT TOP 10 fld.run,
