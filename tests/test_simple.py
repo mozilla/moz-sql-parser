@@ -9,7 +9,7 @@
 from __future__ import absolute_import, division, unicode_literals
 
 import json
-from unittest import TestCase
+from unittest import TestCase, skip
 from mo_dots import Null
 from moz_sql_parser import parse
 
@@ -1201,3 +1201,158 @@ class TestSimple(TestCase):
                 },
             },
         )
+
+    def test_issue_156a_SDSS(self):
+        sql = """
+            SELECT TOP 10 u,g,r,i,z,ra,dec, flags_r
+            FROM Star
+            WHERE
+            ra BETWEEN 180 and 181 AND dec BETWEEN -0.5 and 0.5
+            AND ((flags_r & 0x10000000) != 0)
+            AND ((flags_r & 0x8100000c00a4) = 0)
+            AND (((flags_r & 0x400000000000) = 0) or (psfmagerr_r <= 0.2))
+            AND (((flags_r & 0x100000000000) = 0) or (flags_r & 0x1000) = 0)
+        """
+        result = parse(sql)
+        self.assertEqual(
+            result,
+            {
+                "select": [
+                    {"value": "u"},
+                    {"value": "g"},
+                    {"value": "r"},
+                    {"value": "i"},
+                    {"value": "z"},
+                    {"value": "ra"},
+                    {"value": "dec"},
+                    {"value": "flags_r"},
+                ],
+                "top": 10,
+                "from": "Star",
+                "where": {"and": [
+                    {"between": ["ra", 180, 181]},
+                    {"between": ["dec", -0.5, 0.5]},
+                    {"neq": [{"binary_and": ["flags_r", {"hex": "10000000"}]}, 0]},
+                    {"eq": [{"binary_and": ["flags_r", {"hex": "8100000c00a4"}]}, 0]},
+                    {"or": [
+                        {"eq": [
+                            {"binary_and": ["flags_r", {"hex": "400000000000"}]},
+                            0,
+                        ]},
+                        {"lte": ["psfmagerr_r", 0.2]},
+                    ]},
+                    {"or": [
+                        {"eq": [
+                            {"binary_and": ["flags_r", {"hex": "100000000000"}]},
+                            0,
+                        ]},
+                        {"eq": [{"binary_and": ["flags_r", {"hex": "1000"}]}, 0]},
+                    ]},
+                ]},
+            },
+        )
+
+    def test_issue_156b_SDSS_add_mulitply(self):
+        sql = """        
+            SELECT TOP 10 fld.run,
+            fld.avg_sky_muJy,
+            fld.runarea AS area,
+            ISNULL(fp.nfirstmatch, 0)
+            FROM
+            (SELECT run,
+            sum(primaryArea) AS runarea,
+            3631e6*avg(power(cast(10 AS float), -0.4*sky_r)) AS avg_sky_muJy
+            FROM Field
+            GROUP BY run) AS fld
+            LEFT OUTER JOIN
+            (SELECT p.run,
+            count(*) AS nfirstmatch
+            FROM FIRST AS fm
+            INNER JOIN photoprimary AS p ON p.objid=fm.objid
+            GROUP BY p.run) AS fp ON fld.run=fp.run
+            ORDER BY fld.run
+        """
+        result = parse(sql)
+        self.assertEqual(
+            result,
+            {
+                "select": [
+                    {"value": "fld.run"},
+                    {"value": "fld.avg_sky_muJy"},
+                    {"name": "area", "value": "fld.runarea"},
+                    {"value": {"isnull": ["fp.nfirstmatch", 0]}},
+                ],
+                "top": 10,
+                "from": [
+                    {
+                        "name": "fld",
+                        "value": {
+                            "select": [
+                                {"value": "run"},
+                                {"name": "runarea", "value": {"sum": "primaryArea"}},
+                                {
+                                    "name": "avg_sky_muJy",
+                                    "value": {"mul": [
+                                        3631000000,
+                                        {"avg": {"power": [
+                                            {"cast": [10, {"float": {}}]},
+                                            {"neg": {"mul": [0.4, "sky_r"]}},
+                                        ]}},
+                                    ]},
+                                },
+                            ],
+                            "from": "Field",
+                            "groupby": {"value": "run"},
+                        },
+                    },
+                    {
+                        "left outer join": {
+                            "name": "fp",
+                            "value": {
+                                "select": [
+                                    {"value": "p.run"},
+                                    {"name": "nfirstmatch", "value": {"count": "*"}},
+                                ],
+                                "from": [
+                                    {"name": "fm", "value": "FIRST"},
+                                    {
+                                        "inner join": {
+                                            "name": "p",
+                                            "value": "photoprimary",
+                                        },
+                                        "on": {"eq": ["p.objid", "fm.objid"]},
+                                    },
+                                ],
+                                "groupby": {"value": "p.run"},
+                            },
+                        },
+                        "on": {"eq": ["fld.run", "fp.run"]},
+                    },
+                ],
+                "orderby": {"value": "fld.run"},
+            },
+        )
+
+    @skip("can not handle implicit * operator")
+    def test_issue_156b_SDSS(self):
+        sql = """        
+            SELECT TOP 10 fld.run,
+            fld.avg_sky_muJy,
+            fld.runarea AS area,
+            ISNULL(fp.nfirstmatch, 0)
+            FROM
+            (SELECT run,
+            sum(primaryArea) AS runarea,
+            3631e6avg(power(cast(10. AS float), -0.4sky_r)) AS avg_sky_muJy
+            FROM Field
+            GROUP BY run) AS fld
+            LEFT OUTER JOIN
+            (SELECT p.run,
+            count(*) AS nfirstmatch
+            FROM FIRST AS fm
+            INNER JOIN photoprimary AS p ON p.objid=fm.objid
+            GROUP BY p.run) AS fp ON fld.run=fp.run
+            ORDER BY fld.run
+        """
+        result = parse(sql)
+        self.assertEqual(result, {})

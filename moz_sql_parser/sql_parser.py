@@ -129,10 +129,11 @@ compound = (
     | (LB + Group(ordered_sql) + RB)
     | (LB + Group(delimitedList(expr)).addParseAction(to_tuple_call) + RB)
     | sqlString.set_parser_name("string")
-    | call_function
-    | known_types
+    | hexNum.set_parser_name("hex")
     | realNum.set_parser_name("float")
     | intNum.set_parser_name("int")
+    | call_function
+    | known_types
     | ident
 )
 

@@ -400,7 +400,12 @@ realNum = (
 intNum = (
     Regex(r"[+-]?\d+([eE]\+?\d+)?")
     .set_parser_name("int")
-    .addParseAction(lambda t: int(t[0]))
+    .addParseAction(lambda t: int(float(t[0])) if "e" in t[0].lower() else int(t[0]))
+)
+hexNum = (
+    Regex(r"0x[0-9a-fA-F]+")
+    .set_parser_name("hex")
+    .addParseAction(lambda t: {"hex": t[0][2:]})
 )
 
 # STRINGS
