@@ -5,6 +5,7 @@ from operator import itemgetter
 
 from mo_future import Iterable, text, generator_types
 from mo_imports import export
+from mo_parsing import engine
 
 from mo_parsing.core import ParserElement, _PendingSkip
 from mo_parsing.engine import Engine
@@ -23,7 +24,6 @@ from mo_parsing.utils import (
     append_config,
     regex_caseless,
     regex_compile,
-    is_backtracking,
 )
 
 LOOKUP_COST = 5
@@ -73,23 +73,12 @@ class ParseExpression(ParserElement):
 
     def copy(self):
         output = ParserElement.copy(self)
-        if self.engine is engine.CURRENT:
-            output.exprs = self.exprs
-        else:
-            output.exprs = [e.copy() for e in self.exprs]
+        output.exprs = self.exprs
         return output
 
     def append(self, other):
         self.exprs.append(other)
         return self
-
-    def leaveWhitespace(self):
-        """Extends ``leaveWhitespace`` defined in base class, and also invokes ``leaveWhitespace`` on
-        all contained expressions."""
-        with Engine(""):
-            output = self.copy()
-            output.exprs = [e.leaveWhitespace() for e in self.exprs]
-            return output
 
     def streamline(self):
         if self.streamlined:
@@ -146,10 +135,12 @@ class And(ParseExpression):
     May be constructed using the ``'+'`` operator.
     May also be constructed using the ``'-'`` operator, which will
     suppress backtracking.
-
     """
 
     __slots__ = []
+    Config = append_config(ParseExpression, "engine")
+
+
 
     class SyntaxErrorGuard(Empty):
         def __init__(self, *args, **kwargs):
@@ -157,7 +148,7 @@ class And(ParseExpression):
                 super(And.SyntaxErrorGuard, self).__init__(*args, **kwargs)
                 self.parser_name = "-"
 
-    def __init__(self, exprs):
+    def __init__(self, exprs, engine):
         if exprs and Ellipsis in exprs:
             tmp = []
             for i, expr in enumerate(exprs):
@@ -173,6 +164,7 @@ class And(ParseExpression):
                     tmp.append(expr)
             exprs[:] = tmp
         super(And, self).__init__(exprs)
+        self.set_config(engine=engine)
 
     def streamline(self):
         if self.streamlined:
@@ -212,7 +204,7 @@ class And(ParseExpression):
             same = same and f is e
             if f.is_annotated():
                 acc.append(f)
-            elif isinstance(f, And):
+            elif isinstance(f, And) and f.parser_config.engine is self.parser_config.engine:
                 same = False
                 acc.extend(f.exprs)
             else:
@@ -251,7 +243,9 @@ class And(ParseExpression):
         encountered_syntax_error = False
         end = start
         acc = []
-        for expr in self.exprs:
+        for i, expr in enumerate(self.exprs):
+            if i:
+                end = self.parser_config.engine.skip(string, end)
             if isinstance(expr, And.SyntaxErrorGuard):
                 encountered_syntax_error = True
                 continue
@@ -271,7 +265,7 @@ class And(ParseExpression):
         if other is Ellipsis:
             return _PendingSkip(self)
 
-        return And([self, engine.CURRENT.normalize(other)]).streamline()
+        return And([self, engine.CURRENT.normalize(other)], engine.CURRENT).streamline()
 
     def checkRecursion(self, seen=empty_tuple):
         subRecCheckList = seen + (self,)
@@ -747,14 +741,12 @@ class MatchAll(ParseExpression):
 
         return "{" + " & ".join(text(e) for e in self.exprs) + "}"
 
+try:
 
-# export
-export("mo_parsing.utils", Many)
-
-
-from mo_parsing import core, engine
-
-core.And = And
-core.Or = Or
-core.MatchAll = MatchAll
-core.MatchFirst = MatchFirst
+    export("mo_parsing.utils", Many)
+    export("mo_parsing.core", And)
+    export("mo_parsing.core", Or)
+    export("mo_parsing.core", MatchAll)
+    export("mo_parsing.core", MatchFirst)
+except Exception as cause:
+    Log.error("problem", cause=cause)

@@ -3,14 +3,15 @@ import inspect
 
 from mo_dots import is_many, is_null
 from mo_future import is_text, text, NEXT, zip_longest, MutableMapping
+from mo_imports import expect
 
-from mo_parsing import engine
 from mo_parsing.utils import Log, listwrap
 from mo_parsing.utils import is_forward, forward_type
 
 USE_ATTRIBUTE_ACCESS = False
 
-Suppress, ParserElement, NO_PARSER, NO_RESULTS, Group, Dict, Token, Empty = [None] * 8
+
+Suppress, ParserElement, NO_PARSER, NO_RESULTS, Group, Dict, Token, Empty = expect("Suppress", "ParserElement", "NO_PARSER", "NO_RESULTS", "Group", "Dict", "Token", "Empty")
 
 
 class ParseResults(object):
@@ -503,3 +504,4 @@ class Annotation(ParseResults):
 
 
 MutableMapping.register(ParseResults)
+from mo_parsing import engine

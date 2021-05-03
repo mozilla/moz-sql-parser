@@ -7,6 +7,7 @@ from collections import OrderedDict
 from string import whitespace
 
 from mo_future import unichr, is_text
+from mo_imports import export
 
 from mo_parsing.core import add_reset_action
 from mo_parsing.engine import Engine, PLAIN_ENGINE
@@ -108,26 +109,30 @@ def repeat(tokens):
     if tokens.length() == 1:
         return tokens.value()
 
-    operand, operator = tokens
+    try:
+        operand, operator = tokens
+    except Exception as cause:
+        Log.error("not expected", cause=cause)
+
     mode = operator["mode"]
     if not mode:
         if operator["exact"]:
-            return Many(operand, exact=int(operator["exact"]))
+            return Many(operand, PLAIN_ENGINE, exact=int(operator["exact"]))
         else:
             return Many(
-                operand, min_match=int(operator["min"]), max_match=int(operator["max"])
+                operand, PLAIN_ENGINE, min_match=int(operator["min"]), max_match=int(operator["max"])
             )
     elif mode in "*?":
-        return ZeroOrMore(operand)
+        return ZeroOrMore(operand, PLAIN_ENGINE)
     elif mode in "+?":
-        return OneOrMore(operand)
+        return OneOrMore(operand, PLAIN_ENGINE)
     elif mode == "?":
-        return Optional(operand)
+        return Optional(operand, PLAIN_ENGINE)
     else:
         Log.error("not expected")
 
-
 PLAIN_ENGINE.use()
+
 
 #########################################################################################
 # SQUARE BRACKETS
@@ -164,11 +169,11 @@ plainChar = Char(exclude=r"\]").addParseAction(lambda t: Literal(t.value()))
 
 escapedHexChar = Combine(
     (Literal("\\0x") | Literal("\\x") | Literal("\\X"))  # lookup literals is faster
-    + OneOrMore(Char(hexnums))
+    + OneOrMore(Char(hexnums), PLAIN_ENGINE)
 ).addParseAction(hex_to_char)
 
 escapedOctChar = Combine(
-    Literal("\\0") + OneOrMore(Char("01234567"))
+    Literal("\\0") + OneOrMore(Char("01234567"), PLAIN_ENGINE)
 ).addParseAction(lambda t: Literal(unichr(int(t.value()[2:], 8))))
 
 singleChar = escapedHexChar | escapedOctChar | escapedChar | plainChar
@@ -177,8 +182,8 @@ charRange = Group(singleChar("min") + "-" + singleChar("max")).addParseAction(to
 
 brackets = (
     "["
-    + Optional("^")("negate")
-    + OneOrMore(Group(charRange | singleChar | macro)("body"))
+    + Optional("^", PLAIN_ENGINE)("negate")
+    + OneOrMore(Group(charRange | singleChar | macro)("body"), PLAIN_ENGINE)
     + "]"
 ).addParseAction(to_bracket)
 
@@ -250,8 +255,8 @@ term = (
 )
 
 
-more = (term + Optional(repetition)).addParseAction(repeat)
-sequence = OneOrMore(more).addParseAction(lambda t: And(t))
+more = (term + Optional(repetition, PLAIN_ENGINE)).addParseAction(repeat)
+sequence = OneOrMore(more, PLAIN_ENGINE).addParseAction(lambda t: And(t, PLAIN_ENGINE))
 regex << (
     delimitedList(sequence, separator="|")
     .set_token_name("value")
@@ -393,8 +398,4 @@ class Regex(ParseEnhancement):
 
 _plain_group = Group(None)
 
-
-from mo_parsing import core
-
-core.regex_parameters = parameters
-del core
+export("mo_parsing.core", "regex_parameters", parameters)

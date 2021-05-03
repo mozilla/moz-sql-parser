@@ -25,8 +25,8 @@
 # TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
 # SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #
-
-
+from mo_parsing.engine import Engine
+from mo_parsing import engine
 from mo_parsing.core import ParserElement, _PendingSkip
 from mo_parsing.enhancement import (
     Combine,
@@ -52,9 +52,14 @@ from mo_parsing.exceptions import (
     RecursiveGrammarException,
 )
 from mo_parsing.expressions import And, MatchAll, MatchFirst, Or, ParseExpression
+
+engine.PLAIN_ENGINE = Engine("").use()
+engine.STANDARD_ENGINE = Engine().use()
+
+
 from mo_parsing.infix import LEFT_ASSOC, RIGHT_ASSOC, infixNotation
 from mo_parsing.regex import Regex
-from mo_parsing.results import ParseResults
+from mo_parsing.results import ParseResults, engine
 from mo_parsing.tokens import (
     CaselessKeyword,
     CaselessLiteral,
@@ -77,6 +82,9 @@ from mo_parsing.tokens import (
     Token,
     AnyChar,
 )
+
+
+
 
 __all__ = [
     "And",

@@ -59,7 +59,8 @@ def _profile_parse(self, string, start, doActions=True):
     all_start = process_time()
     try:
         try:
-            preloc = self.engine.skip(string, start)
+            # preloc = self.engine.skip(string, start)
+            preloc = start
             parse_start = process_time()
             tokens = self.parseImpl(string, preloc, doActions)
             parse_end = process_time()

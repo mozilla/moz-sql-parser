@@ -9,8 +9,9 @@
 from __future__ import absolute_import, division, unicode_literals
 
 import os
-from unittest import TestCase, skipIf
+from unittest import TestCase
 
+from mo_parsing.debug import Debugger
 from moz_sql_parser import parse
 
 IS_MASTER = os.environ.get("TRAVIS_BRANCH") == "master"
@@ -192,7 +193,8 @@ class TestResources(TestCase):
 
     def test_026(self):
         sql = "SELECT COUNT(*)+1 FROM test1"
-        result = parse(sql)
+        with Debugger():
+            result = parse(sql)
         expected = {"from": "test1", "select": {"value": {"add": [{"count": "*"}, 1]}}}
         self.assertEqual(result, expected)
 

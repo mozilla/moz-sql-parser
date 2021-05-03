@@ -39,9 +39,9 @@ def delimitedList(expr, separator=",", combine=False):
         delimitedList(Word(hexnums), delim=':', combine=True).parseString("AA:BB:CC:DD:EE") # -> ['AA:BB:CC:DD:EE']
     """
     if combine:
-        return Combine(expr + ZeroOrMore(separator + expr))
+        return Combine(expr + ZeroOrMore(separator + expr, engine.CURRENT))
     else:
-        return expr + ZeroOrMore(Suppress(separator) + expr)
+        return expr + ZeroOrMore(Suppress(separator) + expr, engine.CURRENT)
 
 
 def oneOf(strs, caseless=False, asKeyword=False):
@@ -127,7 +127,7 @@ RIGHT_ASSOC = object()
 _no_op = Empty()
 
 
-def infixNotation(baseExpr, spec, lpar=Suppress("("), rpar=Suppress(")")):
+def infixNotation(baseExpr, spec, lpar=Suppress(Literal("(")), rpar=Suppress(Literal(")"))):
     """
     :param baseExpr: expression representing the most basic element for the
        nested

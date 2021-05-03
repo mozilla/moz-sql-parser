@@ -1,13 +1,12 @@
 # encoding: utf-8
-import re
-from collections import OrderedDict
 
-from mo_future import text, is_text
+from mo_future import is_text
+from mo_imports import export
 
 from mo_parsing.core import ParserElement
-from mo_parsing.engine import Engine, PLAIN_ENGINE
+from mo_parsing.engine import Engine
 from mo_parsing.exceptions import ParseException
-from mo_parsing.results import ParseResults
+from mo_parsing.results import ParseResults, engine
 from mo_parsing.utils import *
 
 
@@ -39,7 +38,8 @@ class Empty(Token):
         return 0
 
     def parseImpl(self, string, start, doActions=True):
-        end = self.engine.skip(string, start)
+        end = start
+        # end = self.engine.skip(string, start)
         return ParseResults(self, start, end, [])
 
     def __regex__(self):
@@ -153,7 +153,7 @@ class Keyword(Token):
     def __init__(self, match, ident_chars=None, caseless=None):
         Token.__init__(self)
         if ident_chars is None:
-            ident_chars = self.engine.keyword_chars
+            ident_chars = engine.CURRENT.keyword_chars
         else:
             ident_chars = "".join(sorted(set(ident_chars)))
 
@@ -632,8 +632,8 @@ class StringStart(_PositionToken):
     def parseImpl(self, string, loc, doActions=True):
         if loc != 0:
             # see if entire string up to here is just whitespace and ignoreables
-            if loc != self.engine.skip(string, 0):
-                raise ParseException(self, loc, string)
+            # if loc != self.engine.skip(string, 0):
+            raise ParseException(self, loc, string)
         return []
 
 
@@ -643,11 +643,6 @@ class StringEnd(_PositionToken):
     """
 
     __slots__ = []
-
-    def __init__(self):
-        with Engine() as e:
-            super(StringEnd, self).__init__()
-            self.set_config(lock_engine=e)
 
     def parseImpl(self, string, start, doActions=True):
         end = len(string)
@@ -707,7 +702,6 @@ class WordEnd(_PositionToken):
 
     def __init__(self, wordChars=printables):
         super(WordEnd, self).__init__()
-        self.engine = PLAIN_ENGINE
         self.set_config(
             word_chars="".join(sorted(set(wordChars))),
             regex=regex_compile(
@@ -717,7 +711,6 @@ class WordEnd(_PositionToken):
 
     def copy(self):
         output = _PositionToken.copy(self)
-        output.engine = PLAIN_ENGINE
         return output
 
     def min_length(self):
@@ -734,30 +727,25 @@ class WordEnd(_PositionToken):
     def __regex__(self):
         return "+", self.parser_config.regex.pattern
 
+export("mo_parsing.results", Token)
+export("mo_parsing.results", Empty)
 
-# export
-from mo_parsing import core, enhancement, engine, results
+export("mo_parsing.core", Empty)
+export("mo_parsing.core", StringEnd)
+export("mo_parsing.core", Literal)
+export("mo_parsing.core", Token)
 
-core.Empty = Empty
-core.StringEnd = StringEnd
-core.Literal = Literal
-core.Token = Token
+export("mo_parsing.engine", Literal)
+export("mo_parsing.engine", Token)
 
-engine.Token = Token
-engine.Literal = Literal
-engine.CURRENT.literal = Literal
-engine.PLAIN_ENGINE.literal = Literal
+export("mo_parsing.enhancement", Token)
+export("mo_parsing.enhancement", NoMatch)
+export("mo_parsing.enhancement", Literal)
+export("mo_parsing.enhancement", Keyword)
+export("mo_parsing.enhancement", Word)
+export("mo_parsing.enhancement", CharsNotIn)
+export("mo_parsing.enhancement", _PositionToken)
+export("mo_parsing.enhancement", StringEnd)
+export("mo_parsing.enhancement", Empty)
+export("mo_parsing.enhancement", Char)
 
-enhancement.Token = Token
-enhancement.Literal = Literal
-enhancement.Keyword = Keyword
-enhancement.Word = Word
-enhancement.CharsNotIn = CharsNotIn
-enhancement._PositionToken = _PositionToken
-enhancement.StringEnd = StringEnd
-enhancement.Empty = Empty
-enhancement.NoMatch = NoMatch
-enhancement.Char = Char
-
-results.Token = Token
-results.Empty = Empty

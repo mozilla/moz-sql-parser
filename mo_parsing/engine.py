@@ -3,15 +3,20 @@ import re
 from collections import namedtuple
 
 from mo_future import is_text
+from mo_imports import expect, Expecting
 
+from mo_parsing.core import ParserElement
+from mo_parsing.results import ParseResults
 from mo_parsing.utils import Log, indent, quote, regex_range, alphanums, regex_iso
 
-ParserElement, Literal, Token = [None] * 3
+Literal, Token, Empty = expect("Literal", "Token", "Empty")
 
 CURRENT = None
+PLAIN_ENGINE = None
+STANDARD_ENGINE = None
 
 
-class Engine:
+class Engine(ParserElement):
     def __init__(self, white=" \n\r\t"):
         self.literal = Literal
         self.keyword_chars = alphanums + "_$"
@@ -21,6 +26,7 @@ class Engine:
         self.content = None
         self.skips = {}
         self.regex = None
+        self.expr = None
         self.set_whitespace(white)
         self.previous = None  # WE MAINTAIN A STACK OF ENGINES
 
@@ -75,6 +81,7 @@ class Engine:
     def set_whitespace(self, chars):
         self.white_chars = "".join(sorted(set(chars)))
         self.content = None
+        self.expr = None if isinstance(Empty, Expecting) else Empty()
         self.regex = re.compile(self.__regex__()[1])
 
     def add_ignore(self, *ignore_exprs):
@@ -86,11 +93,16 @@ class Engine:
             ignore_expr = ignore_expr.suppress()
             self.ignore_list.append(ignore_expr)
             self.content = None
+            self.expr = None if isinstance(Empty, Expecting) else Empty()
             self.regex = re.compile(self.__regex__()[1])
             return self
 
     def backup(self):
         return Backup(self)
+
+    def parseImpl(self, string, start, doActions=True):
+        end = self.skip(string, start)
+        return ParseResults(self.expr, start, end, [])
 
     def skip(self, string, start):
         if not self.ignore_list and not self.white_chars:
@@ -155,6 +167,3 @@ def noop(*args):
 
 
 DebugActions = namedtuple("DebugActions", ["TRY", "MATCH", "FAIL"])
-
-PLAIN_ENGINE = Engine("").use()
-Engine().use()

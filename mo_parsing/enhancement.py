@@ -3,9 +3,10 @@ from collections import OrderedDict
 
 from mo_dots import Null, is_null
 from mo_future import text, is_text
+from mo_imports import export, expect
 
+from mo_parsing import engine as parse_engine
 from mo_parsing.core import ParserElement
-from mo_parsing.engine import Engine
 from mo_parsing.exceptions import (
     ParseException,
     RecursiveGrammarException,
@@ -21,7 +22,6 @@ from mo_parsing.utils import (
 )
 from mo_parsing.utils import MAX_INT, is_forward
 
-# import later
 (
     Token,
     NoMatch,
@@ -33,7 +33,18 @@ from mo_parsing.utils import MAX_INT, is_forward
     StringEnd,
     Empty,
     Char,
-) = [None] * 10
+) = expect(
+    "Token",
+    "NoMatch",
+    "Literal",
+    "Keyword",
+    "Word",
+    "CharsNotIn",
+    "_PositionToken",
+    "StringEnd",
+    "Empty",
+    "Char"
+)
 
 _get = object.__getattribute__
 
@@ -53,10 +64,7 @@ class ParseEnhancement(ParserElement):
 
     def copy(self):
         output = ParserElement.copy(self)
-        if self.engine is engine.CURRENT:
-            output.expr = self.expr
-        else:
-            output.expr = self.expr.copy()
+        output.expr = self.expr
         return output
 
     def expecting(self):
@@ -71,12 +79,6 @@ class ParseEnhancement(ParserElement):
     def parseImpl(self, string, start, doActions=True):
         result = self.expr._parse(string, start, doActions)
         return ParseResults(self, result.start, result.end, [result])
-
-    def leaveWhitespace(self):
-        with Engine(""):
-            output = self.copy()
-            output.expr = self.expr.leaveWhitespace()
-            return output
 
     def streamline(self):
         if self.streamlined:
@@ -135,13 +137,17 @@ class FollowedBy(ParseEnhancement):
         return "*", f"(?={self.expr.__regex__()[1]})"
 
 
-class NotAny(ParseEnhancement):
-    """Lookahead to disallow matching with the given parse expression.
-    ``NotAny`` does *not* advance the parsing position within the
+class LookAhead(ParseEnhancement):
+    """
+    Does *not* advance the parsing position within the
     input string, it only verifies that the specified parse expression
-    does *not* match at the current position.  Also, ``NotAny`` does
-    *not* skip over leading whitespace. ``NotAny`` always returns
-    a null token list.  May be constructed using the '~' operator.
+    """
+
+
+class NotAny(LookAhead):
+    """
+    Lookahead to disallow matching with the given parse expression.
+    May be constructed using the '~' operator.
     """
 
     __slots__ = ["regex"]
@@ -198,9 +204,9 @@ class NotAny(ParseEnhancement):
 
 class Many(ParseEnhancement):
     __slots__ = []
-    Config = append_config(ParseEnhancement, "min_match", "max_match", "end")
+    Config = append_config(ParseEnhancement, "engine", "min_match", "max_match", "end")
 
-    def __init__(self, expr, stopOn=None, min_match=0, max_match=MAX_INT, exact=None):
+    def __init__(self, expr, engine, stopOn=None, min_match=0, max_match=MAX_INT, exact=None):
         """
         MATCH expr SOME NUMBER OF TIMES (OR UNTIL stopOn IS REACHED
         :param expr: THE EXPRESSION TO MATCH
@@ -213,7 +219,7 @@ class Many(ParseEnhancement):
             min_match = exact
             max_match = exact
 
-        self.set_config(min_match=min_match, max_match=max_match)
+        self.set_config(engine=engine or parse_engine.CURRENT, min_match=min_match, max_match=max_match)
         self.stopOn(stopOn)
 
     def stopOn(self, ender):
@@ -236,7 +242,7 @@ class Many(ParseEnhancement):
         try:
             while end < len(string) and count < max:
                 if stopper:
-                    end = self.engine.skip(string, end)
+                    # end = self.engine.skip(string, end)
                     if stopper.match(string, end):
                         if self.parser_config.min_match <= count:
                             break
@@ -284,7 +290,10 @@ class Many(ParseEnhancement):
     def streamline(self):
         if self.streamlined:
             return self
-        expr = self.expr.streamline()
+        try:
+            expr = self.expr.streamline()
+        except Exception as e:
+            print(e)
         if (
             self.parser_config.min_match == self.parser_config.max_match
             and not self.is_annotated()
@@ -366,10 +375,9 @@ class OneOrMore(Many):
 
     __slots__ = []
 
-    def __init__(self, expr, stopOn=None):
-        Many.__init__(self, expr, stopOn, min_match=1, max_match=MAX_INT)
+    def __init__(self, expr, engine=None, stopOn=None):
+        Many.__init__(self, expr, engine, stopOn, min_match=1, max_match=MAX_INT)
         self.set_config(lock_engine=self.expr.parser_config.lock_engine,)
-        self.engine = self.expr.engine
 
     def __str__(self):
         if self.parser_name:
@@ -391,12 +399,11 @@ class ZeroOrMore(Many):
 
     __slots__ = []
 
-    def __init__(self, expr, stopOn=None):
+    def __init__(self, expr, engine=None, stopOn=None):
         super(ZeroOrMore, self).__init__(
-            expr, stopOn=stopOn, min_match=0, max_match=MAX_INT
+            expr, engine, stopOn=stopOn, min_match=0, max_match=MAX_INT
         )
         self.set_config(lock_engine=self.expr.parser_config.lock_engine)
-        self.engine = self.expr.engine
 
     def parseImpl(self, string, start, doActions=True):
         try:
@@ -422,8 +429,8 @@ class Optional(Many):
     __slots__ = []
     Config = append_config(Many, "defaultValue")
 
-    def __init__(self, expr, default=None):
-        Many.__init__(self, expr, stopOn=None, min_match=0, max_match=1)
+    def __init__(self, expr, engine=None, default=None):
+        Many.__init__(self, expr, engine, stopOn=None, min_match=0, max_match=1)
         self.set_config(defaultValue=listwrap(default))
 
     def parseImpl(self, string, start, doActions=True):
@@ -459,7 +466,7 @@ class SkipTo(ParseEnhancement):
         """
         ParseEnhancement.__init__(self, expr)
         self.set_config(
-            include=include, fail=engine.CURRENT.normalize(failOn), ignore=ignore
+            include=include, fail=parse_engine.CURRENT.normalize(failOn), ignore=ignore
         )
         self.parser_name = str(self)
 
@@ -556,7 +563,7 @@ class Forward(ParserElement):
         self._str = None  # avoid recursion
         self._reg = None  # avoid recursion
         if expr:
-            self << engine.CURRENT.normalize(expr)
+            self << parse_engine.CURRENT.normalize(expr)
 
     def copy(self):
         output = ParserElement.copy(self)
@@ -581,7 +588,7 @@ class Forward(ParserElement):
 
         while is_forward(other):
             other = other.expr
-        self.expr = engine.CURRENT.normalize(other).streamline()
+        self.expr = parse_engine.CURRENT.normalize(other).streamline()
         self.checkRecursion()
         return self
 
@@ -590,12 +597,6 @@ class Forward(ParserElement):
             Log.error("not allowed")
         self.expr = self.expr.addParseAction(action)
         return self
-
-    def leaveWhitespace(self):
-        with Engine(""):
-            output = self.copy()
-            output.expr = self.expr.leaveWhitespace()
-            return output
 
     def streamline(self):
         if not self.expr or self.expr.streamlined:
@@ -724,7 +725,7 @@ class Group(TokenConverter):
 
     def __init__(self, expr):
         ParserElement.__init__(self)
-        self.expr = self.engine.normalize(expr)
+        self.expr = parse_engine.CURRENT.normalize(expr)
 
     def is_annotated(self):
         return True
@@ -805,7 +806,7 @@ def _suppress_post_parse(tokens, start, string):
     return ParseResults(tokens.type, tokens.start, tokens.end, [])
 
 
-class PrecededBy(ParseEnhancement):
+class PrecededBy(LookAhead):
     """Lookbehind matching of the given parse expression.
     ``PrecededBy`` does not advance the parsing position within the
     input string, it only verifies that the specified parse expression
@@ -832,7 +833,7 @@ class PrecededBy(ParseEnhancement):
 
     def __init__(self, expr, retreat=None):
         super(PrecededBy, self).__init__(expr)
-        expr = self.expr = self.expr.leaveWhitespace()
+        expr = self.expr
 
         if isinstance(expr, (Literal, Keyword, Char)):
             self.set_config(retreat=expr.min_length(), exact=True)
@@ -875,18 +876,21 @@ class PrecededBy(ParseEnhancement):
         raise NotImplemented()
 
 
-# export
-from mo_parsing import core, engine, results
+export("mo_parsing.core", SkipTo)
+export("mo_parsing.core", Many)
+export("mo_parsing.core", ZeroOrMore)
+export("mo_parsing.core", OneOrMore)
+export("mo_parsing.core", Optional)
+export("mo_parsing.core", NotAny)
+export("mo_parsing.core", Suppress)
+export("mo_parsing.core", Group)
 
-core.SkipTo = SkipTo
-core.Many = Many
-core.ZeroOrMore = ZeroOrMore
-core.OneOrMore = OneOrMore
-core.Optional = Optional
-core.NotAny = NotAny
-core.Suppress = Suppress
-core.Group = Group
+export("mo_parsing.results", Group)
+export("mo_parsing.results", Dict)
+export("mo_parsing.results", Suppress)
 
-results.Group = Group
-results.Dict = Dict
-results.Suppress = Suppress
+export("mo_parsing.engine", Empty)
+
+export("mo_parsing.utils", Many)
+
+from mo_parsing import engine

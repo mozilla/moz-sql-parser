@@ -114,6 +114,10 @@ call_function = (
     + RB
 ).addParseAction(to_json_call)
 
+with Engine(white=""):
+    scale_function = (realNum | intNum) + call_function
+    scale_ident = (realNum | intNum) + ident
+
 compound = (
     NULL
     | TRUE
@@ -130,6 +134,8 @@ compound = (
     | (LB + Group(delimitedList(expr)).addParseAction(to_tuple_call) + RB)
     | sqlString.set_parser_name("string")
     | hexNum.set_parser_name("hex")
+    | scale_function
+    | scale_ident
     | realNum.set_parser_name("float")
     | intNum.set_parser_name("int")
     | call_function

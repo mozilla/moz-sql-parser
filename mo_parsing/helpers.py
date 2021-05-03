@@ -5,8 +5,7 @@ from datetime import datetime
 from mo_future import text
 
 from mo_parsing.core import add_reset_action
-from mo_parsing.debug import Debugger
-from mo_parsing.engine import Engine
+from mo_parsing.engine import Engine, STANDARD_ENGINE
 from mo_parsing.enhancement import (
     Combine,
     Dict,
@@ -546,28 +545,29 @@ def makeHTMLTags(tagStr, suppress_LT=Suppress("<"), suppress_GT=Suppress(">")):
     )
     simpler_name = "".join(resname.replace(":", " ").title().split())
 
-    openTag = (
-        (
-            suppress_LT
-            + tagStr("tag")
-            + OpenDict(ZeroOrMore(Group(
-                tagAttrName.addParseAction(downcaseTokens)
-                + Optional(Suppress("=") + tagAttrValue)
-            )))
-            + Optional(
-                "/", default=[False]
-            )("empty").addParseAction(lambda t, l, s: t[0] == "/")
-            + suppress_GT
+    with STANDARD_ENGINE.use():
+        openTag = (
+            (
+                suppress_LT
+                + tagStr("tag")
+                + OpenDict(ZeroOrMore(Group(
+                    tagAttrName.addParseAction(downcaseTokens)
+                    + Optional(Suppress("=") + tagAttrValue)
+                )))
+                + Optional(
+                    "/", default=[False]
+                )("empty").addParseAction(lambda t, l, s: t[0] == "/")
+                + suppress_GT
+            )
+            .set_token_name("start" + simpler_name)
+            .set_parser_name("<%s>" % resname)
         )
-        .set_token_name("start" + simpler_name)
-        .set_parser_name("<%s>" % resname)
-    )
 
-    closeTag = (
-        Combine(Literal("</") + tagStr + ">")
-        .set_token_name("end" + simpler_name)
-        .set_parser_name("</%s>" % resname)
-    )
+        closeTag = (
+            Combine(Literal("</") + tagStr + ">")
+            .set_token_name("end" + simpler_name)
+            .set_parser_name("</%s>" % resname)
+        )
 
     # openTag.tag = resname
     # closeTag.tag = resname

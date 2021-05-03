@@ -33,7 +33,7 @@ class Debugger(object):
 
 def _debug_parse(self, string, start, doActions=True):
     _try(self, start, string)
-    loc = self.engine.skip(string, start)
+    loc = start
     try:
         tokens = self.parseImpl(string, loc, doActions)
     except Exception as cause:
