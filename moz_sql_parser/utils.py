@@ -402,7 +402,7 @@ def parse_int(tokens):
     if "e" in tokens[0].lower():
         return int(float(tokens[0]))
     else:
-        int(tokens[0])
+        return int(tokens[0])
 
 intNum = (
     Regex(r"[+-]?\d+([eE]\+?\d+)?")

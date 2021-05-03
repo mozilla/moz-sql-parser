@@ -140,8 +140,6 @@ class And(ParseExpression):
     __slots__ = []
     Config = append_config(ParseExpression, "engine")
 
-
-
     class SyntaxErrorGuard(Empty):
         def __init__(self, *args, **kwargs):
             with Engine(""):
@@ -241,16 +239,16 @@ class And(ParseExpression):
         # pass False as last arg to _parse for first element, since we already
         # pre-parsed the string as part of our And pre-parsing
         encountered_syntax_error = False
-        end = start
+        end = index = start
         acc = []
         for i, expr in enumerate(self.exprs):
-            if i:
-                end = self.parser_config.engine.skip(string, end)
+            if end > index:
+                index = self.parser_config.engine.skip(string, end)
             if isinstance(expr, And.SyntaxErrorGuard):
                 encountered_syntax_error = True
                 continue
             try:
-                result = expr._parse(string, end, doActions)
+                result = expr._parse(string, index, doActions)
                 end = result.end
                 acc.append(result)
             except ParseException as pe:

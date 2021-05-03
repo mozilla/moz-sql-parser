@@ -4,7 +4,7 @@ from threading import RLock
 
 from mo_future import text
 from mo_imports import expect, export
-from mo_parsing.results import ParseResults
+from mo_parsing.results import ParseResults, _flatten
 
 from mo_parsing.exceptions import ParseException
 from mo_parsing.utils import Log, MAX_INT, wrap_parse_action, empty_tuple, is_forward
@@ -17,7 +17,6 @@ from mo_parsing.utils import Log, MAX_INT, wrap_parse_action, empty_tuple, is_fo
     Optional,
     NotAny,
     Suppress,
-    _flatten,
     And,
     MatchFirst,
     Or,
@@ -36,7 +35,6 @@ from mo_parsing.utils import Log, MAX_INT, wrap_parse_action, empty_tuple, is_fo
     "Optional",
     "NotAny",
     "Suppress",
-    "_flatten",
     "And",
     "MatchFirst",
     "Or",

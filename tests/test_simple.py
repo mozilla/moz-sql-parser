@@ -1207,7 +1207,6 @@ class TestSimple(TestCase):
         result = parse(sql)
         self.assertEqual(result, {"select": {"value": {"mul": [230000000, "test"]}}})
 
-
     def test_issue_156a_SDSS(self):
         sql = """
             SELECT TOP 10 u,g,r,i,z,ra,dec, flags_r
@@ -1360,4 +1359,62 @@ class TestSimple(TestCase):
             ORDER BY fld.run
         """
         result = parse(sql)
-        self.assertEqual(result, {})
+        self.assertEqual(
+            result,
+            {
+                "select": [
+                    {"value": "fld.run"},
+                    {"value": "fld.avg_sky_muJy"},
+                    {"name": "area", "value": "fld.runarea"},
+                    {"value": {"isnull": ["fp.nfirstmatch", 0]}},
+                ],
+                "top": 10,
+                "from": [
+                    {
+                        "name": "fld",
+                        "value": {
+                            "select": [
+                                {"value": "run"},
+                                {"name": "runarea", "value": {"sum": "primaryArea"}},
+                                {
+                                    "name": "avg_sky_muJy",
+                                    "value": {"mul": [
+                                        3631000000,
+                                        {"avg": {"power": [
+                                            {"cast": [10.0, {"float": {}}]},
+                                            {"neg": {"mul": [0.4, "sky_r"]}},
+                                        ]}},
+                                    ]},
+                                },
+                            ],
+                            "from": "Field",
+                            "groupby": {"value": "run"},
+                        },
+                    },
+                    {
+                        "left outer join": {
+                            "name": "fp",
+                            "value": {
+                                "select": [
+                                    {"value": "p.run"},
+                                    {"name": "nfirstmatch", "value": {"count": "*"}},
+                                ],
+                                "from": [
+                                    {"name": "fm", "value": "FIRST"},
+                                    {
+                                        "inner join": {
+                                            "name": "p",
+                                            "value": "photoprimary",
+                                        },
+                                        "on": {"eq": ["p.objid", "fm.objid"]},
+                                    },
+                                ],
+                                "groupby": {"value": "p.run"},
+                            },
+                        },
+                        "on": {"eq": ["fld.run", "fp.run"]},
+                    },
+                ],
+                "orderby": {"value": "fld.run"},
+            },
+        )

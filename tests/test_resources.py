@@ -193,8 +193,7 @@ class TestResources(TestCase):
 
     def test_026(self):
         sql = "SELECT COUNT(*)+1 FROM test1"
-        with Debugger():
-            result = parse(sql)
+        result = parse(sql)
         expected = {"from": "test1", "select": {"value": {"add": [{"count": "*"}, 1]}}}
         self.assertEqual(result, expected)
 
