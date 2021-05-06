@@ -739,12 +739,8 @@ class MatchAll(ParseExpression):
 
         return "{" + " & ".join(text(e) for e in self.exprs) + "}"
 
-try:
 
-    export("mo_parsing.utils", Many)
-    export("mo_parsing.core", And)
-    export("mo_parsing.core", Or)
-    export("mo_parsing.core", MatchAll)
-    export("mo_parsing.core", MatchFirst)
-except Exception as cause:
-    Log.error("problem", cause=cause)
+export("mo_parsing.core", And)
+export("mo_parsing.core", Or)
+export("mo_parsing.core", MatchAll)
+export("mo_parsing.core", MatchFirst)
