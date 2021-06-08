@@ -5,18 +5,16 @@ from collections import namedtuple
 from mo_future import is_text
 from mo_imports import expect, Expecting
 
-from mo_parsing.core import ParserElement
-from mo_parsing.results import ParseResults
 from mo_parsing.utils import Log, indent, quote, regex_range, alphanums, regex_iso
 
-Literal, Token, Empty = expect("Literal", "Token", "Empty")
+Literal, Token, Empty, ParserElement, PLAIN_ENGINE, STANDARD_ENGINE= expect(
+    "Literal", "Token", "Empty", "ParserElement", "PLAIN_ENGINE", "STANDARD_ENGINE"
+)
 
 CURRENT = None
-PLAIN_ENGINE = None
-STANDARD_ENGINE = None
 
 
-class Engine(ParserElement):
+class Engine:
     def __init__(self, white=" \n\r\t"):
         self.literal = Literal
         self.keyword_chars = alphanums + "_$"
@@ -29,6 +27,19 @@ class Engine(ParserElement):
         self.expr = None
         self.set_whitespace(white)
         self.previous = None  # WE MAINTAIN A STACK OF ENGINES
+
+    def copy(self):
+        output = Engine(self.white_chars)
+        output.literal = self.literal
+        output.keyword_chars = self.keyword_chars
+        output.ignore_list = self.ignore_list
+        output.debugActions = self.debugActions
+        output.all_exceptions = self.all_exceptions
+        output.content = None
+        output.skips = {}
+        output.regex = self.regex
+        output.expr = self.expr
+        return output
 
     def __enter__(self):
         global CURRENT
@@ -100,10 +111,6 @@ class Engine(ParserElement):
     def backup(self):
         return Backup(self)
 
-    def parseImpl(self, string, start, doActions=True):
-        end = self.skip(string, start)
-        return ParseResults(self.expr, start, end, [])
-
     def skip(self, string, start):
         if not self.ignore_list and not self.white_chars:
             return start
@@ -140,6 +147,9 @@ class Engine(ParserElement):
         return "+", f"(?:{white}*(?:{ignored}))*{white}*"
 
     def __str__(self):
+        if getattr(self, "in_str", False):
+            return self.__class__.__name__
+        self.in_str = True
         output = ["{"]
         for k, v in self.__dict__.items():
             value = str(v)

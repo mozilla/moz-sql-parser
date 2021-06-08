@@ -545,29 +545,28 @@ def makeHTMLTags(tagStr, suppress_LT=Suppress("<"), suppress_GT=Suppress(">")):
     )
     simpler_name = "".join(resname.replace(":", " ").title().split())
 
-    with STANDARD_ENGINE.use():
-        openTag = (
-            (
-                suppress_LT
-                + tagStr("tag")
-                + OpenDict(ZeroOrMore(Group(
-                    tagAttrName.addParseAction(downcaseTokens)
-                    + Optional(Suppress("=") + tagAttrValue)
-                )))
-                + Optional(
-                    "/", default=[False]
-                )("empty").addParseAction(lambda t, l, s: t[0] == "/")
-                + suppress_GT
-            )
-            .set_token_name("start" + simpler_name)
-            .set_parser_name("<%s>" % resname)
+    openTag = (
+        (
+            suppress_LT
+            + tagStr("tag")
+            + OpenDict(ZeroOrMore(Group(
+                tagAttrName.addParseAction(downcaseTokens)
+                + Optional(Suppress("=") + tagAttrValue)
+            )))
+            + Optional(
+                "/", default=[False]
+            )("empty").addParseAction(lambda t, l, s: t[0] == "/")
+            + suppress_GT
         )
+        .set_token_name("start" + simpler_name)
+        .set_parser_name("<%s>" % resname)
+    )
 
-        closeTag = (
-            Combine(Literal("</") + tagStr + ">")
-            .set_token_name("end" + simpler_name)
-            .set_parser_name("</%s>" % resname)
-        )
+    closeTag = (
+        Combine(Literal("</") + tagStr + ">")
+        .set_token_name("end" + simpler_name)
+        .set_parser_name("</%s>" % resname)
+    )
 
     # openTag.tag = resname
     # closeTag.tag = resname

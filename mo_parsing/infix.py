@@ -5,7 +5,7 @@ from collections import Iterable
 
 from mo_dots import listwrap
 from mo_future import text
-from mo_imports import delay_import
+from mo_imports import delay_import, expect
 
 from mo_parsing import engine
 from mo_parsing.enhancement import (
@@ -39,9 +39,9 @@ def delimitedList(expr, separator=",", combine=False):
         delimitedList(Word(hexnums), delim=':', combine=True).parseString("AA:BB:CC:DD:EE") # -> ['AA:BB:CC:DD:EE']
     """
     if combine:
-        return Combine(expr + ZeroOrMore(separator + expr, engine.CURRENT))
+        return Combine(expr + ZeroOrMore(separator + expr))
     else:
-        return expr + ZeroOrMore(Suppress(separator) + expr, engine.CURRENT)
+        return expr + ZeroOrMore(Suppress(separator) + expr)
 
 
 def oneOf(strs, caseless=False, asKeyword=False):
@@ -124,10 +124,10 @@ def oneOf(strs, caseless=False, asKeyword=False):
 
 LEFT_ASSOC = object()
 RIGHT_ASSOC = object()
-_no_op = Empty()
+_no_op = Empty().suppress()
 
 
-def infixNotation(baseExpr, spec, lpar=Suppress(Literal("(")), rpar=Suppress(Literal(")"))):
+def infixNotation(baseExpr, spec, lpar=Suppress("("), rpar=Suppress(")")):
     """
     :param baseExpr: expression representing the most basic element for the
        nested

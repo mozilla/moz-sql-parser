@@ -25,6 +25,8 @@
 # TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
 # SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #
+from mo_imports import export
+
 from mo_parsing.engine import Engine
 from mo_parsing import engine
 from mo_parsing.core import ParserElement, _PendingSkip
@@ -53,12 +55,6 @@ from mo_parsing.exceptions import (
 )
 from mo_parsing.expressions import And, MatchAll, MatchFirst, Or, ParseExpression
 
-engine.PLAIN_ENGINE = Engine("").use()
-engine.STANDARD_ENGINE = Engine().use()
-
-
-from mo_parsing.infix import LEFT_ASSOC, RIGHT_ASSOC, infixNotation
-from mo_parsing.regex import Regex
 from mo_parsing.results import ParseResults, engine
 from mo_parsing.tokens import (
     CaselessKeyword,
@@ -66,7 +62,6 @@ from mo_parsing.tokens import (
     Char,
     CloseMatch,
     Empty,
-    GoToColumn,
     LineEnd,
     LineStart,
     NoMatch,
@@ -83,7 +78,19 @@ from mo_parsing.tokens import (
     AnyChar,
 )
 
+PLAIN_ENGINE = Engine("").use()
+STANDARD_ENGINE = Engine().use()
+NO_PARSER = ParserElement().set_parser_name("<nothing>")
+NO_RESULTS = ParseResults(NO_PARSER, -1, 0, [])
 
+export("mo_parsing.tokens", PLAIN_ENGINE)
+export("mo_parsing.engine", PLAIN_ENGINE)
+export("mo_parsing.engine", STANDARD_ENGINE)
+export("mo_parsing.results", NO_PARSER)
+export("mo_parsing.results", NO_RESULTS)
+
+from mo_parsing.infix import LEFT_ASSOC, RIGHT_ASSOC, infixNotation
+from mo_parsing.regex import Regex
 
 
 __all__ = [
@@ -98,7 +105,6 @@ __all__ = [
     "Empty",
     "FollowedBy",
     "Forward",
-    "GoToColumn",
     "Group",
     "Keyword",
     "LineEnd",

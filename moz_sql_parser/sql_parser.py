@@ -9,7 +9,7 @@
 
 from __future__ import absolute_import, division, unicode_literals
 
-from mo_parsing.engine import Engine
+from mo_parsing import PLAIN_ENGINE, Engine
 from mo_parsing.helpers import delimitedList, restOfLine
 from moz_sql_parser.keywords import *
 from moz_sql_parser.utils import *
@@ -26,10 +26,7 @@ sqlserver_ident = Regex(r"\[(\]\]|[^\]])*\]").addParseAction(unquote)
 ident = Combine(
     ~RESERVED
     + (delimitedList(
-        literal_string
-        | mysql_ident
-        | sqlserver_ident
-        | Word(IDENT_CHAR),
+        literal_string | mysql_ident | sqlserver_ident | Word(IDENT_CHAR),
         separator=".",
         combine=True,
     ))
@@ -113,12 +110,14 @@ call_function = (
     + RB
 ).addParseAction(to_json_call)
 
-with Engine(white=""):
-    def scale(tokens):
-        return {"mul":[tokens[0], tokens[1]]}
 
-    scale_function = ((realNum | intNum) + call_function).addParseAction(scale)
-    scale_ident = ((realNum | intNum) + ident).addParseAction(scale)
+with PLAIN_ENGINE:
+    def scale(tokens):
+        return {"mul": [tokens[0], tokens[1]]}
+
+    # TODO: THE call_function IS CONSUMING WHITESPACE PREFIX leaveWhitespace() DOES NOT APPEAR TO STOP IT
+    scale_function = ((realNum | intNum) + call_function.leaveWhitespace()).addParseAction(scale)
+    scale_ident = ((realNum | intNum) + ident.leaveWhitespace()).addParseAction(scale)
 
 compound = (
     NULL
@@ -147,8 +146,8 @@ compound = (
 
 expr << (
     (
-        Literal("*") |
-        infixNotation(
+        Literal("*")
+        | infixNotation(
             compound,
             [
                 (

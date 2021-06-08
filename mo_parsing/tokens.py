@@ -6,11 +6,17 @@ from mo_imports import export
 from mo_parsing.core import ParserElement
 from mo_parsing.engine import Engine
 from mo_parsing.exceptions import ParseException
-from mo_parsing.results import ParseResults, engine
+from mo_parsing.results import ParseResults
 from mo_parsing.utils import *
+
+PLAIN_ENGINE = expect("PLAIN_ENGINE")
 
 
 class Token(ParserElement):
+    """
+    Represent some contiguous set for characters, no whitespace
+    """
+
     __slots__ = []
     Config = append_config(ParserElement, "match", "regex")
 
@@ -38,9 +44,11 @@ class Empty(Token):
         return 0
 
     def parseImpl(self, string, start, doActions=True):
-        end = start
-        # end = self.engine.skip(string, start)
+        end = self.engine.skip(string, start)
         return ParseResults(self, start, end, [])
+
+    def streamline(self):
+        return self
 
     def __regex__(self):
         return self.engine.__regex__()
@@ -153,7 +161,7 @@ class Keyword(Token):
     def __init__(self, match, ident_chars=None, caseless=None):
         Token.__init__(self)
         if ident_chars is None:
-            ident_chars = engine.CURRENT.keyword_chars
+            ident_chars = self.engine.keyword_chars
         else:
             ident_chars = "".join(sorted(set(ident_chars)))
 
@@ -632,8 +640,8 @@ class StringStart(_PositionToken):
     def parseImpl(self, string, loc, doActions=True):
         if loc != 0:
             # see if entire string up to here is just whitespace and ignoreables
-            # if loc != self.engine.skip(string, 0):
-            raise ParseException(self, loc, string)
+            if loc != self.engine.skip(string, 0):
+                raise ParseException(self, loc, string)
         return []
 
 
@@ -643,6 +651,11 @@ class StringEnd(_PositionToken):
     """
 
     __slots__ = []
+
+    def __init__(self):
+        with Engine() as e:
+            super(StringEnd, self).__init__()
+            self.set_config(lock_engine=e)
 
     def parseImpl(self, string, start, doActions=True):
         end = len(string)
@@ -689,7 +702,8 @@ class WordStart(_PositionToken):
 
 
 class WordEnd(_PositionToken):
-    """Matches if the current position is at the end of a Word, and is
+    """
+    Matches if the current position is at the end of a Word, and is
     not followed by any character in a given set of ``wordChars``
     (default= ``printables``). To emulate the ``\b`` behavior of
     regular expressions, use ``WordEnd(alphanums)``. ``WordEnd``
@@ -702,6 +716,7 @@ class WordEnd(_PositionToken):
 
     def __init__(self, wordChars=printables):
         super(WordEnd, self).__init__()
+        self.engine = PLAIN_ENGINE
         self.set_config(
             word_chars="".join(sorted(set(wordChars))),
             regex=regex_compile(
@@ -711,6 +726,7 @@ class WordEnd(_PositionToken):
 
     def copy(self):
         output = _PositionToken.copy(self)
+        output.engine = PLAIN_ENGINE
         return output
 
     def min_length(self):
@@ -726,6 +742,7 @@ class WordEnd(_PositionToken):
 
     def __regex__(self):
         return "+", self.parser_config.regex.pattern
+
 
 export("mo_parsing.results", Token)
 export("mo_parsing.results", Empty)
@@ -744,8 +761,7 @@ export("mo_parsing.enhancement", Literal)
 export("mo_parsing.enhancement", Keyword)
 export("mo_parsing.enhancement", Word)
 export("mo_parsing.enhancement", CharsNotIn)
-export("mo_parsing.enhancement", _PositionToken)
 export("mo_parsing.enhancement", StringEnd)
 export("mo_parsing.enhancement", Empty)
 export("mo_parsing.enhancement", Char)
-
+export("mo_parsing.enhancement", _PositionToken)

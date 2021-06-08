@@ -4,9 +4,10 @@ from threading import RLock
 
 from mo_future import text
 from mo_imports import expect, export
-from mo_parsing.results import ParseResults, _flatten
 
+from mo_parsing import engine, Engine
 from mo_parsing.exceptions import ParseException
+from mo_parsing.results import ParseResults, _flatten
 from mo_parsing.utils import Log, MAX_INT, wrap_parse_action, empty_tuple, is_forward
 
 (
@@ -26,7 +27,7 @@ from mo_parsing.utils import Log, MAX_INT, wrap_parse_action, empty_tuple, is_fo
     Literal,
     Token,
     Group,
-    regex_parameters
+    regex_parameters,
 ) = expect(
     "SkipTo",
     "Many",
@@ -44,7 +45,7 @@ from mo_parsing.utils import Log, MAX_INT, wrap_parse_action, empty_tuple, is_fo
     "Literal",
     "Token",
     "Group",
-    "regex_parameters"
+    "regex_parameters",
 )
 
 DEBUG = False
@@ -97,6 +98,7 @@ class ParserElement(object):
         "parseAction",
         "parser_name",
         "token_name",
+        "engine",
         "streamlined",
         "min_length_cache",
         "parser_config",
@@ -107,6 +109,7 @@ class ParserElement(object):
         self.parseAction = list()
         self.parser_name = ""
         self.token_name = ""
+        self.engine = engine.CURRENT
         self.streamlined = False
         self.min_length_cache = -1
 
@@ -123,6 +126,7 @@ class ParserElement(object):
     def copy(self):
         output = object.__new__(self.__class__)
         le = self.parser_config.lock_engine
+        output.engine = le or engine.CURRENT
         output.parseAction = self.parseAction[:]
         output.parser_name = self.parser_name
         output.token_name = self.token_name
@@ -242,7 +246,8 @@ class ParserElement(object):
 
     def _parse(self, string, start, doActions=True):
         try:
-            result = self.parseImpl(string, start, doActions)
+            index = self.engine.skip(string, start)
+            result = self.parseImpl(string, index, doActions)
         except Exception as cause:
             self.parser_config.failAction and self.parser_config.failAction(
                 self, start, string, cause
@@ -251,7 +256,7 @@ class ParserElement(object):
 
         if doActions or self.parser_config.callDuringTry:
             for fn in self.parseAction:
-                next_result = fn(result, result.start, string)
+                next_result = fn(result, index, string)
                 if next_result.end < result.end:
                     Log.error(
                         "parse action not allowed to roll back the end of parsing"
@@ -288,23 +293,16 @@ class ParserElement(object):
 
     def _parseString(self, string, parseAll=False):
         # TODO: PUT THIS streamline IN THE ENTRY POINT
-        start = 0
-        e = expr = self.streamline()
-        while is_forward(e):
-            e = e.expr
-
-        eng = None
-        if isinstance(e, Many) or isinstance(e, And):
-            eng = e.parser_config.engine
-            start = eng.skip(string, start)
+        expr = self.streamline()
+        for e in expr.engine.ignore_list:
+            e.streamline()
         if expr.token_name:
             # TOP LEVEL NAMES ARE NOT ALLOWED
             expr = Group(expr)
-        tokens = expr._parse(string, start)
+        tokens = expr._parse(string, 0)
         end = tokens.end
         if parseAll:
-            if eng:
-                end = eng.skip(string, end)
+            end = expr.engine.skip(string, end)
             StringEnd()._parse(string, end)
         return tokens
 
@@ -323,8 +321,7 @@ class ParserElement(object):
         end = 0
         matches = 0
         while end <= instrlen and matches < maxMatches:
-            start = end
-            # start = self.engine.skip(string, end)
+            start = self.engine.skip(string, end)
             try:
                 tokens = self._parse(string, start)
             except ParseException:
@@ -470,7 +467,7 @@ class ParserElement(object):
         if other is Ellipsis:
             return _PendingSkip(self)
 
-        return And([self, engine.CURRENT.normalize(other)], engine.CURRENT).streamline()
+        return And([self, engine.CURRENT.normalize(other)]).streamline()
 
     def __radd__(self, other):
         """
@@ -542,9 +539,7 @@ class ParserElement(object):
                 type(other[1]),
             )
 
-        ret = Many(
-            self, engine.CURRENT, min_match=minElements, max_match=maxElements
-        ).streamline()
+        ret = Many(self, min_match=minElements, max_match=maxElements).streamline()
         return ret
 
     def __rmul__(self, other):
@@ -625,6 +620,16 @@ class ParserElement(object):
         cluttering up returned output.
         """
         return Suppress(self)
+
+    def leaveWhitespace(self):
+        """
+        Disables the skipping of whitespace before matching the characters in the
+        `ParserElement`'s defined pattern.  This is normally only used internally by
+        the mo_parsing module, but may be needed in some whitespace-sensitive grammars.
+        """
+        with Engine(""):
+            output = self.copy()
+        return output
 
     def __str__(self):
         return self.parser_name
@@ -707,14 +712,5 @@ class _PendingSkip(ParserElement):
         Log.error("use of `...` expression without following SkipTo target expression")
 
 
-NO_PARSER = (
-    ParserElement().set_parser_name("<nothing>")
-)  # USE THIS WHEN YOU DO NOT CARE ABOUT THE PARSER TYPE
-NO_RESULTS = ParseResults(NO_PARSER, -1, 0, [])
-
-
 export("mo_parsing.results", ParserElement)
-export("mo_parsing.results", NO_PARSER)
-export("mo_parsing.results", NO_RESULTS)
-
-from mo_parsing import engine
+export("mo_parsing.engine", ParserElement)

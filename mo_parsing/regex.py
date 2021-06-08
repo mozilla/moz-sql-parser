@@ -109,30 +109,26 @@ def repeat(tokens):
     if tokens.length() == 1:
         return tokens.value()
 
-    try:
-        operand, operator = tokens
-    except Exception as cause:
-        Log.error("not expected", cause=cause)
-
+    operand, operator = tokens
     mode = operator["mode"]
     if not mode:
         if operator["exact"]:
-            return Many(operand, PLAIN_ENGINE, exact=int(operator["exact"]))
+            return Many(operand, exact=int(operator["exact"]))
         else:
             return Many(
-                operand, PLAIN_ENGINE, min_match=int(operator["min"]), max_match=int(operator["max"])
+                operand, min_match=int(operator["min"]), max_match=int(operator["max"])
             )
     elif mode in "*?":
-        return ZeroOrMore(operand, PLAIN_ENGINE)
+        return ZeroOrMore(operand)
     elif mode in "+?":
-        return OneOrMore(operand, PLAIN_ENGINE)
+        return OneOrMore(operand)
     elif mode == "?":
-        return Optional(operand, PLAIN_ENGINE)
+        return Optional(operand)
     else:
         Log.error("not expected")
 
-PLAIN_ENGINE.use()
 
+PLAIN_ENGINE.use()
 
 #########################################################################################
 # SQUARE BRACKETS
@@ -169,11 +165,11 @@ plainChar = Char(exclude=r"\]").addParseAction(lambda t: Literal(t.value()))
 
 escapedHexChar = Combine(
     (Literal("\\0x") | Literal("\\x") | Literal("\\X"))  # lookup literals is faster
-    + OneOrMore(Char(hexnums), PLAIN_ENGINE)
+    + OneOrMore(Char(hexnums))
 ).addParseAction(hex_to_char)
 
 escapedOctChar = Combine(
-    Literal("\\0") + OneOrMore(Char("01234567"), PLAIN_ENGINE)
+    Literal("\\0") + OneOrMore(Char("01234567"))
 ).addParseAction(lambda t: Literal(unichr(int(t.value()[2:], 8))))
 
 singleChar = escapedHexChar | escapedOctChar | escapedChar | plainChar
@@ -182,8 +178,8 @@ charRange = Group(singleChar("min") + "-" + singleChar("max")).addParseAction(to
 
 brackets = (
     "["
-    + Optional("^", PLAIN_ENGINE)("negate")
-    + OneOrMore(Group(charRange | singleChar | macro)("body"), PLAIN_ENGINE)
+    + Optional("^")("negate")
+    + OneOrMore(Group(charRange | singleChar | macro)("body"))
     + "]"
 ).addParseAction(to_bracket)
 
@@ -255,36 +251,14 @@ term = (
 )
 
 
-more = (term + Optional(repetition, PLAIN_ENGINE)).addParseAction(repeat)
-sequence = OneOrMore(more, PLAIN_ENGINE).addParseAction(lambda t: And(t, PLAIN_ENGINE))
+more = (term + Optional(repetition)).addParseAction(repeat)
+sequence = OneOrMore(more).addParseAction(lambda t: And(t))
 regex << (
     delimitedList(sequence, separator="|")
     .set_token_name("value")
     .addParseAction(lambda t: MatchFirst(listwrap(t.value())).streamline())
     .streamline()
 )
-
-
-def srange(expr):
-    pattern = brackets.parseString(expr).value()
-    chars = set()
-
-    def drill(e):
-        if isinstance(e, Literal):
-            chars.add(e.parser_config.match)
-        elif isinstance(e, Char):
-            chars.update(c for c in e.parser_config.include)
-        elif isinstance(e, MatchFirst):
-            for ee in e.exprs:
-                drill(ee)
-        elif isinstance(e, And):
-            drill(e.exprs[0].expr)
-        else:
-            Log.error("logic error")
-
-    drill(pattern)
-    return "".join(sorted(chars))
-
 
 parameters = (
     "\\" + Char(alphanums)("name") | "\\g<" + Word(alphas, alphanums)("name") + ">"

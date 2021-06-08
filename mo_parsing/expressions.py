@@ -73,12 +73,25 @@ class ParseExpression(ParserElement):
 
     def copy(self):
         output = ParserElement.copy(self)
-        output.exprs = self.exprs
+        if self.engine is engine.CURRENT:
+            output.exprs = self.exprs
+        else:
+            output.exprs = [e.copy() for e in self.exprs]
         return output
 
     def append(self, other):
         self.exprs.append(other)
         return self
+
+    def leaveWhitespace(self):
+        """
+        Extends ``leaveWhitespace`` defined in base class, and also invokes ``leaveWhitespace`` on
+        all contained expressions.
+        """
+        with Engine(""):
+            output = self.copy()
+            output.exprs = [e.leaveWhitespace() for e in self.exprs]
+            return output
 
     def streamline(self):
         if self.streamlined:
@@ -121,10 +134,6 @@ class ParseExpression(ParserElement):
     def __call__(self, name):
         if not name:
             return self
-        # for e in self.exprs:
-        #     if isinstance(e, ParserElement) and e.token_name:
-        #         Log.error("token name is already set in child, use Group() to clarify")
-
         return ParserElement.__call__(self, name)
 
 
@@ -135,10 +144,10 @@ class And(ParseExpression):
     May be constructed using the ``'+'`` operator.
     May also be constructed using the ``'-'`` operator, which will
     suppress backtracking.
+
     """
 
     __slots__ = []
-    Config = append_config(ParseExpression, "engine")
 
     class SyntaxErrorGuard(Empty):
         def __init__(self, *args, **kwargs):
@@ -146,7 +155,7 @@ class And(ParseExpression):
                 super(And.SyntaxErrorGuard, self).__init__(*args, **kwargs)
                 self.parser_name = "-"
 
-    def __init__(self, exprs, engine):
+    def __init__(self, exprs):
         if exprs and Ellipsis in exprs:
             tmp = []
             for i, expr in enumerate(exprs):
@@ -162,7 +171,6 @@ class And(ParseExpression):
                     tmp.append(expr)
             exprs[:] = tmp
         super(And, self).__init__(exprs)
-        self.set_config(engine=engine)
 
     def streamline(self):
         if self.streamlined:
@@ -202,7 +210,7 @@ class And(ParseExpression):
             same = same and f is e
             if f.is_annotated():
                 acc.append(f)
-            elif isinstance(f, And) and f.parser_config.engine is self.parser_config.engine:
+            elif isinstance(f, And):
                 same = False
                 acc.extend(f.exprs)
             else:
@@ -239,16 +247,14 @@ class And(ParseExpression):
         # pass False as last arg to _parse for first element, since we already
         # pre-parsed the string as part of our And pre-parsing
         encountered_syntax_error = False
-        end = index = start
+        end = start
         acc = []
-        for i, expr in enumerate(self.exprs):
-            if end > index:
-                index = self.parser_config.engine.skip(string, end)
+        for expr in self.exprs:
             if isinstance(expr, And.SyntaxErrorGuard):
                 encountered_syntax_error = True
                 continue
             try:
-                result = expr._parse(string, index, doActions)
+                result = expr._parse(string, end, doActions)
                 end = result.end
                 acc.append(result)
             except ParseException as pe:
@@ -263,7 +269,7 @@ class And(ParseExpression):
         if other is Ellipsis:
             return _PendingSkip(self)
 
-        return And([self, engine.CURRENT.normalize(other)], engine.CURRENT).streamline()
+        return And([self, engine.CURRENT.normalize(other)]).streamline()
 
     def checkRecursion(self, seen=empty_tuple):
         subRecCheckList = seen + (self,)
@@ -416,9 +422,10 @@ class Or(ParseExpression):
 
 
 class MatchFirst(ParseExpression):
-    """Requires that at least one `ParseExpression` is found. If
+    """
+    Requires that at least one `ParseExpression` is found. If
     two expressions match, the first one listed is the one that will
-    match. May be constructed using the ``'|'`` operator.
+    match. May be constructed using the `|` operator.
     """
 
     __slots__ = ["alternate"]
