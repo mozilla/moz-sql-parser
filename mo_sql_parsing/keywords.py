@@ -1,4 +1,4 @@
-from moz_sql_parser.utils import *
+from mo_sql_parsing.utils import *
 
 # SQL CONSTANTS
 NULL = Keyword("null", caseless=True).addParseAction(lambda: "null")

@@ -5,10 +5,10 @@ out
 .idea
 .svn
 *.iml
-/moz_sql_parser.egg-info
+/mo_sql_parsing.egg-info
 /build
 /dist
-/moz-sql-parser
+/mo-sql-parsing
 vendor/
 ._*
 .DS_Store

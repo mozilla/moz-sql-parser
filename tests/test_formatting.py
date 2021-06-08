@@ -11,7 +11,7 @@ from __future__ import absolute_import, division, unicode_literals
 
 from unittest import TestCase
 
-from moz_sql_parser import format
+from mo_sql_parsing import format
 
 
 class TestSimple(TestCase):

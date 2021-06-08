@@ -4,7 +4,7 @@ python:
 
 install:
   - pip install .
-  - python -c "from moz_sql_parser import parse; print(parse(\"select count(1) from jobs\"))"
+  - python -c "from mo_sql_parsing import parse; print(parse(\"select count(1) from jobs\"))"
   - pip install -r tests/requirements.txt
 
 env:

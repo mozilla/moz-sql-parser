@@ -11,7 +11,7 @@ from __future__ import absolute_import, division, unicode_literals
 import json
 from unittest import TestCase, skip
 from mo_dots import Null
-from moz_sql_parser import parse
+from mo_sql_parsing import parse
 
 try:
     from tests.util import assertRaises

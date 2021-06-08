@@ -11,8 +11,8 @@ from __future__ import absolute_import, division, unicode_literals
 
 from mo_parsing.helpers import delimitedList
 
-from moz_sql_parser.keywords import *
-from moz_sql_parser.utils import *
+from mo_sql_parsing.keywords import *
+from mo_sql_parsing.utils import *
 
 
 # https://docs.microsoft.com/en-us/sql/t-sql/queries/select-over-clause-transact-sql?view=sql-server-ver15

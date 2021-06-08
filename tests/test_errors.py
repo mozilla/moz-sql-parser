@@ -13,7 +13,7 @@ import unittest
 
 from mo_testing.fuzzytestcase import FuzzyTestCase
 
-from moz_sql_parser import parse, format
+from mo_sql_parsing import parse, format
 
 
 class TestErrors(FuzzyTestCase):

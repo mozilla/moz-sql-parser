@@ -11,9 +11,9 @@ from __future__ import absolute_import, division, unicode_literals
 
 from mo_parsing import PLAIN_ENGINE, Engine
 from mo_parsing.helpers import delimitedList, restOfLine
-from moz_sql_parser.keywords import *
-from moz_sql_parser.utils import *
-from moz_sql_parser.windows import sortColumn, window
+from mo_sql_parsing.keywords import *
+from mo_sql_parsing.utils import *
+from mo_sql_parsing.windows import sortColumn, window
 
 engine = Engine().use()
 engine.add_ignore(Literal("--") + restOfLine)

@@ -1,30 +1,32 @@
 {
-    "name": "moz-sql-parser",
+    "name": "mo-sql-parsing",
     "description": "Extract Parse Tree from SQL",
     "repository": {
-        "url": "https://github.com/mozilla/moz-sql-parser",
+        "url": "https://github.com/klahnakoski/mo-sql-parsing",
         "license": "MPL2",
         "type": "git",
-        "tests": "https://github.com/mozilla/moz-sql-parser/tree/dev/tests",
-        "clone": "https://github.com/mozilla/moz-sql-parser.git"
+        "tests": "https://github.com/klahnakoski/mo-sql-parsing/tree/dev/tests",
+        "clone": "https://github.com/klahnakoski/mo-sql-parsing.git"
     },
     "participate": {
-        "home": "https://github.com/mozilla/moz-sql-parser",
-        "docs": "https://github.com/mozilla/moz-sql-parser/docs",
+        "home": "https://github.com/klahnakoski/mo-sql-parsing",
+        "docs": "https://github.com/klahnakoski/mo-sql-parsing/docs",
         "irc-contacts": [
             "ekyle"
         ]
     },
     "bugs": {
-        "list": "https://github.com/mozilla/moz-sql-parser/issues",
-        "report": "https://github.com/mozilla/moz-sql-parser/issues/new"
+        "list": "https://github.com/klahnakoski/mo-sql-parsing/issues",
+        "report": "https://github.com/klahnakoski/mo-sql-parsing/issues/new"
     },
     "urls": {
         "stage": ""
     },
     "keywords": [
         "python",
-        "mozilla"
+        "sql",
+        "parsing",
+        "parse"
     ]
 }
 

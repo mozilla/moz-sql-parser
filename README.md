@@ -1,12 +1,12 @@
-# Moz SQL Parser
+# More SQL Parsing!
 
 Let's make a SQL parser so we can provide a familiar interface to non-sql datastores!
 
 
 |Branch      |Status   |
 |------------|---------|
-|master      | [![Build Status](https://travis-ci.org/klahnakoski/moz-sql-parser.svg?branch=master)](https://travis-ci.org/klahnakoski/moz-sql-parser) |
-|dev         | [![Build Status](https://travis-ci.org/klahnakoski/moz-sql-parser.svg?branch=dev)](https://travis-ci.org/klahnakoski/moz-sql-parser)    |
+|master      | [![Build Status](https://travis-ci.org/klahnakoski/mo-sql-parsing.svg?branch=master)](https://travis-ci.org/klahnakoski/mo-sql-parsing) |
+|dev         | [![Build Status](https://travis-ci.org/klahnakoski/mo-sql-parsing.svg?branch=dev)](https://travis-ci.org/klahnakoski/mo-sql-parsing)    |
 
 
 ## Problem Statement
@@ -15,7 +15,7 @@ SQL is a familiar language used to access databases. Although, each database ven
 
 ## Objectives
 
-The primary objective of this library is to convert SQL queries to JSON-izable parse trees. This originally targeted MySQL, but has grown to include other database vendors. *Please [paste some SQL into a new issue](https://github.com/klahnakoski/moz-sql-parser/issues) if it does not work for you*
+The primary objective of this library is to convert SQL queries to JSON-izable parse trees. This originally targeted MySQL, but has grown to include other database vendors. *Please [paste some SQL into a new issue](https://github.com/klahnakoski/mo-sql-parsing/issues) if it does not work for you*
 
 ## Non-Objectives 
 
@@ -26,15 +26,15 @@ It is my sincere hope you can convert the JSON into queries for your particular 
 
 ## Project Status
 
-Jan 2021 -There are [almost 500 tests](https://github.com/mozilla/moz-sql-parser/tree/dev/tests). This parser is good enough for basic usage, including inner queries, `with` clauses, and window functions.  There is still a lot missing to support BigQuery and Redshift queries.  
+Jan 2021 -There are [almost 500 tests](https://github.com/klahnakoski/mo-sql-parsing/tree/dev/tests). This parser is good enough for basic usage, including inner queries, `with` clauses, and window functions.  There is still a lot missing to support BigQuery and Redshift queries.  
 
 ## Install
 
-    pip install moz-sql-parser
+    pip install mo-sql-parsing
 
 ## Parsing SQL
 
-    >>> from moz_sql_parser import parse
+    >>> from mo_sql_parsing import parse
     >>> import json
     >>> json.dumps(parse("select count(1) from jobs"))
     '{"select": {"value": {"count": 1}}, "from": "jobs"}'
@@ -50,7 +50,7 @@ The `SELECT` clause is an array of objects containing `name` and `value` propert
 
 Python's default recursion limit (1000) is not hit when parsing the test suite, but this may not be the case for large SQL. You can increase the recursion limit before you `parse`:
 
-    >>> from moz_sql_parser import parse
+    >>> from mo_sql_parsing import parse
     >>> sys.setrecursionlimit(3000)
     >>> parse(complicated_sql)
 
@@ -59,7 +59,7 @@ Python's default recursion limit (1000) is not hit when parsing the test suite, 
 
 You may also generate SQL from the a given JSON document. This is done by the formatter, which is still incomplete (Jan2020).
 
-    >>> from moz_sql_parser import format
+    >>> from mo_sql_parsing import format
     >>> format({"from":"test", "select":["a.b", "c"]})
     'SELECT a.b, c FROM test'
 
@@ -70,7 +70,7 @@ In the event that the parser is not working for you, you can help make this bett
 
 ## Run Tests
 
-See [the tests directory](https://github.com/mozilla/moz-sql-parser/tree/dev/tests) for instructions running tests, or writing new ones.
+See [the tests directory](https://github.com/klahnakoski/mo-sql-parsing/tree/dev/tests) for instructions running tests, or writing new ones.
 
 ## More about implementation
 
@@ -95,7 +95,7 @@ and you can see this pattern in the previous example:
     
 ## Array Programming
 
-The `moz-sql-parser.scrub()` method is used liberally throughout the code, and it "simplifies" the JSON.  You may find this form a bit tedious to work with because the JSON property values can be values, lists of values, or missing.  Please consider converting everything to arrays: 
+The `mo-sql-parsing.scrub()` method is used liberally throughout the code, and it "simplifies" the JSON.  You may find this form a bit tedious to work with because the JSON property values can be values, lists of values, or missing.  Please consider converting everything to arrays: 
 
 
 ```

@@ -17,7 +17,7 @@ from unittest import TestCase
 from mo_future import unichr
 
 from mo_parsing.utils import regex_range
-from moz_sql_parser import sql_parser
+from mo_sql_parsing import sql_parser
 
 _ensure_imported = sql_parser
 

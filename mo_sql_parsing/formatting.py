@@ -13,8 +13,8 @@ import re
 
 from mo_dots import split_field
 from mo_future import first, is_text, long, string_types, text
-from moz_sql_parser.keywords import RESERVED, join_keywords, precedence
-from moz_sql_parser.utils import binary_ops
+from mo_sql_parsing.keywords import RESERVED, join_keywords, precedence
+from mo_sql_parsing.utils import binary_ops
 
 VALID = re.compile(r"^[a-zA-Z_]\w*$")
 

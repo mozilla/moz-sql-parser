@@ -1,4 +1,4 @@
-# Moz SQL Parser Tests
+# More SQL Parsing Tests
 
 The test suite has over 400 tests.
 
@@ -6,8 +6,8 @@ The test suite has over 400 tests.
 
 For __Linux__:
 
-	git clone https://github.com/klahnakoski/moz-sql-parser.git
-	cd moz-sql-parser
+	git clone https://github.com/klahnakoski/mo-sql-parsing.git
+	cd mo-sql-parsing
 	pip install -r requirements.txt
 	pip install -r tests/requirements.txt
 	export PYTHONPATH=.	
@@ -15,8 +15,8 @@ For __Linux__:
 
  For __Windows__:
 
-	git clone https://github.com/klahnakoski/moz-sql-parser.git
-	cd moz-sql-parser
+	git clone https://github.com/klahnakoski/mo-sql-parsing.git
+	cd mo-sql-parsing
 	pip install -r requirements.txt
 	pip install -r tests\requirements.txt
 	set PYTHONPATH=.	

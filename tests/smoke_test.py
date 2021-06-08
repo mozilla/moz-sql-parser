@@ -7,7 +7,7 @@
 # Author: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
 
-from moz_sql_parser import parse
+from mo_sql_parsing import parse
 
 parse("select *")
 

@@ -13,8 +13,8 @@ import re
 from unittest import TestCase, skip
 
 from mo_logs import Log
-from moz_sql_parser import format, parse
-from moz_sql_parser.keywords import join_keywords
+from mo_sql_parsing import format, parse
+from mo_sql_parsing.keywords import join_keywords
 
 
 EXCEPTION_MESSAGE = """
