@@ -1,3 +1,7 @@
+## NOTICE - June 2021
+
+The Moz SQL Parser repository is now archived. But the good news is that a fork of this project, called More SQL Parsing!, remains under active development independent of Mozilla. That project can be found at https://github.com/klahnakoski/mo-sql-parsing.
+
 # Moz SQL Parser
 
 Let's make a SQL parser so we can provide a familiar interface to non-sql datastores!
